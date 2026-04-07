@@ -15,13 +15,10 @@
             --color-text-secondary: light-dark(#5b564c, #b7b0a2);
             --color-border-primary: light-dark(#d0c2ad, #363d48);
             --color-ring-primary: light-dark(#8b5e34, #d39a5e);
-            --color-background-info: light-dark(#fff8ee, #201b13);
+            --color-accent-soft: light-dark(#fff8ee, #201b13);
+            --color-accent-strong: light-dark(#8b5e34, #d39a5e);
             --font-sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
             --font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
-            --font-weight-normal: 400;
-            --font-weight-medium: 500;
-            --font-weight-semibold: 600;
-            --font-weight-bold: 700;
             --border-radius-md: 14px;
             --border-radius-lg: 20px;
             --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.08);
@@ -81,15 +78,19 @@
             line-height: 1.45;
         }
 
-        .actions {
+        .actions,
+        .card-actions,
+        .form-actions {
             display: flex;
             gap: 10px;
-            padding: 0 18px 18px;
             flex-wrap: wrap;
         }
 
-        .button,
-        .feature-button {
+        .actions {
+            padding: 0 18px 18px;
+        }
+
+        .button {
             appearance: none;
             border: 1px solid var(--color-border-primary);
             border-radius: 999px;
@@ -97,84 +98,104 @@
             color: var(--color-text-primary);
             cursor: pointer;
             font: inherit;
-            transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
-        }
-
-        .button {
+            transition: transform 140ms ease, border-color 140ms ease;
             padding: 8px 14px;
             font-size: 14px;
         }
 
-        .button:hover,
-        .feature-button:hover {
+        .button:hover {
             transform: translateY(-1px);
             border-color: var(--color-ring-primary);
         }
 
-        .button:disabled,
-        .feature-button:disabled {
+        .button[data-kind="primary"] {
+            background: color-mix(in srgb, var(--color-accent-strong) 18%, var(--color-background-primary));
+        }
+
+        .button[data-kind="ghost"] {
+            background: transparent;
+        }
+
+        .button:disabled {
             cursor: progress;
             opacity: 0.72;
             transform: none;
         }
 
-        .list {
+        .list,
+        .outcome-list {
             display: grid;
             gap: 12px;
             padding: 0 18px 18px;
         }
 
-        .feature-button {
-            width: 100%;
-            padding: 16px;
-            text-align: left;
+        .outcome-list {
+            list-style: none;
+            margin: 0;
         }
 
-        .feature-row {
+        .card,
+        .outcome-item,
+        .editor {
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--border-radius-md);
+            background: color-mix(in srgb, var(--color-background-primary) 76%, var(--color-background-tertiary));
+            padding: 16px;
+        }
+
+        .card-header {
             display: flex;
-            align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
+            align-items: flex-start;
         }
 
-        .feature-id {
-            margin: 0 0 4px;
+        .card-id,
+        .outcome-order,
+        .label-caption {
+            margin: 0 0 6px;
             color: var(--color-text-secondary);
             font-family: var(--font-mono);
             font-size: 12px;
         }
 
-        .feature-title {
+        .card-title,
+        .outcome-title {
             margin: 0;
             font-size: 18px;
-            font-weight: var(--font-weight-semibold);
         }
 
-        .feature-meta {
-            margin: 10px 0 0;
+        .card-meta,
+        .outcome-meta,
+        .helper,
+        .empty,
+        .status {
             color: var(--color-text-secondary);
             font-size: 13px;
-            line-height: 1.4;
+            line-height: 1.45;
+        }
+
+        .card-meta,
+        .outcome-meta {
+            margin: 10px 0 0;
+        }
+
+        .badge,
+        .active-chip {
+            display: inline-flex;
+            border-radius: 999px;
+            font-size: 12px;
+            padding: 5px 10px;
+            border: 1px solid var(--color-border-primary);
         }
 
         .badge {
-            flex: 0 0 auto;
-            padding: 5px 10px;
-            border-radius: 999px;
-            background: var(--color-background-info);
-            border: 1px solid var(--color-border-primary);
-            font-size: 12px;
-            color: var(--color-text-secondary);
+            background: var(--color-accent-soft);
         }
 
         .active-chip {
-            display: inline-flex;
             margin-top: 10px;
-            padding: 4px 9px;
-            border-radius: 999px;
             background: color-mix(in srgb, var(--color-ring-primary) 18%, transparent);
-            color: var(--color-text-primary);
-            font-size: 12px;
         }
 
         .empty,
@@ -183,50 +204,69 @@
             margin: 0 18px 18px;
             border-radius: var(--border-radius-md);
             border: 1px dashed var(--color-border-primary);
-            color: var(--color-text-secondary);
             background: color-mix(in srgb, var(--color-background-secondary) 66%, transparent);
-            font-size: 14px;
-            line-height: 1.45;
         }
 
         .status[data-variant="error"] {
             border-style: solid;
         }
 
-        .outcome-list {
-            list-style: none;
-            margin: 0;
-            padding: 0 18px 18px;
+        .editor {
+            margin-top: 12px;
+            background: color-mix(in srgb, var(--color-accent-soft) 40%, var(--color-background-primary));
+        }
+
+        .editor h2 {
+            margin: 0 0 14px;
+            font-size: 17px;
+        }
+
+        .field-grid {
             display: grid;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .outcome-item {
-            border: 1px solid var(--color-border-primary);
-            border-radius: var(--border-radius-md);
-            background: color-mix(in srgb, var(--color-background-primary) 76%, var(--color-background-tertiary));
-            padding: 14px;
+        .field-grid[data-columns="2"] {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .outcome-order {
-            margin: 0 0 6px;
-            color: var(--color-text-secondary);
-            font-family: var(--font-mono);
-            font-size: 12px;
-        }
-
-        .outcome-title {
-            margin: 0;
-            font-size: 16px;
-        }
-
-        .outcome-meta {
-            margin: 8px 0 0;
-            color: var(--color-text-secondary);
+        label {
+            display: grid;
+            gap: 6px;
             font-size: 13px;
         }
 
-        @media (max-width: 520px) {
+        input,
+        textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--color-border-primary);
+            background: color-mix(in srgb, var(--color-background-primary) 88%, transparent);
+            color: var(--color-text-primary);
+            padding: 10px 12px;
+            font: inherit;
+        }
+
+        textarea {
+            min-height: 88px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: 2px solid color-mix(in srgb, var(--color-ring-primary) 35%, transparent);
+            outline-offset: 1px;
+        }
+
+        .helper {
+            margin: 0;
+        }
+
+        .selected-feature {
+            margin: 0 18px 12px;
+        }
+
+        @media (max-width: 600px) {
             .shell {
                 padding: 10px;
             }
@@ -235,8 +275,10 @@
                 font-size: 20px;
             }
 
-            .feature-row {
-                flex-direction: column;
+            .card-header,
+            .field-grid[data-columns="2"] {
+                grid-template-columns: 1fr;
+                display: grid;
             }
         }
     </style>
@@ -263,6 +305,11 @@
                 toolArguments: {},
                 toolResult: null,
                 pendingFeatureId: null,
+                editingFeatureId: null,
+                editingOutcomeId: null,
+                featureDraft: null,
+                outcomeDraft: null,
+                isSaving: false,
             };
 
             const elements = {
@@ -296,7 +343,6 @@
             function sendRequest(method, params) {
                 const id = nextId++;
                 window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
-
                 return new Promise((resolve, reject) => {
                     pending.set(id, { resolve, reject });
                 });
@@ -323,7 +369,6 @@
                 if (!result || !Array.isArray(result.content)) {
                     return "";
                 }
-
                 const textBlock = result.content.find((item) => item && item.type === "text");
                 return textBlock && typeof textBlock.text === "string" ? textBlock.text : "";
             }
@@ -335,7 +380,6 @@
                     elements.status.removeAttribute("data-variant");
                     return;
                 }
-
                 elements.status.hidden = false;
                 elements.status.textContent = message;
                 if (variant) {
@@ -355,27 +399,54 @@
                         }
                     }
                 }
-
                 if (state.hostContext.theme === "dark" || state.hostContext.theme === "light") {
                     root.style.colorScheme = state.hostContext.theme;
                 }
+            }
+
+            function linesToArray(value) {
+                return String(value || "")
+                    .split(/\r?\n/)
+                    .map((item) => item.trim())
+                    .filter(Boolean);
+            }
+
+            function arrayToLines(value) {
+                return Array.isArray(value) ? value.join("\n") : "";
+            }
+
+            async function callServerTool(name, args) {
+                return sendRequest("tools/call", { name, arguments: args });
+            }
+
+            async function refreshCurrentView() {
+                const current = state.toolResult && state.toolResult.structuredContent;
+                if (current && current.mode === "outcome_selection" && current.selectedFeatureId) {
+                    const result = await callServerTool("specrail_feature_navigate", {
+                        ...state.toolArguments,
+                        feature_id: current.selectedFeatureId,
+                    });
+                    state.toolResult = result;
+                    return;
+                }
+
+                const result = await callServerTool("specrail_feature_navigate", { ...state.toolArguments });
+                state.toolResult = result;
             }
 
             async function selectFeature(featureId) {
                 state.pendingFeatureId = featureId;
                 showStatus(`Loading outcomes for ${featureId}...`);
                 render();
-
                 try {
-                    const result = await sendRequest("tools/call", {
-                        name: "specrail_feature_navigate",
-                        arguments: {
-                            ...state.toolArguments,
-                            feature_id: featureId,
-                        },
+                    const result = await callServerTool("specrail_feature_navigate", {
+                        ...state.toolArguments,
+                        feature_id: featureId,
                     });
                     state.toolResult = result;
                     state.pendingFeatureId = null;
+                    state.editingFeatureId = null;
+                    state.featureDraft = null;
                     showStatus("");
                     render();
                 } catch (error) {
@@ -387,22 +458,281 @@
 
             async function returnToFeatures() {
                 showStatus("Loading features...");
-                render();
-
                 try {
-                    const result = await sendRequest("tools/call", {
-                        name: "specrail_feature_navigate",
-                        arguments: {
-                            ...state.toolArguments,
-                        },
-                    });
-                    state.toolResult = result;
+                    state.editingFeatureId = null;
+                    state.editingOutcomeId = null;
+                    state.featureDraft = null;
+                    state.outcomeDraft = null;
+                    await refreshCurrentView();
                     showStatus("");
                     render();
                 } catch (error) {
                     showStatus(error instanceof Error ? error.message : String(error), "error");
                     render();
                 }
+            }
+
+            async function startFeatureEdit(featureId) {
+                showStatus(`Loading feature ${featureId}...`);
+                try {
+                    const result = await callServerTool("specrail_feature_show", {
+                        ...state.toolArguments,
+                        id: featureId,
+                    });
+                    const feature = result.structuredContent && result.structuredContent.feature;
+                    state.editingFeatureId = featureId;
+                    state.featureDraft = {
+                        id: feature.id,
+                        title: feature.title || "",
+                        purpose: feature.purpose || "",
+                        outcomes: arrayToLines(feature.outcomes),
+                        constraints: arrayToLines(feature.constraints),
+                        non_goals: arrayToLines(feature.non_goals),
+                        dependencies: arrayToLines(feature.dependencies),
+                    };
+                    showStatus("");
+                    render();
+                } catch (error) {
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                }
+            }
+
+            async function startOutcomeEdit(featureId, outcomeId) {
+                showStatus(`Loading outcome ${outcomeId}...`);
+                try {
+                    const result = await callServerTool("specrail_outcome_show", {
+                        ...state.toolArguments,
+                        feature_id: featureId,
+                        outcome_id: outcomeId,
+                    });
+                    const outcome = result.structuredContent && result.structuredContent.outcome;
+                    state.editingOutcomeId = outcomeId;
+                    state.outcomeDraft = {
+                        feature_id: featureId,
+                        outcome_id: outcome.id,
+                        title: outcome.title || "",
+                        goal: outcome.goal || "",
+                        order: String(outcome.order || 1),
+                        prerequisites: arrayToLines(outcome.prerequisites),
+                        allowed_paths: arrayToLines(outcome.allowed_paths),
+                        forbidden_paths: arrayToLines(outcome.forbidden_paths),
+                        required_tests: arrayToLines(outcome.required_tests),
+                    };
+                    showStatus("");
+                    render();
+                } catch (error) {
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                }
+            }
+
+            function cancelFeatureEdit() {
+                state.editingFeatureId = null;
+                state.featureDraft = null;
+                render();
+            }
+
+            function cancelOutcomeEdit() {
+                state.editingOutcomeId = null;
+                state.outcomeDraft = null;
+                render();
+            }
+
+            async function saveFeatureEdit(event) {
+                event.preventDefault();
+                if (!state.featureDraft) {
+                    return;
+                }
+
+                state.isSaving = true;
+                showStatus(`Saving feature ${state.featureDraft.id}...`);
+                render();
+
+                try {
+                    await callServerTool("specrail_feature_edit", {
+                        ...state.toolArguments,
+                        id: state.featureDraft.id,
+                        title: state.featureDraft.title,
+                        purpose: state.featureDraft.purpose,
+                        outcomes: linesToArray(state.featureDraft.outcomes),
+                        constraints: linesToArray(state.featureDraft.constraints),
+                        non_goals: linesToArray(state.featureDraft.non_goals),
+                        dependencies: linesToArray(state.featureDraft.dependencies),
+                    });
+
+                    state.editingFeatureId = null;
+                    state.featureDraft = null;
+                    await refreshCurrentView();
+                    state.isSaving = false;
+                    showStatus("Feature updated.");
+                    render();
+                } catch (error) {
+                    state.isSaving = false;
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                    render();
+                }
+            }
+
+            async function saveOutcomeEdit(event) {
+                event.preventDefault();
+                if (!state.outcomeDraft) {
+                    return;
+                }
+
+                state.isSaving = true;
+                showStatus(`Saving outcome ${state.outcomeDraft.outcome_id}...`);
+                render();
+
+                try {
+                    await callServerTool("specrail_outcome_edit", {
+                        ...state.toolArguments,
+                        feature_id: state.outcomeDraft.feature_id,
+                        outcome_id: state.outcomeDraft.outcome_id,
+                        title: state.outcomeDraft.title,
+                        goal: state.outcomeDraft.goal,
+                        order: Number(state.outcomeDraft.order || 1),
+                        prerequisites: linesToArray(state.outcomeDraft.prerequisites),
+                        allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
+                        forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
+                        required_tests: linesToArray(state.outcomeDraft.required_tests),
+                    });
+
+                    state.editingOutcomeId = null;
+                    state.outcomeDraft = null;
+                    await refreshCurrentView();
+                    state.isSaving = false;
+                    showStatus("Outcome updated.");
+                    render();
+                } catch (error) {
+                    state.isSaving = false;
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                    render();
+                }
+            }
+
+            function updateDraft(target, key, value) {
+                if (target === "feature" && state.featureDraft) {
+                    state.featureDraft[key] = value;
+                }
+                if (target === "outcome" && state.outcomeDraft) {
+                    state.outcomeDraft[key] = value;
+                }
+            }
+
+            function renderField(label, key, value, target, multiline, helper) {
+                const wrapper = document.createElement("label");
+                wrapper.innerHTML = `<span>${escapeHtml(label)}</span>`;
+                const input = document.createElement(multiline ? "textarea" : "input");
+                if (!multiline) {
+                    input.type = key === "order" ? "number" : "text";
+                    if (key === "order") {
+                        input.min = "1";
+                    }
+                }
+                input.value = value || "";
+                input.addEventListener("input", (event) => updateDraft(target, key, event.target.value));
+                wrapper.appendChild(input);
+                if (helper) {
+                    const text = document.createElement("p");
+                    text.className = "helper";
+                    text.textContent = helper;
+                    wrapper.appendChild(text);
+                }
+                return wrapper;
+            }
+
+            function renderFeatureEditor(featureId) {
+                if (!state.featureDraft || state.editingFeatureId !== featureId) {
+                    return null;
+                }
+
+                const form = document.createElement("form");
+                form.className = "editor";
+                form.addEventListener("submit", saveFeatureEdit);
+                form.innerHTML = `<h2>Edit feature ${escapeHtml(featureId)}</h2>`;
+
+                const grid = document.createElement("div");
+                grid.className = "field-grid";
+                grid.appendChild(renderField("Title", "title", state.featureDraft.title, "feature", false));
+                grid.appendChild(renderField("Purpose", "purpose", state.featureDraft.purpose, "feature", true));
+                grid.appendChild(renderField("Outcomes", "outcomes", state.featureDraft.outcomes, "feature", true, "One item per line."));
+                grid.appendChild(renderField("Constraints", "constraints", state.featureDraft.constraints, "feature", true, "One item per line."));
+                grid.appendChild(renderField("Non-goals", "non_goals", state.featureDraft.non_goals, "feature", true, "One item per line."));
+                grid.appendChild(renderField("Dependencies", "dependencies", state.featureDraft.dependencies, "feature", true, "One item per line."));
+                form.appendChild(grid);
+
+                const actions = document.createElement("div");
+                actions.className = "form-actions";
+
+                const saveButton = document.createElement("button");
+                saveButton.className = "button";
+                saveButton.dataset.kind = "primary";
+                saveButton.type = "submit";
+                saveButton.disabled = state.isSaving;
+                saveButton.textContent = state.isSaving ? "Saving..." : "Save feature";
+                actions.appendChild(saveButton);
+
+                const cancelButton = document.createElement("button");
+                cancelButton.className = "button";
+                cancelButton.dataset.kind = "ghost";
+                cancelButton.type = "button";
+                cancelButton.disabled = state.isSaving;
+                cancelButton.textContent = "Cancel";
+                cancelButton.addEventListener("click", cancelFeatureEdit);
+                actions.appendChild(cancelButton);
+
+                form.appendChild(actions);
+                return form;
+            }
+
+            function renderOutcomeEditor(outcome) {
+                if (!state.outcomeDraft || state.editingOutcomeId !== outcome.id) {
+                    return null;
+                }
+
+                const form = document.createElement("form");
+                form.className = "editor";
+                form.addEventListener("submit", saveOutcomeEdit);
+                form.innerHTML = `<h2>Edit outcome ${escapeHtml(outcome.id)}</h2>`;
+
+                const grid = document.createElement("div");
+                grid.className = "field-grid";
+                grid.appendChild(renderField("Title", "title", state.outcomeDraft.title, "outcome", false));
+                grid.appendChild(renderField("Goal", "goal", state.outcomeDraft.goal, "outcome", true));
+
+                const twoCol = document.createElement("div");
+                twoCol.className = "field-grid";
+                twoCol.dataset.columns = "2";
+                twoCol.appendChild(renderField("Order", "order", state.outcomeDraft.order, "outcome", false));
+                twoCol.appendChild(renderField("Prerequisites", "prerequisites", state.outcomeDraft.prerequisites, "outcome", true, "One outcome id per line."));
+                grid.appendChild(twoCol);
+
+                grid.appendChild(renderField("Allowed paths", "allowed_paths", state.outcomeDraft.allowed_paths, "outcome", true, "One glob per line."));
+                grid.appendChild(renderField("Forbidden paths", "forbidden_paths", state.outcomeDraft.forbidden_paths, "outcome", true, "One glob per line."));
+                grid.appendChild(renderField("Required tests", "required_tests", state.outcomeDraft.required_tests, "outcome", true, "One path or id per line."));
+                form.appendChild(grid);
+
+                const actions = document.createElement("div");
+                actions.className = "form-actions";
+
+                const saveButton = document.createElement("button");
+                saveButton.className = "button";
+                saveButton.dataset.kind = "primary";
+                saveButton.type = "submit";
+                saveButton.disabled = state.isSaving;
+                saveButton.textContent = state.isSaving ? "Saving..." : "Save outcome";
+                actions.appendChild(saveButton);
+
+                const cancelButton = document.createElement("button");
+                cancelButton.className = "button";
+                cancelButton.dataset.kind = "ghost";
+                cancelButton.type = "button";
+                cancelButton.disabled = state.isSaving;
+                cancelButton.textContent = "Cancel";
+                cancelButton.addEventListener("click", cancelOutcomeEdit);
+                actions.appendChild(cancelButton);
+
+                form.appendChild(actions);
+                return form;
             }
 
             function renderFeatureSelection(data) {
@@ -418,31 +748,52 @@
                 list.className = "list";
 
                 for (const feature of features) {
-                    const button = document.createElement("button");
-                    button.className = "feature-button";
-                    button.type = "button";
-                    button.disabled = state.pendingFeatureId === feature.id;
-                    button.addEventListener("click", () => selectFeature(feature.id));
-
-                    const activeChip = feature.isActive
-                        ? '<span class="active-chip">Active feature</span>'
-                        : "";
+                    const card = document.createElement("section");
+                    card.className = "card";
                     const verifiedCount = Number(feature.verifiedOutcomeCount || 0);
                     const outcomeCount = Number(feature.outcomeCount || 0);
+                    const activeChip = feature.isActive ? '<span class="active-chip">Active feature</span>' : "";
 
-                    button.innerHTML = `
-              <div class="feature-row">
-                <div>
-                  <p class="feature-id">${escapeHtml(feature.id)}</p>
-                  <p class="feature-title">${escapeHtml(feature.title || feature.id)}</p>
-                  <p class="feature-meta">${escapeHtml(feature.status || "planned")} · ${outcomeCount} outcome(s) · ${verifiedCount} verified</p>
-                  ${activeChip}
-                </div>
-                <span class="badge">Select</span>
-              </div>
-            `;
+                    card.innerHTML = `
+                            <div class="card-header">
+                                <div>
+                                    <p class="card-id">${escapeHtml(feature.id)}</p>
+                                    <p class="card-title">${escapeHtml(feature.title || feature.id)}</p>
+                                    <p class="card-meta">${escapeHtml(feature.status || "planned")} · ${outcomeCount} outcome(s) · ${verifiedCount} verified</p>
+                                    ${activeChip}
+                                </div>
+                                <span class="badge">Feature</span>
+                            </div>
+                        `;
 
-                    list.appendChild(button);
+                    const actions = document.createElement("div");
+                    actions.className = "card-actions";
+
+                    const selectButton = document.createElement("button");
+                    selectButton.className = "button";
+                    selectButton.dataset.kind = "primary";
+                    selectButton.type = "button";
+                    selectButton.disabled = state.pendingFeatureId === feature.id || state.isSaving;
+                    selectButton.textContent = state.pendingFeatureId === feature.id ? "Loading..." : "Select";
+                    selectButton.addEventListener("click", () => selectFeature(feature.id));
+                    actions.appendChild(selectButton);
+
+                    const editButton = document.createElement("button");
+                    editButton.className = "button";
+                    editButton.type = "button";
+                    editButton.disabled = state.isSaving;
+                    editButton.textContent = state.editingFeatureId === feature.id ? "Editing" : "Edit";
+                    editButton.addEventListener("click", () => startFeatureEdit(feature.id));
+                    actions.appendChild(editButton);
+
+                    card.appendChild(actions);
+
+                    const editor = renderFeatureEditor(feature.id);
+                    if (editor) {
+                        card.appendChild(editor);
+                    }
+
+                    list.appendChild(card);
                 }
 
                 elements.content.appendChild(list);
@@ -453,8 +804,36 @@
                 const outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
                 elements.content.innerHTML = "";
 
-                const list = document.createElement("ul");
-                list.className = "outcome-list";
+                const featureCard = document.createElement("section");
+                featureCard.className = "card selected-feature";
+                featureCard.innerHTML = `
+                        <div class="card-header">
+                            <div>
+                                <p class="card-id">${escapeHtml(selectedFeature.id || data.selectedFeatureId || "")}</p>
+                                <p class="card-title">${escapeHtml(selectedFeature.title || selectedFeature.id || "Selected feature")}</p>
+                                <p class="card-meta">${escapeHtml(selectedFeature.status || "draft")}</p>
+                            </div>
+                            <span class="badge">Selected</span>
+                        </div>
+                    `;
+
+                const featureActions = document.createElement("div");
+                featureActions.className = "card-actions";
+                const featureEditButton = document.createElement("button");
+                featureEditButton.className = "button";
+                featureEditButton.type = "button";
+                featureEditButton.disabled = state.isSaving;
+                featureEditButton.textContent = state.editingFeatureId === selectedFeature.id ? "Editing feature" : "Edit feature";
+                featureEditButton.addEventListener("click", () => startFeatureEdit(selectedFeature.id));
+                featureActions.appendChild(featureEditButton);
+                featureCard.appendChild(featureActions);
+
+                const featureEditor = renderFeatureEditor(selectedFeature.id);
+                if (featureEditor) {
+                    featureCard.appendChild(featureEditor);
+                }
+
+                elements.content.appendChild(featureCard);
 
                 if (!outcomes.length) {
                     const empty = document.createElement("div");
@@ -464,14 +843,41 @@
                     return;
                 }
 
+                const list = document.createElement("ul");
+                list.className = "outcome-list";
+
                 for (const outcome of outcomes) {
                     const item = document.createElement("li");
                     item.className = "outcome-item";
                     item.innerHTML = `
-              <p class="outcome-order">Outcome ${escapeHtml(outcome.order || "?")}</p>
-              <p class="outcome-title">${escapeHtml(outcome.title || outcome.id)}</p>
-              <p class="outcome-meta">${escapeHtml(outcome.id)} · ${escapeHtml(outcome.status || "planned")}${outcome.isActive ? " · active" : ""}</p>
-            `;
+                            <div class="card-header">
+                                <div>
+                                    <p class="outcome-order">Outcome ${escapeHtml(outcome.order || "?")}</p>
+                                    <p class="outcome-title">${escapeHtml(outcome.title || outcome.id)}</p>
+                                    <p class="outcome-meta">${escapeHtml(outcome.id)} · ${escapeHtml(outcome.status || "pending")}${outcome.isActive ? " · active" : ""}</p>
+                                </div>
+                                <span class="badge">Outcome</span>
+                            </div>
+                        `;
+
+                    const actions = document.createElement("div");
+                    actions.className = "card-actions";
+
+                    const editButton = document.createElement("button");
+                    editButton.className = "button";
+                    editButton.type = "button";
+                    editButton.disabled = state.isSaving;
+                    editButton.textContent = state.editingOutcomeId === outcome.id ? "Editing" : "Edit";
+                    editButton.addEventListener("click", () => startOutcomeEdit(selectedFeature.id, outcome.id));
+                    actions.appendChild(editButton);
+
+                    item.appendChild(actions);
+
+                    const editor = renderOutcomeEditor(outcome);
+                    if (editor) {
+                        item.appendChild(editor);
+                    }
+
                     list.appendChild(item);
                 }
 
@@ -480,7 +886,6 @@
 
             function renderActions(data) {
                 elements.actions.innerHTML = "";
-
                 if (data.mode === "outcome_selection") {
                     const backButton = document.createElement("button");
                     backButton.className = "button";
@@ -513,14 +918,14 @@
                     const selectedFeature = data.selectedFeature || {};
                     elements.eyebrow.textContent = "Specrail outcome picker";
                     elements.title.textContent = selectedFeature.title || selectedFeature.id || "Selected feature";
-                    elements.summary.textContent = toolText(result) || "Choose an outcome in chat or create a new one.";
+                    elements.summary.textContent = toolText(result) || "Inspect outcomes or edit the existing records inline.";
                     renderOutcomeSelection(data);
                     return;
                 }
 
                 elements.eyebrow.textContent = "Specrail feature picker";
-                elements.title.textContent = "Select a feature";
-                elements.summary.textContent = toolText(result) || "Choose a feature to inspect its outcomes.";
+                elements.title.textContent = "Select or edit a feature";
+                elements.summary.textContent = toolText(result) || "Choose a feature to inspect its outcomes, or edit an existing one inline.";
                 renderFeatureSelection(data);
             }
 
@@ -587,7 +992,7 @@
                         protocolVersion: "2026-01-26",
                         clientInfo: {
                             name: "specrail-feature-picker",
-                            version: "1.0.0",
+                            version: "1.1.0",
                         },
                         capabilities: {},
                         appCapabilities: {

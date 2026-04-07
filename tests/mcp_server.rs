@@ -156,7 +156,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("Select a feature"));
+        .contains("Select or edit a feature"));
 
     let status_before = client.request(
         "tools/call",
@@ -340,6 +340,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         feature_picker["result"]["structuredContent"]["nextActions"]["selectFeatureTool"],
         "specrail_feature_navigate"
     );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["nextActions"]["editFeatureTool"],
+        "specrail_feature_edit"
+    );
 
     let outcome_picker = client.request(
         "tools/call",
@@ -374,6 +378,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["createOutcomeTool"],
         "specrail_outcome_new"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["editOutcomeTool"],
+        "specrail_outcome_edit"
     );
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["suggestedNewOutcomeOrder"],

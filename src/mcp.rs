@@ -258,8 +258,10 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_init" => tool_init(arguments),
         "specrail_feature_new" => tool_feature_new(arguments),
         "specrail_feature_activate" => tool_feature_activate(arguments),
+        "specrail_feature_edit" => tool_feature_edit(arguments),
         "specrail_outcome_new" => tool_outcome_new(arguments),
         "specrail_outcome_activate" => tool_outcome_activate(arguments),
+        "specrail_outcome_edit" => tool_outcome_edit(arguments),
         "specrail_test_add" => tool_test_add(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
@@ -458,7 +460,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "suggestedNewOutcomeOrder": next_order,
                 "nextActions": {
                     "selectOutcomeTool": "specrail_outcome_activate",
-                    "createOutcomeTool": "specrail_outcome_new"
+                    "createOutcomeTool": "specrail_outcome_new",
+                    "editOutcomeTool": "specrail_outcome_edit"
                 }
             })),
         ));
@@ -477,7 +480,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
             "features": feature_summaries,
             "nextActions": {
                 "selectFeatureTool": "specrail_feature_navigate",
-                "createFeatureTool": "specrail_feature_new"
+                "createFeatureTool": "specrail_feature_new",
+                "editFeatureTool": "specrail_feature_edit"
             }
         })),
     ))
@@ -649,6 +653,34 @@ fn tool_feature_activate(arguments: &Map<String, Value>) -> Result<Value> {
     run_cli_tool(&cwd, vec!["feature".to_string(), "activate".to_string(), id])
 }
 
+fn tool_feature_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    let outcomes = string_array(arguments, "outcomes")?;
+    let constraints = string_array(arguments, "constraints")?;
+    let non_goals = string_array(arguments, "non_goals")?;
+    let dependencies = string_array(arguments, "dependencies")?;
+
+    let mut args = vec![
+        "feature".to_string(),
+        "edit".to_string(),
+        id,
+        "--title".to_string(),
+        title,
+        "--purpose".to_string(),
+        purpose,
+    ];
+
+    push_repeated_flag(&mut args, "--outcome", outcomes);
+    push_repeated_flag(&mut args, "--constraint", constraints);
+    push_repeated_flag(&mut args, "--non-goal", non_goals);
+    push_repeated_flag(&mut args, "--dep", dependencies);
+
+    run_cli_tool(&cwd, args)
+}
+
 fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let feature_id = require_string(arguments, "feature_id")?;
@@ -695,6 +727,39 @@ fn tool_outcome_activate(arguments: &Map<String, Value>) -> Result<Value> {
             outcome_id,
         ],
     )
+}
+
+fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let title = require_string(arguments, "title")?;
+    let goal = require_string(arguments, "goal")?;
+    let order = require_u64(arguments, "order")?;
+    let prerequisites = string_array(arguments, "prerequisites")?;
+    let allowed_paths = string_array(arguments, "allowed_paths")?;
+    let forbidden_paths = string_array(arguments, "forbidden_paths")?;
+    let required_tests = string_array(arguments, "required_tests")?;
+
+    let mut args = vec![
+        "outcome".to_string(),
+        "edit".to_string(),
+        feature_id,
+        outcome_id,
+        "--title".to_string(),
+        title,
+        "--goal".to_string(),
+        goal,
+        "--order".to_string(),
+        order.to_string(),
+    ];
+
+    push_repeated_flag(&mut args, "--prereq", prerequisites);
+    push_repeated_flag(&mut args, "--allow", allowed_paths);
+    push_repeated_flag(&mut args, "--forbid", forbidden_paths);
+    push_repeated_flag(&mut args, "--test", required_tests);
+
+    run_cli_tool(&cwd, args)
 }
 
 fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1387,6 +1452,24 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_feature_edit",
+            "description": "Edit an existing feature.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" },
+                    "outcomes": { "type": "array", "items": { "type": "string" } },
+                    "constraints": { "type": "array", "items": { "type": "string" } },
+                    "non_goals": { "type": "array", "items": { "type": "string" } },
+                    "dependencies": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
             "name": "specrail_outcome_new",
             "description": "Create an outcome for a feature.",
             "inputSchema": {
@@ -1417,6 +1500,26 @@ fn tool_definitions() -> Vec<Value> {
                     "outcome_id": { "type": "string" }
                 },
                 "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_edit",
+            "description": "Edit an existing outcome.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string" },
+                    "outcome_id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "goal": { "type": "string" },
+                    "order": { "type": "integer", "minimum": 1 },
+                    "prerequisites": { "type": "array", "items": { "type": "string" } },
+                    "allowed_paths": { "type": "array", "items": { "type": "string" } },
+                    "forbidden_paths": { "type": "array", "items": { "type": "string" } },
+                    "required_tests": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
         }),
         json!({

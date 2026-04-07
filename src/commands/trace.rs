@@ -46,8 +46,10 @@ fn format_event_type(et: &LedgerEventType) -> &'static str {
     match et {
         LedgerEventType::ProjectInitialized => "project_initialized",
         LedgerEventType::FeatureCreated => "feature_created",
+        LedgerEventType::FeatureEdited => "feature_edited",
         LedgerEventType::FeatureActivated => "feature_activated",
         LedgerEventType::OutcomeCreated => "outcome_created",
+        LedgerEventType::OutcomeEdited => "outcome_edited",
         LedgerEventType::OutcomeActivated => "outcome_activated",
         LedgerEventType::TestAdded => "test_added",
         LedgerEventType::TestGenerationRun => "test_generation_run",

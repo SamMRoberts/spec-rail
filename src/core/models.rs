@@ -56,8 +56,10 @@ pub enum VerificationStatus {
 pub enum LedgerEventType {
     ProjectInitialized,
     FeatureCreated,
+    FeatureEdited,
     FeatureActivated,
     OutcomeCreated,
+    OutcomeEdited,
     OutcomeActivated,
     TestAdded,
     TestGenerationRun,

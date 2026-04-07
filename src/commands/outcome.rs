@@ -20,6 +20,18 @@ pub struct NewArgs {
     pub required_tests: Vec<String>,
 }
 
+pub struct EditArgs {
+    pub feature_id: String,
+    pub outcome_id: String,
+    pub title: String,
+    pub goal: String,
+    pub order: u32,
+    pub prerequisites: Vec<String>,
+    pub allowed_paths: Vec<String>,
+    pub forbidden_paths: Vec<String>,
+    pub required_tests: Vec<String>,
+}
+
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
     // Ensure the feature exists
     repo.load_feature(&args.feature_id)?;
@@ -123,6 +135,43 @@ pub fn show(repo: &Repository, feature_id: &str, outcome_id: &str) -> Result<()>
             println!("  • {rt}");
         }
     }
+    Ok(())
+}
+
+pub(crate) fn edit_outcome(repo: &Repository, args: EditArgs) -> Result<OutcomeSpec> {
+    let mut outcome = repo.load_outcome(&args.feature_id, &args.outcome_id)?;
+
+    outcome.title = args.title;
+    outcome.goal = args.goal;
+    outcome.order = args.order;
+    outcome.prerequisites = args.prerequisites;
+    outcome.allowed_paths = args.allowed_paths;
+    outcome.forbidden_paths = args.forbidden_paths;
+    outcome.required_tests = args.required_tests;
+
+    if matches!(
+        outcome.status,
+        OutcomeStatus::Verified | OutcomeStatus::Failed | OutcomeStatus::Skipped
+    ) {
+        outcome.status = OutcomeStatus::Pending;
+    }
+
+    repo.save_outcome(&outcome)?;
+
+    let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
+        .with_feature(&outcome.feature_id)
+        .with_outcome(&outcome.id);
+    Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(outcome)
+}
+
+pub fn edit(repo: &Repository, args: EditArgs) -> Result<()> {
+    let outcome = edit_outcome(repo, args)?;
+    println!(
+        "✓ Outcome '{}' updated for feature '{}'",
+        outcome.id, outcome.feature_id
+    );
     Ok(())
 }
 
