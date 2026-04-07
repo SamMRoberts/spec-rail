@@ -28,7 +28,7 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     for dir in [
         &specrail,
         &repo.features_dir(),
-        &repo.phases_dir(),
+        &repo.outcomes_dir(),
         &repo.tests_dir(),
         &repo.state_dir(),
         &repo.agents_dir(),

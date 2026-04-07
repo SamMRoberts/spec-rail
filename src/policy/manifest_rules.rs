@@ -3,12 +3,12 @@ use anyhow::Result;
 use crate::core::models::TestManifest;
 
 /// Validate that every test in the manifest references a real feature and
-/// phase that exist in the provided sets.
+/// outcome that exist in the provided sets.
 #[allow(dead_code)]
 pub fn validate_manifest_references(
     manifest: &TestManifest,
     known_feature_ids: &[String],
-    known_phase_ids: &[(String, String)], // (feature_id, phase_id)
+    known_outcome_ids: &[(String, String)], // (feature_id, outcome_id)
 ) -> Result<()> {
     for test in &manifest.tests {
         if !known_feature_ids.contains(&test.feature_id) {
@@ -19,12 +19,12 @@ pub fn validate_manifest_references(
             );
         }
 
-        let pair = (test.feature_id.clone(), test.phase_id.clone());
-        if !known_phase_ids.contains(&pair) {
+        let pair = (test.feature_id.clone(), test.outcome_id.clone());
+        if !known_outcome_ids.contains(&pair) {
             anyhow::bail!(
-                "test '{}' references unknown phase '{}' for feature '{}'",
+                "test '{}' references unknown outcome '{}' for feature '{}'",
                 test.id,
-                test.phase_id,
+                test.outcome_id,
                 test.feature_id
             );
         }

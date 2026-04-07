@@ -12,7 +12,7 @@ use clap::Parser;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use cli::{
-    Cli, Commands, FeatureCommands, PhaseCommands, TestCommands,
+    Cli, Commands, FeatureCommands, OutcomeCommands, TestCommands,
 };
 use core::repository::Repository;
 
@@ -83,10 +83,10 @@ fn run(cli: Cli) -> Result<()> {
             FeatureCommands::Activate { id } => commands::feature::activate(&repo, &id),
         },
 
-        Commands::Phase(sub) => match sub {
-            PhaseCommands::New {
+        Commands::Outcome(sub) => match sub {
+            OutcomeCommands::New {
                 feature_id,
-                phase_id,
+                outcome_id,
                 title,
                 goal,
                 order,
@@ -94,11 +94,11 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
-            } => commands::phase::new(
+            } => commands::outcome::new(
                 &repo,
-                commands::phase::NewArgs {
+                commands::outcome::NewArgs {
                     feature_id,
-                    phase_id,
+                    outcome_id,
                     title,
                     goal,
                     order,
@@ -108,22 +108,22 @@ fn run(cli: Cli) -> Result<()> {
                     required_tests,
                 },
             ),
-            PhaseCommands::List { feature_id } => commands::phase::list(&repo, &feature_id),
-            PhaseCommands::Show {
+            OutcomeCommands::List { feature_id } => commands::outcome::list(&repo, &feature_id),
+            OutcomeCommands::Show {
                 feature_id,
-                phase_id,
-            } => commands::phase::show(&repo, &feature_id, &phase_id),
-            PhaseCommands::Activate {
+                outcome_id,
+            } => commands::outcome::show(&repo, &feature_id, &outcome_id),
+            OutcomeCommands::Activate {
                 feature_id,
-                phase_id,
-            } => commands::phase::activate(&repo, &feature_id, &phase_id),
+                outcome_id,
+            } => commands::outcome::activate(&repo, &feature_id, &outcome_id),
         },
 
         Commands::Test(sub) => match sub {
             TestCommands::Add {
                 id,
                 feature,
-                phase,
+                outcome,
                 path,
                 kind,
                 purpose_refs,
@@ -134,7 +134,7 @@ fn run(cli: Cli) -> Result<()> {
                     commands::test::AddArgs {
                         id,
                         feature_id: feature,
-                        phase_id: phase,
+                        outcome_id: outcome,
                         path,
                         kind: test_kind,
                         purpose_refs,
@@ -144,8 +144,8 @@ fn run(cli: Cli) -> Result<()> {
             TestCommands::Generate { agent } => {
                 commands::test::generate(&repo, agent.as_deref())
             }
-            TestCommands::List { feature, phase } => {
-                commands::test::list(&repo, feature.as_deref(), phase.as_deref())
+            TestCommands::List { feature, outcome } => {
+                commands::test::list(&repo, feature.as_deref(), outcome.as_deref())
             }
             TestCommands::SetStatus { id, status } => {
                 let test_status = parse_test_status(&status)?;

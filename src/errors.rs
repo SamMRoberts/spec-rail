@@ -9,20 +9,20 @@ pub enum SpeRailError {
     #[error("feature not found: {0}")]
     FeatureNotFound(String),
 
-    #[error("phase not found: {phase_id} for feature {feature_id}")]
-    PhaseNotFound {
+    #[error("outcome not found: {outcome_id} for feature {feature_id}")]
+    OutcomeNotFound {
         feature_id: String,
-        phase_id: String,
+        outcome_id: String,
     },
 
     #[error("no active feature set — use `specrail feature activate <id>`")]
     NoActiveFeature,
 
-    #[error("no active phase set — use `specrail phase activate <feature-id> <phase-id>`")]
-    NoActivePhase,
+    #[error("no active outcome set — use `specrail outcome activate <feature-id> <outcome-id>`")]
+    NoActiveOutcome,
 
-    #[error("phase gate rejected: {0}")]
-    PhaseGateRejected(String),
+    #[error("outcome gate rejected: {0}")]
+    OutcomeGateRejected(String),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

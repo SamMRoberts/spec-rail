@@ -21,7 +21,7 @@ fn init_creates_directory_structure() {
     assert!(base.is_dir(), ".specrail/ not created");
     assert!(base.join("project.yaml").exists(), "project.yaml missing");
     assert!(base.join("features").is_dir(), "features/ missing");
-    assert!(base.join("phases").is_dir(), "phases/ missing");
+    assert!(base.join("outcomes").is_dir(), "outcomes/ missing");
     assert!(base.join("tests").is_dir(), "tests/ missing");
     assert!(base.join("tests/manifest.yaml").exists(), "manifest.yaml missing");
     assert!(base.join("state").is_dir(), "state/ missing");

@@ -3,10 +3,10 @@ use anyhow::{Context, Result};
 use crate::{
     core::{
         ledger::Ledger,
-        models::{LedgerEvent, LedgerEventType, PhaseStatus},
+        models::{LedgerEvent, LedgerEventType, OutcomeStatus},
         repository::Repository,
     },
-    policy::phase_gate,
+    policy::outcome_gate,
 };
 
 pub fn run(repo: &Repository) -> Result<()> {
@@ -17,61 +17,61 @@ pub fn run(repo: &Repository) -> Result<()> {
         .as_deref()
         .context("no active feature")?;
 
-    let phase_id = state
-        .active_phase
+    let outcome_id = state
+        .active_outcome
         .as_deref()
-        .context("no active phase")?;
+        .context("no active outcome")?;
 
-    let phase = repo.load_phase(feature_id, phase_id)?;
+    let outcome = repo.load_outcome(feature_id, outcome_id)?;
 
-    // Gate: current phase must be verified
-    phase_gate::check_advance_gates(&phase)?;
+    // Gate: current outcome must be verified
+    outcome_gate::check_advance_gates(&outcome)?;
 
-    // Find the next phase by order
-    let all_phases = repo.list_phases(feature_id)?;
-    let next_phase = all_phases
+    // Find the next outcome by order
+    let all_outcomes = repo.list_outcomes(feature_id)?;
+    let next_outcome = all_outcomes
         .iter()
-        .find(|p| p.order == phase.order + 1)
+        .find(|o| o.order == outcome.order + 1)
         .cloned();
 
     // Log advancement
-    let event = LedgerEvent::new(LedgerEventType::PhaseAdvanced)
+    let event = LedgerEvent::new(LedgerEventType::OutcomeAdvanced)
         .with_feature(feature_id)
-        .with_phase(phase_id)
+        .with_outcome(outcome_id)
         .with_message(
-            next_phase
+            next_outcome
                 .as_ref()
-                .map(|np| format!("advanced to {}", np.id))
+                .map(|no| format!("advanced to {}", no.id))
                 .unwrap_or_else(|| "feature complete".into()),
         );
     Ledger::append(&repo.ledger_path(), &event)?;
 
-    match next_phase {
+    match next_outcome {
         Some(mut next) => {
-            next.status = PhaseStatus::Active;
-            repo.save_phase(&next)?;
+            next.status = OutcomeStatus::Active;
+            repo.save_outcome(&next)?;
 
             let mut state = repo.load_state()?;
-            state.active_phase = Some(next.id.clone());
+            state.active_outcome = Some(next.id.clone());
             repo.save_state(&state)?;
 
-            super::feature::set_current_phase(repo, feature_id, Some(&next.id))?;
+            super::feature::set_current_outcome(repo, feature_id, Some(&next.id))?;
 
-            println!("✓ Advanced from '{phase_id}' to '{}'.", next.id);
+            println!("✓ Advanced from '{outcome_id}' to '{}'.", next.id);
             println!("  Next: specrail implement");
         }
         None => {
-            // No next phase — mark feature complete
+            // No next outcome — mark feature complete
             let mut feature = repo.load_feature(feature_id)?;
             feature.status = crate::core::models::FeatureStatus::Complete;
-            feature.current_phase = None;
+            feature.current_outcome = None;
             repo.save_feature(&feature)?;
 
             let mut state = repo.load_state()?;
-            state.active_phase = None;
+            state.active_outcome = None;
             repo.save_state(&state)?;
 
-            println!("✓ All phases for feature '{feature_id}' are complete!");
+            println!("✓ All outcomes for feature '{feature_id}' are complete!");
             println!("  Feature marked as complete.");
         }
     }

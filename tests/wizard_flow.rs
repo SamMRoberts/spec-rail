@@ -9,7 +9,7 @@ fn specrail(dir: &TempDir) -> Command {
 }
 
 #[test]
-fn init_walkthrough_creates_feature_and_multiple_phases() {
+fn init_walkthrough_creates_feature_and_multiple_outcomes() {
     let dir = TempDir::new().unwrap();
 
     specrail(&dir)
@@ -26,7 +26,7 @@ fn init_walkthrough_creates_feature_and_multiple_phases() {
              \n\
              sessions\n\
              \n\
-             phase-1\n\
+             outcome-1\n\
              Validation\n\
              Validate credentials and reject bad input.\n\
              \n\
@@ -38,11 +38,11 @@ fn init_walkthrough_creates_feature_and_multiple_phases() {
              tests/auth/validate.rs\n\
              \n\
              y\n\
-             phase-2\n\
+             outcome-2\n\
              Persistence\n\
              Persist authenticated users.\n\
              \n\
-             phase-1\n\
+             outcome-1\n\
              \n\
              src/auth/persistence/**\n\
              \n\
@@ -60,27 +60,27 @@ fn init_walkthrough_creates_feature_and_multiple_phases() {
     let feature = fs::read_to_string(dir.path().join(".specrail/features/auth.yaml")).unwrap();
     assert!(feature.contains("Authentication"));
     assert!(feature.contains("Users can sign in"));
-    assert!(feature.contains("phase-2"), "feature should point to the active phase");
+    assert!(feature.contains("outcome-2"), "feature should point to the active outcome");
 
-    let phase_one = fs::read_to_string(dir.path().join(".specrail/phases/auth/phase-1.yaml"))
+    let outcome_one = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-1.yaml"))
         .unwrap();
-    assert!(phase_one.contains("src/auth/**"));
-    assert!(phase_one.contains("tests/auth/validate.rs"));
+    assert!(outcome_one.contains("src/auth/**"));
+    assert!(outcome_one.contains("tests/auth/validate.rs"));
 
-    let phase_two = fs::read_to_string(dir.path().join(".specrail/phases/auth/phase-2.yaml"))
+    let outcome_two = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-2.yaml"))
         .unwrap();
-    assert!(phase_two.contains("phase-1"));
-    assert!(phase_two.contains("src/auth/persistence/**"));
+    assert!(outcome_two.contains("outcome-1"));
+    assert!(outcome_two.contains("src/auth/persistence/**"));
 
     let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("auth"));
-    assert!(state.contains("phase-2"));
+    assert!(state.contains("outcome-2"));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("feature_created"));
-    assert!(ledger.contains("phase_created"));
+    assert!(ledger.contains("outcome_created"));
     assert!(ledger.contains("feature_activated"));
-    assert!(ledger.contains("phase_activated"));
+    assert!(ledger.contains("outcome_activated"));
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn init_walkthrough_can_repeat_features() {
              \n\
              \n\
              \n\
-             phase-1\n\
+             outcome-1\n\
              Validation\n\
              Validate input.\n\
              \n\
@@ -114,7 +114,7 @@ fn init_walkthrough_can_repeat_features() {
              \n\
              \n\
              \n\
-             phase-1\n\
+             outcome-1\n\
              Capture\n\
              Capture payment details.\n\
              \n\
@@ -140,5 +140,5 @@ fn init_walkthrough_can_repeat_features() {
 
     let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("billing"), "last feature should be active");
-    assert!(state.contains("phase-1"), "last feature phase should be active");
+    assert!(state.contains("outcome-1"), "last feature outcome should be active");
 }

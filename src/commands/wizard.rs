@@ -3,7 +3,7 @@ use std::io::{self, BufRead, Write};
 use anyhow::{bail, Result};
 
 use crate::{
-    commands::{feature, phase, test},
+    commands::{feature, outcome, test},
     core::repository::Repository,
 };
 
@@ -21,7 +21,7 @@ fn run_with_io<R: BufRead, W: Write>(
     reader: &mut R,
     writer: &mut W,
 ) -> Result<()> {
-    writeln!(writer, "\nWalkthrough: add features and phases to get started.")?;
+    writeln!(writer, "\nWalkthrough: add features and outcomes to get started.")?;
     writeln!(
         writer,
         "Press Enter on an empty list prompt to move to the next section."
@@ -52,15 +52,15 @@ fn run_with_io<R: BufRead, W: Write>(
 
         writeln!(writer, "\nCreated feature '{}'.", feature.id)?;
 
-        let latest_phase_id = prompt_phases(repo, reader, writer, &feature.id)?;
+        let latest_outcome_id = prompt_outcomes(repo, reader, writer, &feature.id)?;
 
         feature::activate_feature(repo, &feature.id)?;
-        phase::activate_phase(repo, &feature.id, &latest_phase_id)?;
+        outcome::activate_outcome(repo, &feature.id, &latest_outcome_id)?;
 
         writeln!(
             writer,
-            "Activated feature '{}' and phase '{}'.",
-            feature.id, latest_phase_id
+            "Activated feature '{}' and outcome '{}'.",
+            feature.id, latest_outcome_id
         )?;
         writer.flush()?;
 
@@ -122,83 +122,83 @@ fn prompt_feature<R: BufRead, W: Write>(
     }))
 }
 
-fn prompt_phases<R: BufRead, W: Write>(
+fn prompt_outcomes<R: BufRead, W: Write>(
     repo: &Repository,
     reader: &mut R,
     writer: &mut W,
     feature_id: &str,
 ) -> Result<String> {
-    let mut latest_phase_id = None;
+    let mut latest_outcome_id = None;
     let mut next_order = 1;
 
     loop {
-        let phase_args = match prompt_phase(reader, writer, feature_id, next_order, latest_phase_id.is_some())? {
+        let outcome_args = match prompt_outcome(reader, writer, feature_id, next_order, latest_outcome_id.is_some())? {
             Some(args) => args,
-            None if latest_phase_id.is_some() => break,
+            None if latest_outcome_id.is_some() => break,
             None => {
-                writeln!(writer, "At least one phase is required for each feature.")?;
+                writeln!(writer, "At least one outcome is required for each feature.")?;
                 writer.flush()?;
                 continue;
             }
         };
 
-        let phase = match phase::create(repo, phase_args) {
-            Ok(phase) => phase,
+        let outcome = match outcome::create(repo, outcome_args) {
+            Ok(outcome) => outcome,
             Err(error) => {
-                writeln!(writer, "Could not create phase: {error}")?;
+                writeln!(writer, "Could not create outcome: {error}")?;
                 writer.flush()?;
                 continue;
             }
         };
 
-        writeln!(writer, "Created phase '{}' (order {}).", phase.id, phase.order)?;
+        writeln!(writer, "Created outcome '{}' (order {}).", outcome.id, outcome.order)?;
         writer.flush()?;
 
-        next_order = phase.order.saturating_add(1);
-        latest_phase_id = Some(phase.id.clone());
+        next_order = outcome.order.saturating_add(1);
+        latest_outcome_id = Some(outcome.id.clone());
 
-        let question = format!("Add another phase for '{}' ?", feature_id);
+        let question = format!("Add another outcome for '{}' ?", feature_id);
         if !confirm(reader, writer, &question, false)? {
             break;
         }
     }
 
-    latest_phase_id.ok_or_else(|| anyhow::anyhow!("walkthrough ended without a phase"))
+    latest_outcome_id.ok_or_else(|| anyhow::anyhow!("walkthrough ended without an outcome"))
 }
 
-fn prompt_phase<R: BufRead, W: Write>(
+fn prompt_outcome<R: BufRead, W: Write>(
     reader: &mut R,
     writer: &mut W,
     feature_id: &str,
     default_order: u32,
-    already_created_phase: bool,
-) -> Result<Option<phase::NewArgs>> {
-    let phase_id_prompt = if already_created_phase {
-        "\nPhase ID (leave blank to stop adding phases): "
+    already_created_outcome: bool,
+) -> Result<Option<outcome::NewArgs>> {
+    let outcome_id_prompt = if already_created_outcome {
+        "\nOutcome ID (leave blank to stop adding outcomes): "
     } else {
-        "\nPhase ID: "
+        "\nOutcome ID: "
     };
 
-    let Some(phase_id) = prompt_optional(reader, writer, phase_id_prompt)? else {
+    let Some(outcome_id) = prompt_optional(reader, writer, outcome_id_prompt)? else {
         return Ok(None);
     };
 
-    let title = prompt_required(reader, writer, "Phase title: ")?;
-    let goal = prompt_required(reader, writer, "Phase goal: ")?;
+    let title = prompt_required(reader, writer, "Outcome title: ")?;
+    let goal = prompt_required(reader, writer, "Outcome goal: ")?;
     let order = prompt_u32_with_default(
         reader,
         writer,
-        &format!("Phase order [{default_order}]: "),
+        &format!("Outcome order [{default_order}]: "),
         default_order,
     )?;
-    let prerequisites = collect_list(reader, writer, "Phase prerequisite")?;
+    let prerequisites = collect_list(reader, writer, "Outcome prerequisite")?;
     let allowed_paths = collect_list(reader, writer, "Allowed path")?;
     let forbidden_paths = collect_list(reader, writer, "Forbidden path")?;
     let required_tests = collect_list(reader, writer, "Required test path")?;
 
-    Ok(Some(phase::NewArgs {
+    Ok(Some(outcome::NewArgs {
         feature_id: feature_id.to_string(),
-        phase_id,
+        outcome_id,
         title,
         goal,
         order,

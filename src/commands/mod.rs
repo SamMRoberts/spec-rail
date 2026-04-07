@@ -2,7 +2,7 @@ pub mod advance;
 pub mod feature;
 pub mod implement;
 pub mod init;
-pub mod phase;
+pub mod outcome;
 pub mod status;
 pub mod test;
 pub mod trace;

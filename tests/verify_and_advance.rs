@@ -9,7 +9,7 @@ fn specrail(dir: &TempDir) -> Command {
     cmd
 }
 
-/// Set up a project with one feature, two phases, and one test in the manifest.
+/// Set up a project with one feature, two outcomes, and one test in the manifest.
 fn full_setup(dir: &TempDir) {
     specrail(dir).args(["init", "--no-wizard"]).assert().success();
 
@@ -23,16 +23,16 @@ fn full_setup(dir: &TempDir) {
 
     specrail(dir)
         .args([
-            "phase", "new", "auth", "phase-1",
-            "--title", "Phase 1", "--goal", "Validate inputs.", "--order", "1",
+            "outcome", "new", "auth", "outcome-1",
+            "--title", "Outcome 1", "--goal", "Validate inputs.", "--order", "1",
         ])
         .assert()
         .success();
 
     specrail(dir)
         .args([
-            "phase", "new", "auth", "phase-2",
-            "--title", "Phase 2", "--goal", "Persist user.", "--order", "2",
+            "outcome", "new", "auth", "outcome-2",
+            "--title", "Outcome 2", "--goal", "Persist user.", "--order", "2",
         ])
         .assert()
         .success();
@@ -41,14 +41,14 @@ fn full_setup(dir: &TempDir) {
         .args([
             "test", "add", "test-validate-email",
             "--feature", "auth",
-            "--phase", "phase-1",
+            "--outcome", "outcome-1",
             "--path", "tests/domain/validate_email.rs",
             "--kind", "unit",
         ])
         .assert()
         .success();
 
-    // Mark test as written so the phase gate allows implementation
+    // Mark test as written so the outcome gate allows implementation
     specrail(dir)
         .args(["test", "set-status", "test-validate-email", "written"])
         .assert()
@@ -60,7 +60,7 @@ fn full_setup(dir: &TempDir) {
         .success();
 
     specrail(dir)
-        .args(["phase", "activate", "auth", "phase-1"])
+        .args(["outcome", "activate", "auth", "outcome-1"])
         .assert()
         .success();
 }
@@ -90,7 +90,7 @@ fn implement_fails_when_no_tests_in_manifest() {
 
     specrail(&dir)
         .args([
-            "phase", "new", "feat", "p1",
+            "outcome", "new", "feat", "o1",
             "--title", "T", "--goal", "g", "--order", "1",
         ])
         .assert()
@@ -102,7 +102,7 @@ fn implement_fails_when_no_tests_in_manifest() {
         .success();
 
     specrail(&dir)
-        .args(["phase", "activate", "feat", "p1"])
+        .args(["outcome", "activate", "feat", "o1"])
         .assert()
         .success();
 
@@ -125,7 +125,7 @@ fn implement_fails_when_tests_still_planned() {
 
     specrail(&dir)
         .args([
-            "phase", "new", "feat", "p1",
+            "outcome", "new", "feat", "o1",
             "--title", "T", "--goal", "g", "--order", "1",
         ])
         .assert()
@@ -134,7 +134,7 @@ fn implement_fails_when_tests_still_planned() {
     specrail(&dir)
         .args([
             "test", "add", "my-test",
-            "--feature", "feat", "--phase", "p1",
+            "--feature", "feat", "--outcome", "o1",
             "--path", "tests/my_test.rs",
         ])
         .assert()
@@ -147,7 +147,7 @@ fn implement_fails_when_tests_still_planned() {
         .success();
 
     specrail(&dir)
-        .args(["phase", "activate", "feat", "p1"])
+        .args(["outcome", "activate", "feat", "o1"])
         .assert()
         .success();
 
@@ -157,7 +157,7 @@ fn implement_fails_when_tests_still_planned() {
 // ── verify ────────────────────────────────────────────────────────────────────
 
 #[test]
-fn verify_fails_when_no_active_phase() {
+fn verify_fails_when_no_active_outcome() {
     let dir = TempDir::new().unwrap();
     specrail(&dir).args(["init", "--no-wizard"]).assert().success();
     specrail(&dir).arg("verify").assert().failure();
@@ -166,11 +166,11 @@ fn verify_fails_when_no_active_phase() {
 // ── advance ───────────────────────────────────────────────────────────────────
 
 #[test]
-fn advance_fails_when_phase_not_verified() {
+fn advance_fails_when_outcome_not_verified() {
     let dir = TempDir::new().unwrap();
     full_setup(&dir);
 
-    // Phase is active but not verified
+    // Outcome is active but not verified
     specrail(&dir).arg("advance").assert().failure();
 }
 
@@ -186,7 +186,7 @@ fn status_shows_project_info() {
         .assert()
         .success()
         .stdout(contains("auth"))
-        .stdout(contains("phase-1"));
+        .stdout(contains("outcome-1"));
 }
 
 // ── trace ─────────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ fn trace_shows_ledger_events() {
         .success()
         .stdout(contains("project_initialized"))
         .stdout(contains("feature_created"))
-        .stdout(contains("phase_created"))
+        .stdout(contains("outcome_created"))
         .stdout(contains("test_added"));
 }
 
@@ -281,21 +281,21 @@ fn verify_and_advance_happy_path() {
     // Advance should succeed
     specrail(&dir).arg("advance").assert().success();
 
-    // State should now reference phase-2
+    // State should now reference outcome-2
     let state =
         fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("phase-2"), "state should advance to phase-2");
+    assert!(state.contains("outcome-2"), "state should advance to outcome-2");
 
     // Ledger should show advancement
     let ledger =
         fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("phase_advanced"));
-    assert!(ledger.contains("phase_verified"));
+    assert!(ledger.contains("outcome_advanced"));
+    assert!(ledger.contains("outcome_verified"));
 }
 
-/// Test that verify marks phase as failed when test_command exits non-zero.
+/// Test that verify marks outcome as failed when test_command exits non-zero.
 #[test]
-fn verify_marks_phase_failed_on_test_failure() {
+fn verify_marks_outcome_failed_on_test_failure() {
     let dir = TempDir::new().unwrap();
     full_setup(&dir);
 
@@ -310,10 +310,11 @@ fn verify_marks_phase_failed_on_test_failure() {
     // Verify exits with success (CLI completes) but records failure
     specrail(&dir).arg("verify").assert().success();
 
-    let phase = fs::read_to_string(
+    let outcome = fs::read_to_string(
         dir.path()
-            .join(".specrail/phases/auth/phase-1.yaml"),
+            .join(".specrail/outcomes/auth/outcome-1.yaml"),
     )
     .unwrap();
-    assert!(phase.contains("failed"), "phase should be marked failed");
+    assert!(outcome.contains("failed"), "outcome should be marked failed");
 }
+

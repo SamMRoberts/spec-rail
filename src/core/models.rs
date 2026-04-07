@@ -15,7 +15,7 @@ pub enum FeatureStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
-pub enum PhaseStatus {
+pub enum OutcomeStatus {
     #[default]
     Pending,
     Active,
@@ -57,15 +57,15 @@ pub enum LedgerEventType {
     ProjectInitialized,
     FeatureCreated,
     FeatureActivated,
-    PhaseCreated,
-    PhaseActivated,
+    OutcomeCreated,
+    OutcomeActivated,
     TestAdded,
     TestGenerationRun,
     ImplementationRun,
     VerificationRun,
-    PhaseVerified,
-    PhaseFailed,
-    PhaseAdvanced,
+    OutcomeVerified,
+    OutcomeFailed,
+    OutcomeAdvanced,
 }
 
 // ─── Core Domain Models ───────────────────────────────────────────────────────
@@ -85,11 +85,11 @@ pub struct FeatureSpec {
     pub dependencies: Vec<String>,
     #[serde(default)]
     pub status: FeatureStatus,
-    pub current_phase: Option<String>,
+    pub current_outcome: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PhaseSpec {
+pub struct OutcomeSpec {
     pub id: String,
     pub feature_id: String,
     pub title: String,
@@ -104,14 +104,14 @@ pub struct PhaseSpec {
     #[serde(default)]
     pub required_tests: Vec<String>,
     #[serde(default)]
-    pub status: PhaseStatus,
+    pub status: OutcomeStatus,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TestSpec {
     pub id: String,
     pub feature_id: String,
-    pub phase_id: String,
+    pub outcome_id: String,
     pub path: String,
     #[serde(default)]
     pub purpose_refs: Vec<String>,
@@ -132,7 +132,7 @@ pub struct TestManifest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AgentTask {
     pub feature_id: String,
-    pub phase_id: String,
+    pub outcome_id: String,
     pub agent: String,
     pub prompt: String,
     pub allowed_paths: Vec<String>,
@@ -167,7 +167,7 @@ pub struct LedgerEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub feature_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub phase_id: Option<String>,
+    pub outcome_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -182,7 +182,7 @@ impl LedgerEvent {
             timestamp: Utc::now(),
             event_type,
             feature_id: None,
-            phase_id: None,
+            outcome_id: None,
             agent: None,
             success: None,
             message: None,
@@ -194,8 +194,8 @@ impl LedgerEvent {
         self
     }
 
-    pub fn with_phase(mut self, phase_id: impl Into<String>) -> Self {
-        self.phase_id = Some(phase_id.into());
+    pub fn with_outcome(mut self, outcome_id: impl Into<String>) -> Self {
+        self.outcome_id = Some(outcome_id.into());
         self
     }
 
@@ -220,5 +220,5 @@ impl LedgerEvent {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ProjectState {
     pub active_feature: Option<String>,
-    pub active_phase: Option<String>,
+    pub active_outcome: Option<String>,
 }

@@ -29,25 +29,25 @@ pub enum Commands {
     #[command(subcommand)]
     Feature(FeatureCommands),
 
-    /// Manage phases
+    /// Manage outcomes
     #[command(subcommand)]
-    Phase(PhaseCommands),
+    Outcome(OutcomeCommands),
 
     /// Manage tests in the manifest
     #[command(subcommand)]
     Test(TestCommands),
 
-    /// Run the AI coding agent for the active phase
+    /// Run the AI coding agent for the active outcome
     Implement {
         /// Override the configured agent (generic-shell | copilot | codex)
         #[arg(long, short)]
         agent: Option<String>,
     },
 
-    /// Run tests to verify the active phase
+    /// Run tests to verify the active outcome
     Verify,
 
-    /// Advance to the next phase (requires current phase to be verified)
+    /// Advance to the next outcome (requires current outcome to be verified)
     Advance,
 
     /// Show project status dashboard
@@ -105,26 +105,26 @@ pub enum FeatureCommands {
     },
 }
 
-// ── Phase sub-commands ────────────────────────────────────────────────────────
+// ── Outcome sub-commands ──────────────────────────────────────────────────────
 
 #[derive(Subcommand, Debug)]
-pub enum PhaseCommands {
-    /// Create a new phase for a feature
+pub enum OutcomeCommands {
+    /// Create a new outcome for a feature
     New {
         /// Feature ID
         feature_id: String,
-        /// Unique phase identifier (e.g. phase-1-domain)
-        phase_id: String,
-        /// Short title for the phase
+        /// Unique outcome identifier (e.g. outcome-1-domain)
+        outcome_id: String,
+        /// Short title for the outcome
         #[arg(long, short)]
         title: String,
-        /// Goal: what this phase accomplishes
+        /// Goal: what this outcome accomplishes
         #[arg(long, short)]
         goal: String,
-        /// Phase execution order (1-based)
+        /// Outcome execution order (1-based)
         #[arg(long, short)]
         order: u32,
-        /// Phase IDs that must be verified before this one (repeatable)
+        /// Outcome IDs that must be verified before this one (repeatable)
         #[arg(long = "prereq")]
         prerequisites: Vec<String>,
         /// Glob paths the agent is allowed to modify (repeatable)
@@ -138,26 +138,26 @@ pub enum PhaseCommands {
         required_tests: Vec<String>,
     },
 
-    /// List phases for a feature
+    /// List outcomes for a feature
     List {
         /// Feature ID
         feature_id: String,
     },
 
-    /// Show details of a phase
+    /// Show details of an outcome
     Show {
         /// Feature ID
         feature_id: String,
-        /// Phase ID
-        phase_id: String,
+        /// Outcome ID
+        outcome_id: String,
     },
 
-    /// Mark a phase as the active phase
+    /// Mark an outcome as the active outcome
     Activate {
         /// Feature ID
         feature_id: String,
-        /// Phase ID
-        phase_id: String,
+        /// Outcome ID
+        outcome_id: String,
     },
 }
 
@@ -172,9 +172,9 @@ pub enum TestCommands {
         /// Feature this test belongs to
         #[arg(long, short = 'f')]
         feature: String,
-        /// Phase this test belongs to
-        #[arg(long, short = 'P')]
-        phase: String,
+        /// Outcome this test belongs to
+        #[arg(long, short = 'O')]
+        outcome: String,
         /// Relative path to the test file
         #[arg(long, short = 'p')]
         path: String,
@@ -186,7 +186,7 @@ pub enum TestCommands {
         purpose_refs: Vec<String>,
     },
 
-    /// Generate required tests from feature and phase YAML using an AI agent
+    /// Generate required tests from feature and outcome YAML using an AI agent
     Generate {
         /// Override the agent used for generation (defaults to `copilot`)
         #[arg(long, short)]
@@ -198,9 +198,9 @@ pub enum TestCommands {
         /// Filter by feature ID
         #[arg(long, short)]
         feature: Option<String>,
-        /// Filter by phase ID
-        #[arg(long, short)]
-        phase: Option<String>,
+        /// Filter by outcome ID
+        #[arg(long, short = 'o')]
+        outcome: Option<String>,
     },
 
     /// Update the status of a test

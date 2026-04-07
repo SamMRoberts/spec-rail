@@ -4,10 +4,10 @@ use crate::{
     agents,
     core::{
         ledger::Ledger,
-        models::{AgentTask, LedgerEvent, LedgerEventType, PhaseStatus},
+        models::{AgentTask, LedgerEvent, LedgerEventType, OutcomeStatus},
         repository::Repository,
     },
-    policy::phase_gate,
+    policy::outcome_gate,
     prompts::builder,
 };
 
@@ -20,34 +20,34 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
         .as_deref()
         .context("no active feature — run `specrail feature activate <id>` first")?;
 
-    let phase_id = state
-        .active_phase
+    let outcome_id = state
+        .active_outcome
         .as_deref()
-        .context("no active phase — run `specrail phase activate <feature-id> <phase-id>` first")?;
+        .context("no active outcome — run `specrail outcome activate <feature-id> <outcome-id>` first")?;
 
     let feature = repo.load_feature(feature_id)?;
-    let mut phase = repo.load_phase(feature_id, phase_id)?;
+    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
     let manifest = repo.load_manifest()?;
 
-    // Phase gate checks
-    phase_gate::check_implementation_gates(&phase, &manifest).with_context(|| {
-        format!("phase gate check failed for phase '{phase_id}'")
+    // Outcome gate checks
+    outcome_gate::check_implementation_gates(&outcome, &manifest).with_context(|| {
+        format!("outcome gate check failed for outcome '{outcome_id}'")
     })?;
 
     let agent_name = agent_override.unwrap_or(&config.default_agent);
 
-    let prompt = builder::build_implementation_prompt(&feature, &phase, &manifest);
+    let prompt = builder::build_implementation_prompt(&feature, &outcome, &manifest);
 
     let task = AgentTask {
         feature_id: feature_id.to_string(),
-        phase_id: phase_id.to_string(),
+        outcome_id: outcome_id.to_string(),
         agent: agent_name.to_string(),
         prompt,
-        allowed_paths: phase.allowed_paths.clone(),
-        forbidden_paths: phase.forbidden_paths.clone(),
+        allowed_paths: outcome.allowed_paths.clone(),
+        forbidden_paths: outcome.forbidden_paths.clone(),
     };
 
-    println!("▶ Running agent '{agent_name}' for phase '{phase_id}'…");
+    println!("▶ Running agent '{agent_name}' for outcome '{outcome_id}'…");
     println!("{}", "─".repeat(60));
 
     let result = agents::run_task(agent_name, &task, Some(&repo.root))?;
@@ -58,15 +58,15 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     }
     println!("{}", "─".repeat(60));
 
-    // Update phase status to Active if still Pending
-    if phase.status == PhaseStatus::Pending {
-        phase.status = PhaseStatus::Active;
-        repo.save_phase(&phase)?;
+    // Update outcome status to Active if still Pending
+    if outcome.status == OutcomeStatus::Pending {
+        outcome.status = OutcomeStatus::Active;
+        repo.save_outcome(&outcome)?;
     }
 
     let event = LedgerEvent::new(LedgerEventType::ImplementationRun)
         .with_feature(feature_id)
-        .with_phase(phase_id)
+        .with_outcome(outcome_id)
         .with_agent(agent_name)
         .with_success(result.success);
     Ledger::append(&repo.ledger_path(), &event)?;
