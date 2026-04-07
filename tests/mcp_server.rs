@@ -157,7 +157,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("Select or edit a feature"));
+        .contains("specrail_feature_navigate"));
 
     let status_before = client.request(
         "tools/call",
