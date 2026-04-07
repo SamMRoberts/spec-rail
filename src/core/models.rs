@@ -20,6 +20,7 @@ pub enum OutcomeStatus {
     Pending,
     Active,
     #[serde(alias = "complete")]
+    #[serde(alias = "completed")]
     Verified,
     Failed,
     Skipped,

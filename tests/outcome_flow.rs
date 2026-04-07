@@ -273,3 +273,40 @@ fn outcome_edit_resets_legacy_complete_status_to_pending() {
     let outcome = fs::read_to_string(&path).unwrap();
     assert!(outcome.contains("status: pending"));
 }
+
+#[test]
+fn outcome_edit_resets_legacy_completed_status_to_pending() {
+    let dir = TempDir::new().unwrap();
+    setup(&dir);
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth-login", "outcome-1-domain",
+            "--title", "Domain Validation",
+            "--goal", "Initial goal.",
+            "--order", "1",
+        ])
+        .assert()
+        .success();
+
+    let path = dir
+        .path()
+        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
+    let updated = fs::read_to_string(&path)
+        .unwrap()
+        .replace("status: pending", "status: completed");
+    fs::write(&path, updated).unwrap();
+
+    specrail(&dir)
+        .args([
+            "outcome", "edit", "auth-login", "outcome-1-domain",
+            "--title", "Credential Validation",
+            "--goal", "Updated goal.",
+            "--order", "1",
+        ])
+        .assert()
+        .success();
+
+    let outcome = fs::read_to_string(&path).unwrap();
+    assert!(outcome.contains("status: pending"));
+}

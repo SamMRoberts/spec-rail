@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{BufRead, BufReader, Write},
     path::Path,
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
@@ -387,6 +388,93 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         outcome_picker["result"]["structuredContent"]["suggestedNewOutcomeOrder"],
         2
     );
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1
+            }
+        }),
+    );
+
+    let outcome_path = dir
+        .path()
+        .join(".specrail/outcomes/auth/login.yaml");
+    let updated = fs::read_to_string(&outcome_path)
+        .unwrap()
+        .replace("status: pending", "status: completed");
+    fs::write(&outcome_path, updated).unwrap();
+
+    let edit = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_edit",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials and MFA.",
+                "order": 1,
+                "prerequisites": [],
+                "allowed_paths": [],
+                "forbidden_paths": [],
+                "required_tests": []
+            }
+        }),
+    );
+    assert_eq!(edit["result"]["isError"], json!(false));
+
+    let refreshed = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {
+                "feature_id": "auth"
+            }
+        }),
+    );
+
+    let outcomes = refreshed["result"]["structuredContent"]["outcomes"]
+        .as_array()
+        .unwrap();
+    assert_eq!(outcomes[0]["status"], "pending");
 
     client.shutdown();
 }
