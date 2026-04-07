@@ -443,7 +443,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
             .collect();
 
         let count = outcome_summaries.len();
-        return Ok(tool_success_payload(
+        return Ok(feature_navigate_payload(
             format!(
                 "Feature '{feature_id}' selected. Found {count} outcome(s). Select an outcome with specrail_outcome_activate or create a new one with specrail_outcome_new."
             ),
@@ -465,7 +465,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     }
 
     let count = feature_summaries.len();
-    Ok(tool_success_payload(
+    Ok(feature_navigate_payload(
         format!(
             "Found {count} feature(s). Select a feature by calling specrail_feature_navigate with feature_id, or create a new feature with specrail_feature_new."
         ),
@@ -1186,11 +1186,35 @@ fn tool_success_payload(text: String, structured_content: Option<Value>) -> Valu
     tool_payload(text, structured_content, false)
 }
 
+fn feature_navigate_payload(text: String, structured_content: Option<Value>) -> Value {
+    tool_payload_with_meta(
+        text,
+        structured_content,
+        Some(json!({
+            "ui": {
+                "resourceUri": FEATURE_NAVIGATE_APP_URI,
+                "visibility": ["model", "app"]
+            },
+            "ui/resourceUri": FEATURE_NAVIGATE_APP_URI
+        })),
+        false,
+    )
+}
+
 fn tool_error_payload(error: impl std::fmt::Display) -> Value {
     tool_payload(error.to_string(), None, true)
 }
 
 fn tool_payload(text: String, structured_content: Option<Value>, is_error: bool) -> Value {
+    tool_payload_with_meta(text, structured_content, None, is_error)
+}
+
+fn tool_payload_with_meta(
+    text: String,
+    structured_content: Option<Value>,
+    meta: Option<Value>,
+    is_error: bool,
+) -> Value {
     let mut result = json!({
         "content": [
             {
@@ -1203,6 +1227,10 @@ fn tool_payload(text: String, structured_content: Option<Value>, is_error: bool)
 
     if let Some(structured_content) = structured_content {
         result["structuredContent"] = structured_content;
+    }
+
+    if let Some(meta) = meta {
+        result["_meta"] = meta;
     }
 
     result

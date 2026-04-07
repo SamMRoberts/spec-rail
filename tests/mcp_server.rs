@@ -327,6 +327,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         feature_picker["result"]["structuredContent"]["mode"],
         "feature_selection"
     );
+    assert_eq!(
+        feature_picker["result"]["_meta"]["ui"]["resourceUri"],
+        "ui://specrail/feature-navigate"
+    );
     let features = feature_picker["result"]["structuredContent"]["features"]
         .as_array()
         .unwrap();
@@ -349,6 +353,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["mode"],
         "outcome_selection"
+    );
+    assert_eq!(
+        outcome_picker["result"]["_meta"]["ui/resourceUri"],
+        "ui://specrail/feature-navigate"
     );
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["selectedFeature"]["id"],
