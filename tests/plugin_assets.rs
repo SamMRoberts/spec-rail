@@ -31,7 +31,7 @@ fn plugin_mcp_config_runs_specrail_mcp_server() {
 }
 
 #[test]
-fn plugin_workflow_skill_exists() {
+fn plugin_workflow_stage_skill_exists() {
     let skill_path = format!(
         "{}/.github/plugin/skills/specrail-workflow/SKILL.md",
         env!("CARGO_MANIFEST_DIR")

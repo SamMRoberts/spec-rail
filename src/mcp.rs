@@ -907,17 +907,11 @@ fn workflow_guidance_for_snapshot(
 }
 
 fn workflow_stage(snapshot: &OutcomeWorkflowSnapshot) -> String {
-    if snapshot.outcome.status == OutcomeStatus::Verified {
-        "activation".to_string()
-    } else if snapshot.outcome.status == OutcomeStatus::Failed
-        || snapshot.test_count == 0
-        || !snapshot.planned_test_ids.is_empty()
+    if snapshot.outcome.status != OutcomeStatus::Failed
+        && snapshot.outcome.status != OutcomeStatus::Verified
+        && (snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty())
     {
-        if snapshot.outcome.status == OutcomeStatus::Failed {
-            "activation".to_string()
-        } else {
-            "testing".to_string()
-        }
+        "testing".to_string()
     } else {
         "activation".to_string()
     }
