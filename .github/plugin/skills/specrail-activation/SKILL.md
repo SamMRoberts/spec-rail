@@ -7,20 +7,28 @@ Use this skill when the user wants help deciding implementation order or wants t
 
 When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect state and move the workflow forward.
 
-Default sequence:
+If the project is not initialized yet, use the `specrail-init` skill or call `specrail_init` before applying this workflow.
+
+If the active or planned outcomes do not yet have registered, non-`planned` tests, use the `specrail-testing` skill before running implementation.
+
+## Default sequence
 
 1. Call `specrail_status` to identify the current active feature, current active outcome, and whether work is already in progress.
-2. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, and `specrail_outcome_show` to gather the full set of features and outcomes before proposing an execution order.
-3. Determine the best feature order using explicit dependencies first.
-4. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
-5. Activate the first eligible feature with `specrail_feature_activate`.
-6. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
-7. Keep the user focused on the active outcome until it is successfully verified.
-8. After a successful outcome, move forward with `specrail_advance` or activate the next eligible outcome if needed.
-9. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
-10. Continue until all planned features and outcomes are verified or the user asks to stop.
+2. Call `specrail_feature_navigate` (no arguments) to see all features with progress indicators. Call again with `feature_id` to drill into a specific feature's outcomes.
+3. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
+4. Determine the best feature order using explicit dependencies first.
+5. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
+6. Before activating or implementing an outcome, confirm that it has registered tests and that none of its required tests are still `planned`.
+7. If tests are missing or still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-testing` skill, before continuing.
+8. Activate the first eligible feature with `specrail_feature_activate`.
+9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
+10. Run `specrail_implement` for the active outcome.
+11. Run `specrail_verify` for the active outcome.
+12. If verification succeeds, run `specrail_advance` to move to the next outcome.
+13. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
+14. Continue until all planned features and outcomes are verified or the user asks to stop.
 
-Ordering rules:
+## Ordering rules
 
 - Prefer features whose dependencies are already complete.
 - If feature dependencies are missing, ambiguous, or conflicting, ask follow-up questions before choosing an order.
@@ -30,38 +38,61 @@ Ordering rules:
 - If an outcome has prerequisites, do not activate it before its prerequisites are satisfied.
 - If ordering metadata is incomplete, ask the user to confirm the intended sequence.
 
-Execution rules:
+## Execution rules
 
 - Do not switch away from an already active, unverified outcome unless the user explicitly asks to reorder or abandon it.
 - Treat outcome success as `Verified`, not merely `Active`.
 - Do not advance to the next outcome after activation alone.
+- Follow the canonical execution loop: `specrail_implement`, then `specrail_verify`, then `specrail_advance`.
+- Do not bypass `specrail_advance` by directly activating the next outcome unless the user explicitly wants a manual override.
 - After each activation or advancement step, call `specrail_status` again to confirm the new state.
+- After each implementation or verification step, inspect the result before moving on.
 - If verification fails, keep the current outcome active and help the user resolve that outcome before moving on.
 - Do not skip blocked or failed outcomes without explicit user approval.
 - When a feature is complete, confirm that all of its outcomes are verified before moving to the next feature.
 
-Recommended loop:
+## Progress display
+
+After each `specrail_advance` call, show progress:
+
+```
+✅ Verified: auth → login
+▶  Next up : auth → register (Outcome 2)
+   Progress: auth — 1/3 outcomes complete (33%)
+```
+
+When a feature is completed:
+```
+🎉 Feature complete: auth — all 3 outcomes verified!
+▶  Moving to next feature: payment
+```
+
+## Recommended loop
 
 1. Identify the next eligible feature.
 2. Activate that feature.
 3. Identify the next eligible outcome in that feature.
-4. Activate that outcome.
-5. Work on that outcome until verification succeeds.
-6. Advance to the next outcome.
-7. Repeat until the feature is complete.
-8. Move to the next feature.
-9. Repeat until the full workflow is complete.
+4. Confirm that the outcome's tests are registered and ready.
+5. Activate that outcome.
+6. Run `specrail_implement`.
+7. Run `specrail_verify`.
+8. If verification succeeds, run `specrail_advance`.
+9. Repeat until the feature is complete.
+10. Move to the next feature.
+11. Repeat until the full workflow is complete.
 
-User interaction guidance:
+## User interaction guidance
 
 - If the best implementation order is unclear, explain the tradeoffs and ask targeted follow-up questions.
 - Summarize the proposed feature order and per-feature outcome order before making changes.
 - Tell the user which feature and outcome are active after each successful transition.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
 
-Example:
+## Example
 
 - If Feature B depends on Feature A, activate Feature A first.
 - If Feature A has outcomes with orders `1`, `2`, and `3`, activate them in that order.
+- If outcome `2` still has tests in `planned`, stop and use the testing workflow before running `specrail_implement`.
 - If outcome `2` fails verification, keep outcome `2` active and do not move to outcome `3` until outcome `2` is verified.
 - Once all outcomes in Feature A are verified, move to the next eligible feature and repeat.
+

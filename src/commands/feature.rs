@@ -18,6 +18,16 @@ pub struct NewArgs {
     pub dependencies: Vec<String>,
 }
 
+pub struct EditArgs {
+    pub id: String,
+    pub title: String,
+    pub purpose: String,
+    pub outcomes: Vec<String>,
+    pub constraints: Vec<String>,
+    pub non_goals: Vec<String>,
+    pub dependencies: Vec<String>,
+}
+
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
     let path = repo.feature_path(&args.id);
     if path.exists() {
@@ -102,6 +112,32 @@ pub fn show(repo: &Repository, id: &str) -> Result<()> {
     if let Some(outcome) = &f.current_outcome {
         println!("\nCurrent outcome: {outcome}");
     }
+    Ok(())
+}
+
+pub(crate) fn edit_feature(repo: &Repository, args: EditArgs) -> Result<FeatureSpec> {
+    let mut feature = repo.load_feature(&args.id)?;
+
+    feature.title = args.title;
+    feature.purpose = args.purpose;
+    feature.outcomes = args.outcomes;
+    feature.constraints = args.constraints;
+    feature.non_goals = args.non_goals;
+    feature.dependencies = args.dependencies;
+
+    repo.save_feature(&feature)?;
+
+    let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
+        .with_feature(&feature.id)
+        .with_message(format!("feature '{}' updated", feature.id));
+    Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(feature)
+}
+
+pub fn edit(repo: &Repository, args: EditArgs) -> Result<()> {
+    let feature = edit_feature(repo, args)?;
+    println!("✓ Feature '{}' updated: {}", feature.id, feature.title);
     Ok(())
 }
 

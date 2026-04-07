@@ -102,6 +102,30 @@ pub enum FeatureCommands {
         id: String,
     },
 
+    /// Edit an existing feature
+    Edit {
+        /// Feature ID
+        id: String,
+        /// Short human-readable title
+        #[arg(long, short)]
+        title: String,
+        /// Purpose statement: why this feature exists
+        #[arg(long, short)]
+        purpose: String,
+        /// Expected outcomes (repeatable)
+        #[arg(long = "outcome", short = 'o')]
+        outcomes: Vec<String>,
+        /// Constraints (repeatable)
+        #[arg(long = "constraint", short = 'c')]
+        constraints: Vec<String>,
+        /// Non-goals (repeatable)
+        #[arg(long = "non-goal", short = 'n')]
+        non_goals: Vec<String>,
+        /// Feature dependencies (repeatable)
+        #[arg(long = "dep", short = 'd')]
+        dependencies: Vec<String>,
+    },
+
     /// Mark a feature as the active feature
     Activate {
         /// Feature ID
@@ -154,6 +178,35 @@ pub enum OutcomeCommands {
         feature_id: String,
         /// Outcome ID
         outcome_id: String,
+    },
+
+    /// Edit an existing outcome
+    Edit {
+        /// Feature ID
+        feature_id: String,
+        /// Outcome ID
+        outcome_id: String,
+        /// Short title for the outcome
+        #[arg(long, short)]
+        title: String,
+        /// Goal: what this outcome accomplishes
+        #[arg(long, short)]
+        goal: String,
+        /// Outcome execution order (1-based)
+        #[arg(long, short)]
+        order: u32,
+        /// Outcome IDs that must be verified before this one (repeatable)
+        #[arg(long = "prereq")]
+        prerequisites: Vec<String>,
+        /// Glob paths the agent is allowed to modify (repeatable)
+        #[arg(long = "allow")]
+        allowed_paths: Vec<String>,
+        /// Glob paths the agent must NOT touch (repeatable)
+        #[arg(long = "forbid")]
+        forbidden_paths: Vec<String>,
+        /// Test paths required to pass (repeatable)
+        #[arg(long = "test")]
+        required_tests: Vec<String>,
     },
 
     /// Mark an outcome as the active outcome

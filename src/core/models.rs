@@ -19,6 +19,8 @@ pub enum OutcomeStatus {
     #[default]
     Pending,
     Active,
+    #[serde(alias = "complete")]
+    #[serde(alias = "completed")]
     Verified,
     Failed,
     Skipped,
@@ -56,8 +58,10 @@ pub enum VerificationStatus {
 pub enum LedgerEventType {
     ProjectInitialized,
     FeatureCreated,
+    FeatureEdited,
     FeatureActivated,
     OutcomeCreated,
+    OutcomeEdited,
     OutcomeActivated,
     TestAdded,
     TestGenerationRun,

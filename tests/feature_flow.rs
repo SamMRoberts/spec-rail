@@ -148,3 +148,40 @@ fn feature_activate_updates_state() {
         fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("feat"), "state should reference active feature");
 }
+
+#[test]
+fn feature_edit_updates_existing_file() {
+    let dir = TempDir::new().unwrap();
+    init(&dir);
+
+    specrail(&dir)
+        .args([
+            "feature", "new", "search",
+            "--title", "Search",
+            "--purpose", "Initial purpose.",
+            "--outcome", "Original outcome",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "feature", "edit", "search",
+            "--title", "Advanced Search",
+            "--purpose", "Updated purpose.",
+            "--outcome", "Fast query results",
+            "--constraint", "Stay under 200ms",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("updated"));
+
+    let feature = fs::read_to_string(dir.path().join(".specrail/features/search.yaml")).unwrap();
+    assert!(feature.contains("Advanced Search"));
+    assert!(feature.contains("Updated purpose."));
+    assert!(feature.contains("Fast query results"));
+    assert!(feature.contains("Stay under 200ms"));
+
+    let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
+    assert!(ledger.contains("feature_edited"));
+}

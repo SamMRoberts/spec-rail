@@ -2,16 +2,24 @@ use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 
-use crate::core::{ledger::Ledger, models::TestStatus, repository::Repository};
+use crate::core::{
+    ledger::Ledger,
+    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestStatus},
+    repository::Repository,
+};
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
+const UI_EXTENSION_NAME: &str = "io.modelcontextprotocol/ui";
+const UI_RESOURCE_MIME_TYPE: &str = "text/html;profile=mcp-app";
+const FEATURE_NAVIGATE_APP_URI: &str = "ui://specrail/feature-navigate";
+const FEATURE_NAVIGATE_APP_HTML: &str = include_str!("mcp_feature_navigate_app.html");
 const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     DEFAULT_PROTOCOL_VERSION,
     "2025-06-18",
@@ -31,6 +39,14 @@ fn server_capabilities() -> Value {
     json!({
         "tools": {
             "listChanged": false
+        },
+        "resources": {
+            "listChanged": false
+        },
+        "extensions": {
+            UI_EXTENSION_NAME: {
+                "mimeTypes": [UI_RESOURCE_MIME_TYPE]
+            }
         }
     })
 }
@@ -66,7 +82,8 @@ fn summarize_for_log(text: &str) -> String {
     if text.len() <= LIMIT {
         text.to_string()
     } else {
-        format!("{}…", &text[..LIMIT])
+        let truncated: String = text.chars().take(LIMIT).collect();
+        format!("{truncated}…")
     }
 }
 
@@ -92,9 +109,9 @@ pub fn run() -> Result<()> {
     ));
 
     while let Some((message, transport)) = read_message(&mut reader)? {
-        mcp_debug_log(format!("received message: {}", summarize_for_log(&message.to_string())));
+        mcp_debug_log(format!("received message: {}", summarize_for_log(&serde_json::to_string(&message).unwrap_or_else(|e| format!("<serialization error: {e}>")))));
         if let Some(response) = server.handle_message(message) {
-            mcp_debug_log(format!("sending response: {}", summarize_for_log(&response.to_string())));
+            mcp_debug_log(format!("sending response: {}", summarize_for_log(&serde_json::to_string(&response).unwrap_or_else(|e| format!("<serialization error: {e}>")))));
             write_message(&mut writer, &response, transport)?;
             writer.flush()?;
         }
@@ -191,6 +208,13 @@ impl McpServer {
             }
             "ping" => id.map(|id| jsonrpc_result(id, json!({}))),
             "tools/list" => id.map(|id| jsonrpc_result(id, json!({ "tools": tool_definitions() }))),
+            "resources/list" => {
+                id.map(|id| jsonrpc_result(id, json!({ "resources": resource_definitions() })))
+            }
+            "resources/read" => id.map(|id| match read_resource(message.get("params")) {
+                Ok(result) => jsonrpc_result(id, result),
+                Err(error) => jsonrpc_error(id, -32002, error.to_string()),
+            }),
             "tools/call" => {
                 let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
                 let result = handle_tool_call(&params).unwrap_or_else(|error| tool_error_payload(error));
@@ -225,6 +249,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
 
     match name {
         "specrail_status" => tool_status(arguments),
+        "specrail_feature_navigate" => tool_feature_navigate(arguments),
         "specrail_feature_list" => tool_feature_list(arguments),
         "specrail_feature_show" => tool_feature_show(arguments),
         "specrail_outcome_list" => tool_outcome_list(arguments),
@@ -234,8 +259,10 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_init" => tool_init(arguments),
         "specrail_feature_new" => tool_feature_new(arguments),
         "specrail_feature_activate" => tool_feature_activate(arguments),
+        "specrail_feature_edit" => tool_feature_edit(arguments),
         "specrail_outcome_new" => tool_outcome_new(arguments),
         "specrail_outcome_activate" => tool_outcome_activate(arguments),
+        "specrail_outcome_edit" => tool_outcome_edit(arguments),
         "specrail_test_add" => tool_test_add(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
@@ -244,6 +271,26 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_advance" => tool_advance(arguments),
         other => Ok(tool_error_payload(anyhow!("unknown tool '{other}'"))),
     }
+}
+
+#[derive(Serialize)]
+struct WorkflowGuidance {
+    stage: String,
+    recommended_skill: String,
+    summary: String,
+    blockers: Vec<String>,
+    next_tools: Vec<String>,
+    active_feature_id: Option<String>,
+    active_outcome_id: Option<String>,
+    candidate_feature_id: Option<String>,
+    candidate_outcome_id: Option<String>,
+}
+
+struct OutcomeWorkflowSnapshot {
+    feature_id: String,
+    outcome: OutcomeSpec,
+    test_count: usize,
+    planned_test_ids: Vec<String>,
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -255,7 +302,18 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                 format!("No specrail project found from {}.", cwd.display()),
                 Some(json!({
                     "initialized": false,
-                    "cwd": cwd.display().to_string()
+                    "cwd": cwd.display().to_string(),
+                    "workflow": WorkflowGuidance {
+                        stage: "init".to_string(),
+                        recommended_skill: "specrail-init".to_string(),
+                        summary: "Initialize specrail before planning features, tests, or implementation.".to_string(),
+                        blockers: vec!["No .specrail project was found from this working directory.".to_string()],
+                        next_tools: vec!["specrail_init".to_string()],
+                        active_feature_id: None,
+                        active_outcome_id: None,
+                        candidate_feature_id: None,
+                        candidate_outcome_id: None,
+                    }
                 })),
             ));
         }
@@ -303,13 +361,31 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     let active_feature = state.active_feature.clone().unwrap_or_else(|| "(none)".to_string());
     let active_outcome = state.active_outcome.clone().unwrap_or_else(|| "(none)".to_string());
     let project_name = config.name.clone();
-    let feature_count = feature_summaries.len();
+    let _feature_count = feature_summaries.len();
     let test_count = manifest.tests.len();
+    let workflow = build_workflow_guidance(&repo, &state, &features, &manifest)?;
 
     Ok(tool_success_payload(
-        format!(
-            "Project '{project_name}' is initialized. Active feature: {active_feature}. Active outcome: {active_outcome}. Features: {feature_count}. Tests: {test_count} (passing {passing}, written {written}, planned {planned})."
-        ),
+        {
+            let active_feat_icon = if state.active_feature.is_some() { "⚡" } else { "○" };
+            let active_out_icon = if state.active_outcome.is_some() { "⚡" } else { "○" };
+            let mut lines = vec![
+                format!("🚂 **{project_name}** — specrail project"),
+                String::new(),
+                format!("Active feature : {active_feat_icon} {active_feature}"),
+                format!("Active outcome : {active_out_icon} {active_outcome}"),
+                format!("Tests          : {test_count} total ({passing} passing, {written} written, {planned} planned)"),
+                String::new(),
+                format!("▶  {}", workflow.summary),
+            ];
+            if !workflow.blockers.is_empty() {
+                lines.push(String::new());
+                for b in &workflow.blockers {
+                    lines.push(format!("  ⚠️  {b}"));
+                }
+            }
+            lines.join("\n")
+        },
         Some(json!({
             "initialized": true,
             "root": repo.root.display().to_string(),
@@ -321,7 +397,8 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                 "passing": passing,
                 "written": written,
                 "planned": planned
-            }
+            },
+            "workflow": workflow
         })),
     ))
 }
@@ -330,10 +407,177 @@ fn tool_feature_list(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     let features = repo.list_features()?;
     let count = features.len();
-    Ok(tool_success_payload(
-        format!("Found {count} feature(s)."),
-        Some(json!({ "features": features })),
+    let list: String = features
+        .iter()
+        .map(|f| format!("  • {} — {}", f.id, f.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let text = if list.is_empty() {
+        "No features yet. Create one with specrail_feature_new.".to_string()
+    } else {
+        format!("Found {count} feature(s):\n{list}")
+    };
+    Ok(tool_success_payload(text, Some(json!({ "features": features }))))
+}
+
+fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let state = repo.load_state()?;
+    let features = repo.list_features()?;
+    let manifest = repo.load_manifest()?;
+    let feature_summaries: Vec<Value> = features
+        .iter()
+        .map(|feature| {
+            let outcomes = repo.list_outcomes(&feature.id).unwrap_or_default();
+            let verified_outcome_count = outcomes
+                .iter()
+                .filter(|outcome| outcome.status == OutcomeStatus::Verified)
+                .count();
+            let active_outcome_count = outcomes
+                .iter()
+                .filter(|outcome| outcome.status == crate::core::models::OutcomeStatus::Active)
+                .count();
+            json!({
+                "id": feature.id,
+                "title": feature.title,
+                "status": feature.status,
+                "outcomeCount": outcomes.len(),
+                "verifiedOutcomeCount": verified_outcome_count,
+                "activeOutcomeCount": active_outcome_count,
+                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str())
+            })
+        })
+        .collect();
+
+    let active_feature_id = state.active_feature.clone();
+    let active_outcome_id = state.active_outcome.clone();
+
+    if let Some(feature_id) = optional_string(arguments, "feature_id") {
+        let feature = repo.load_feature(&feature_id)?;
+        let outcomes = repo.list_outcomes(&feature_id)?;
+        let next_order = outcomes
+            .iter()
+            .map(|outcome| outcome.order)
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let outcome_summaries: Vec<Value> = outcomes
+            .iter()
+            .map(|outcome| {
+                let test_count = manifest
+                    .tests
+                    .iter()
+                    .filter(|t| t.feature_id == feature_id && t.outcome_id == outcome.id)
+                    .count();
+                let planned_test_count = manifest
+                    .tests
+                    .iter()
+                    .filter(|t| {
+                        t.feature_id == feature_id
+                            && t.outcome_id == outcome.id
+                            && t.status == TestStatus::Planned
+                    })
+                    .count();
+                let passing_test_count = manifest
+                    .tests
+                    .iter()
+                    .filter(|t| {
+                        t.feature_id == feature_id
+                            && t.outcome_id == outcome.id
+                            && t.status == TestStatus::Passing
+                    })
+                    .count();
+                json!({
+                    "id": outcome.id,
+                    "title": outcome.title,
+                    "status": outcome.status,
+                    "order": outcome.order,
+                    "isActive": active_outcome_id.as_deref() == Some(outcome.id.as_str()),
+                    "testCount": test_count,
+                    "plannedTestCount": planned_test_count,
+                    "passingTestCount": passing_test_count
+                })
+            })
+            .collect();
+
+        let count = outcome_summaries.len();
+        return Ok(feature_navigate_payload(
+            format!(
+                "Feature '{feature_id}' selected. Found {count} outcome(s). Select an outcome with specrail_outcome_activate or create a new one with specrail_outcome_new."
+            ),
+            Some(json!({
+                "mode": "outcome_selection",
+                "activeFeatureId": active_feature_id,
+                "activeOutcomeId": active_outcome_id,
+                "selectedFeatureId": feature_id,
+                "selectedFeature": feature,
+                "features": feature_summaries,
+                "outcomes": outcome_summaries,
+                "suggestedNewOutcomeOrder": next_order,
+                "nextActions": {
+                    "selectOutcomeTool": "specrail_outcome_activate",
+                    "createOutcomeTool": "specrail_outcome_new",
+                    "editOutcomeTool": "specrail_outcome_edit",
+                    "activateOutcomeTool": "specrail_outcome_activate"
+                }
+            })),
+        ));
+    }
+
+    let count = feature_summaries.len();
+    Ok(feature_navigate_payload(
+        format!(
+            "Found {count} feature(s). Select a feature by calling specrail_feature_navigate with feature_id, or create a new feature with specrail_feature_new."
+        ),
+        Some(json!({
+            "mode": "feature_selection",
+            "activeFeatureId": active_feature_id,
+            "activeOutcomeId": active_outcome_id,
+            "selectedFeatureId": Value::Null,
+            "features": feature_summaries,
+            "nextActions": {
+                "selectFeatureTool": "specrail_feature_navigate",
+                "createFeatureTool": "specrail_feature_new",
+                "editFeatureTool": "specrail_feature_edit",
+                "activateFeatureTool": "specrail_feature_activate"
+            }
+        })),
     ))
+}
+
+fn resource_definitions() -> Vec<Value> {
+    vec![json!({
+        "uri": FEATURE_NAVIGATE_APP_URI,
+        "name": "specrail_feature_navigate",
+        "title": "Specrail Feature Picker",
+        "description": "Interactive feature and outcome picker for the specrail workflow.",
+        "mimeType": UI_RESOURCE_MIME_TYPE
+    })]
+}
+
+fn read_resource(params: Option<&Value>) -> Result<Value> {
+    let uri = params
+        .and_then(|value| value.get("uri"))
+        .and_then(Value::as_str)
+        .context("missing resource uri")?;
+
+    match uri {
+        FEATURE_NAVIGATE_APP_URI => Ok(json!({
+            "contents": [
+                {
+                    "uri": FEATURE_NAVIGATE_APP_URI,
+                    "mimeType": UI_RESOURCE_MIME_TYPE,
+                    "text": FEATURE_NAVIGATE_APP_HTML,
+                    "_meta": {
+                        "ui": {
+                            "prefersBorder": true
+                        }
+                    }
+                }
+            ]
+        })),
+        other => bail!("resource not found: {other}"),
+    }
 }
 
 fn tool_feature_show(arguments: &Map<String, Value>) -> Result<Value> {
@@ -356,10 +600,17 @@ fn tool_outcome_list(arguments: &Map<String, Value>) -> Result<Value> {
     repo.load_feature(&feature_id)?;
     let outcomes = repo.list_outcomes(&feature_id)?;
     let count = outcomes.len();
-    Ok(tool_success_payload(
-        format!("Found {count} outcome(s) for feature '{feature_id}'."),
-        Some(json!({ "feature_id": feature_id, "outcomes": outcomes })),
-    ))
+    let list: String = outcomes
+        .iter()
+        .map(|o| format!("  {}. [{}] {} — {}", o.order, format!("{:?}", o.status).to_lowercase(), o.id, o.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let text = if list.is_empty() {
+        format!("No outcomes found for feature '{feature_id}'.")
+    } else {
+        format!("Found {count} outcome(s) for '{feature_id}':\n{list}")
+    };
+    Ok(tool_success_payload(text, Some(json!({ "feature_id": feature_id, "outcomes": outcomes }))))
 }
 
 fn tool_outcome_show(arguments: &Map<String, Value>) -> Result<Value> {
@@ -467,6 +718,34 @@ fn tool_feature_activate(arguments: &Map<String, Value>) -> Result<Value> {
     run_cli_tool(&cwd, vec!["feature".to_string(), "activate".to_string(), id])
 }
 
+fn tool_feature_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    let outcomes = string_array(arguments, "outcomes")?;
+    let constraints = string_array(arguments, "constraints")?;
+    let non_goals = string_array(arguments, "non_goals")?;
+    let dependencies = string_array(arguments, "dependencies")?;
+
+    let mut args = vec![
+        "feature".to_string(),
+        "edit".to_string(),
+        id,
+        "--title".to_string(),
+        title,
+        "--purpose".to_string(),
+        purpose,
+    ];
+
+    push_repeated_flag(&mut args, "--outcome", outcomes);
+    push_repeated_flag(&mut args, "--constraint", constraints);
+    push_repeated_flag(&mut args, "--non-goal", non_goals);
+    push_repeated_flag(&mut args, "--dep", dependencies);
+
+    run_cli_tool(&cwd, args)
+}
+
 fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let feature_id = require_string(arguments, "feature_id")?;
@@ -513,6 +792,39 @@ fn tool_outcome_activate(arguments: &Map<String, Value>) -> Result<Value> {
             outcome_id,
         ],
     )
+}
+
+fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let title = require_string(arguments, "title")?;
+    let goal = require_string(arguments, "goal")?;
+    let order = require_u64(arguments, "order")?;
+    let prerequisites = string_array(arguments, "prerequisites")?;
+    let allowed_paths = string_array(arguments, "allowed_paths")?;
+    let forbidden_paths = string_array(arguments, "forbidden_paths")?;
+    let required_tests = string_array(arguments, "required_tests")?;
+
+    let mut args = vec![
+        "outcome".to_string(),
+        "edit".to_string(),
+        feature_id,
+        outcome_id,
+        "--title".to_string(),
+        title,
+        "--goal".to_string(),
+        goal,
+        "--order".to_string(),
+        order.to_string(),
+    ];
+
+    push_repeated_flag(&mut args, "--prereq", prerequisites);
+    push_repeated_flag(&mut args, "--allow", allowed_paths);
+    push_repeated_flag(&mut args, "--forbid", forbidden_paths);
+    push_repeated_flag(&mut args, "--test", required_tests);
+
+    run_cli_tool(&cwd, args)
 }
 
 fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
@@ -588,6 +900,7 @@ fn run_cli_tool(cwd: &Path, args: Vec<String>) -> Result<Value> {
     let output = Command::new(&executable)
         .args(&args)
         .current_dir(cwd)
+        .stdin(Stdio::null())
         .output()
         .with_context(|| format!("running specrail {}", args.join(" ")))?;
 
@@ -636,6 +949,301 @@ fn build_cli_tool_text(
     }
 
     parts.join("\n\n")
+}
+
+fn build_workflow_guidance(
+    repo: &Repository,
+    state: &ProjectState,
+    features: &[FeatureSpec],
+    manifest: &TestManifest,
+) -> Result<WorkflowGuidance> {
+    if features.is_empty() {
+        return Ok(WorkflowGuidance {
+            stage: "workflow".to_string(),
+            recommended_skill: "specrail-workflow".to_string(),
+            summary: "No features exist yet. Gather the first feature and break it into ordered outcomes before planning tests.".to_string(),
+            blockers: vec!["The project has been initialized, but no features are registered yet.".to_string()],
+            next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: None,
+            candidate_outcome_id: None,
+        });
+    }
+
+    let mut any_outcomes = false;
+    for feature in features {
+        if !repo.list_outcomes(&feature.id)?.is_empty() {
+            any_outcomes = true;
+            break;
+        }
+    }
+
+    if !any_outcomes {
+        return Ok(WorkflowGuidance {
+            stage: "workflow".to_string(),
+            recommended_skill: "specrail-workflow".to_string(),
+            summary: "Features exist, but no outcomes are defined yet. Split the next feature into outcome-sized slices before planning tests.".to_string(),
+            blockers: vec!["At least one feature is present, but there are no outcomes to drive the TDD loop yet.".to_string()],
+            next_tools: vec!["specrail_outcome_new".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: state.active_feature.clone(),
+            candidate_outcome_id: None,
+        });
+    }
+
+    if let (Some(feature_id), Some(outcome_id)) =
+        (state.active_feature.as_deref(), state.active_outcome.as_deref())
+    {
+        let active = workflow_snapshot(repo, manifest, feature_id, outcome_id)?;
+        return workflow_guidance_for_snapshot(
+            repo,
+            state,
+            Some(&active),
+            find_first_incomplete_outcome(repo, features, manifest)?,
+        );
+    }
+
+    let candidate = find_first_incomplete_outcome(repo, features, manifest)?;
+    workflow_guidance_for_snapshot(repo, state, None, candidate)
+}
+
+fn workflow_guidance_for_snapshot(
+    repo: &Repository,
+    state: &ProjectState,
+    active: Option<&OutcomeWorkflowSnapshot>,
+    candidate: Option<OutcomeWorkflowSnapshot>,
+) -> Result<WorkflowGuidance> {
+    if let Some(active) = active {
+        let next_tools = if active.outcome.status == OutcomeStatus::Verified {
+            vec!["specrail_advance".to_string()]
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
+        } else if active.test_count == 0 || !active.planned_test_ids.is_empty() {
+            vec![
+                "specrail_test_add".to_string(),
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ]
+        } else {
+            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
+        };
+
+        let blockers = if active.test_count == 0 {
+            vec![format!(
+                "Active outcome '{}:{}' has no registered tests yet.",
+                active.feature_id, active.outcome.id
+            )]
+        } else if !active.planned_test_ids.is_empty() {
+            vec![format!(
+                "Active outcome '{}:{}' still has tests in planned status: {}.",
+                active.feature_id,
+                active.outcome.id,
+                active.planned_test_ids.join(", ")
+            )]
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec![format!(
+                "Active outcome '{}:{}' failed verification and must be fixed before advancing.",
+                active.feature_id, active.outcome.id
+            )]
+        } else {
+            Vec::new()
+        };
+
+        let summary = match active.outcome.status {
+            OutcomeStatus::Verified => {
+                let outcomes = repo.list_outcomes(&active.feature_id)?;
+                let has_next = outcomes.iter().any(|outcome| outcome.order == active.outcome.order + 1);
+                if has_next {
+                    format!(
+                        "Active outcome '{}:{}' is verified. Advance to unlock the next outcome.",
+                        active.feature_id, active.outcome.id
+                    )
+                } else {
+                    format!(
+                        "Active outcome '{}:{}' is verified. Advance once more to mark the feature complete.",
+                        active.feature_id, active.outcome.id
+                    )
+                }
+            }
+            OutcomeStatus::Failed => format!(
+                "Active outcome '{}:{}' failed verification. Keep it active, fix the implementation, then verify again.",
+                active.feature_id, active.outcome.id
+            ),
+            _ if active.test_count == 0 => format!(
+                "Active outcome '{}:{}' is blocked on test planning. Register at least one test before implementation.",
+                active.feature_id, active.outcome.id
+            ),
+            _ if !active.planned_test_ids.is_empty() => format!(
+                "Active outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
+                active.feature_id, active.outcome.id
+            ),
+            _ => format!(
+                "Active outcome '{}:{}' is ready for the implement → verify loop.",
+                active.feature_id, active.outcome.id
+            ),
+        };
+
+        return Ok(WorkflowGuidance {
+            stage: workflow_stage(active),
+            recommended_skill: workflow_skill(active).to_string(),
+            summary,
+            blockers,
+            next_tools,
+            active_feature_id: Some(active.feature_id.clone()),
+            active_outcome_id: Some(active.outcome.id.clone()),
+            candidate_feature_id: Some(active.feature_id.clone()),
+            candidate_outcome_id: Some(active.outcome.id.clone()),
+        });
+    }
+
+    let Some(candidate) = candidate else {
+        return Ok(WorkflowGuidance {
+            stage: "done".to_string(),
+            recommended_skill: "specrail-activation".to_string(),
+            summary: "All known outcomes are already verified or skipped. The TDD workflow is complete.".to_string(),
+            blockers: Vec::new(),
+            next_tools: vec!["specrail_status".to_string(), "specrail_trace".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: None,
+            candidate_outcome_id: None,
+        });
+    };
+
+    let (summary, blockers, next_tools, stage, recommended_skill) = if candidate.test_count == 0 {
+        (
+            format!(
+                "Next outcome '{}:{}' is blocked on test planning. Register at least one test before activation.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            vec![format!(
+                "Outcome '{}:{}' has no registered tests yet.",
+                candidate.feature_id, candidate.outcome.id
+            )],
+            vec![
+                "specrail_test_add".to_string(),
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ],
+            "testing".to_string(),
+            "specrail-testing".to_string(),
+        )
+    } else if !candidate.planned_test_ids.is_empty() {
+        (
+            format!(
+                "Next outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            vec![format!(
+                "Outcome '{}:{}' still has tests in planned status: {}.",
+                candidate.feature_id,
+                candidate.outcome.id,
+                candidate.planned_test_ids.join(", ")
+            )],
+            vec![
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ],
+            "testing".to_string(),
+            "specrail-testing".to_string(),
+        )
+    } else {
+        (
+            format!(
+                "Next outcome '{}:{}' is ready to activate and run through implement → verify → advance.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            Vec::new(),
+            vec![
+                "specrail_feature_activate".to_string(),
+                "specrail_outcome_activate".to_string(),
+                "specrail_implement".to_string(),
+                "specrail_verify".to_string(),
+                "specrail_advance".to_string(),
+            ],
+            "activation".to_string(),
+            "specrail-activation".to_string(),
+        )
+    };
+
+    Ok(WorkflowGuidance {
+        stage,
+        recommended_skill,
+        summary,
+        blockers,
+        next_tools,
+        active_feature_id: state.active_feature.clone(),
+        active_outcome_id: state.active_outcome.clone(),
+        candidate_feature_id: Some(candidate.feature_id),
+        candidate_outcome_id: Some(candidate.outcome.id),
+    })
+}
+
+fn workflow_stage(snapshot: &OutcomeWorkflowSnapshot) -> String {
+    if snapshot.outcome.status != OutcomeStatus::Failed
+        && snapshot.outcome.status != OutcomeStatus::Verified
+        && (snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty())
+    {
+        "testing".to_string()
+    } else {
+        "activation".to_string()
+    }
+}
+
+fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
+    if snapshot.outcome.status == OutcomeStatus::Verified
+        || snapshot.outcome.status == OutcomeStatus::Failed
+    {
+        "specrail-activation"
+    } else if snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty() {
+        "specrail-testing"
+    } else {
+        "specrail-activation"
+    }
+}
+
+fn find_first_incomplete_outcome(
+    repo: &Repository,
+    features: &[FeatureSpec],
+    manifest: &TestManifest,
+) -> Result<Option<OutcomeWorkflowSnapshot>> {
+    for feature in features {
+        for outcome in repo.list_outcomes(&feature.id)? {
+            if outcome.status != OutcomeStatus::Verified && outcome.status != OutcomeStatus::Skipped {
+                return workflow_snapshot(repo, manifest, &feature.id, &outcome.id).map(Some);
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn workflow_snapshot(
+    repo: &Repository,
+    manifest: &TestManifest,
+    feature_id: &str,
+    outcome_id: &str,
+) -> Result<OutcomeWorkflowSnapshot> {
+    let outcome = repo.load_outcome(feature_id, outcome_id)?;
+    let tests: Vec<_> = manifest
+        .tests
+        .iter()
+        .filter(|test| test.feature_id == feature_id && test.outcome_id == outcome_id)
+        .collect();
+    let planned_test_ids = tests
+        .iter()
+        .filter(|test| test.status == TestStatus::Planned)
+        .map(|test| test.id.clone())
+        .collect();
+
+    Ok(OutcomeWorkflowSnapshot {
+        feature_id: feature_id.to_string(),
+        outcome,
+        test_count: tests.len(),
+        planned_test_ids,
+    })
 }
 
 fn discover_repo(arguments: &Map<String, Value>) -> Result<Repository> {
@@ -709,11 +1317,35 @@ fn tool_success_payload(text: String, structured_content: Option<Value>) -> Valu
     tool_payload(text, structured_content, false)
 }
 
+fn feature_navigate_payload(text: String, structured_content: Option<Value>) -> Value {
+    tool_payload_with_meta(
+        text,
+        structured_content,
+        Some(json!({
+            "ui": {
+                "resourceUri": FEATURE_NAVIGATE_APP_URI,
+                "visibility": ["model", "app"]
+            },
+            "ui/resourceUri": FEATURE_NAVIGATE_APP_URI
+        })),
+        false,
+    )
+}
+
 fn tool_error_payload(error: impl std::fmt::Display) -> Value {
     tool_payload(error.to_string(), None, true)
 }
 
 fn tool_payload(text: String, structured_content: Option<Value>, is_error: bool) -> Value {
+    tool_payload_with_meta(text, structured_content, None, is_error)
+}
+
+fn tool_payload_with_meta(
+    text: String,
+    structured_content: Option<Value>,
+    meta: Option<Value>,
+    is_error: bool,
+) -> Value {
     let mut result = json!({
         "content": [
             {
@@ -726,6 +1358,10 @@ fn tool_payload(text: String, structured_content: Option<Value>, is_error: bool)
 
     if let Some(structured_content) = structured_content {
         result["structuredContent"] = structured_content;
+    }
+
+    if let Some(meta) = meta {
+        result["_meta"] = meta;
     }
 
     result
@@ -745,103 +1381,162 @@ fn tool_definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "specrail_status",
-            "description": "Inspect the current specrail project status and active workflow state.",
+            "title": "Project Status",
+            "description": "Get the current specrail project status, active workflow state, and recommended next action. Always call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "cwd": { "type": "string", "description": "Workspace or project path to inspect." }
+                    "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_feature_navigate",
+            "title": "Feature & Outcome Navigator",
+            "description": "Interactive feature and outcome browser. Without feature_id returns all features with progress summaries. With feature_id returns outcomes with test counts and status. Use this to browse and pick features/outcomes before activating them.",
+            "_meta": {
+                "ui": {
+                    "resourceUri": FEATURE_NAVIGATE_APP_URI,
+                    "visibility": ["model", "app"]
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string", "description": "Workspace or project root path." },
+                    "feature_id": { "type": "string", "description": "Feature identifier to drill into outcomes for." }
                 }
             }
         }),
         json!({
             "name": "specrail_feature_list",
-            "description": "List all features registered in the current specrail project.",
+            "title": "List Features",
+            "description": "List all features registered in the current specrail project with their status and identifier.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "cwd": { "type": "string" }
+                    "cwd": { "type": "string", "description": "Workspace or project root path." }
                 }
             }
         }),
         json!({
             "name": "specrail_feature_show",
-            "description": "Show a feature and its outcomes.",
+            "title": "Show Feature",
+            "description": "Show full details of a feature including its title, purpose, constraints, non-goals, and list of outcomes.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "id": { "type": "string", "description": "Feature identifier." }
+                    "id": { "type": "string", "description": "Feature identifier (e.g. 'auth', 'payment')." }
                 },
                 "required": ["id"]
             }
         }),
         json!({
             "name": "specrail_outcome_list",
-            "description": "List outcomes for a feature.",
+            "title": "List Outcomes",
+            "description": "List all outcomes for a feature, ordered by their execution order. Each outcome has an id, title, status, and order number.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "feature_id": { "type": "string" }
+                    "feature_id": { "type": "string", "description": "Feature identifier whose outcomes to list." }
                 },
                 "required": ["feature_id"]
             }
         }),
         json!({
             "name": "specrail_outcome_show",
-            "description": "Show a single outcome definition.",
+            "title": "Show Outcome",
+            "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, and required tests.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "feature_id": { "type": "string" },
-                    "outcome_id": { "type": "string" }
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier." }
                 },
                 "required": ["feature_id", "outcome_id"]
             }
         }),
         json!({
             "name": "specrail_test_list",
-            "description": "List tests from the specrail manifest, optionally filtered by feature or outcome.",
+            "title": "List Tests",
+            "description": "List tests from the specrail manifest. Filter by feature_id and/or outcome_id. Returns tests with their status (planned, written, passing, failing). Use to check whether tests are ready before implementation.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "feature_id": { "type": "string" },
-                    "outcome_id": { "type": "string" }
+                    "feature_id": { "type": "string", "description": "Filter to tests for this feature." },
+                    "outcome_id": { "type": "string", "description": "Filter to tests for this outcome (requires feature_id)." }
                 }
             }
         }),
         json!({
             "name": "specrail_trace",
-            "description": "Read the specrail ledger history.",
+            "title": "Audit Ledger",
+            "description": "Read the append-only specrail audit ledger showing the history of all project actions (features created, outcomes activated, tests updated, etc). Use limit to get recent events.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "limit": { "type": "integer", "minimum": 1 }
+                    "limit": { "type": "integer", "minimum": 1, "description": "Max number of most recent events to return." }
                 }
             }
         }),
         json!({
             "name": "specrail_init",
-            "description": "Initialize specrail in the given directory.",
+            "title": "Initialize Project",
+            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure with project.yaml, test manifest, and state files. Safe to run on an existing project (only adds missing files).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "cwd": { "type": "string" },
-                    "no_wizard": { "type": "boolean", "description": "Defaults to true for MCP usage." }
+                    "cwd": { "type": "string", "description": "Directory to initialize. Defaults to the server working directory." },
+                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard. Defaults to true for MCP usage." }
                 }
             }
         }),
         json!({
             "name": "specrail_feature_new",
-            "description": "Create a feature in the current specrail project.",
+            "title": "New Feature",
+            "description": "Create a new feature in the specrail project. A feature groups a set of ordered outcomes that together deliver a user-facing capability. After creating, call specrail_feature_activate to set it active.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "id": { "type": "string" },
+                    "id": { "type": "string", "description": "Unique slug identifier (e.g. 'auth', 'checkout')." },
+                    "title": { "type": "string", "description": "Human-readable feature title." },
+                    "purpose": { "type": "string", "description": "One or two sentence description of why this feature is needed." },
+                    "outcomes": { "type": "array", "items": { "type": "string" }, "description": "High-level outcome descriptions (optional, for documentation)." },
+                    "constraints": { "type": "array", "items": { "type": "string" }, "description": "Technical or business constraints." },
+                    "non_goals": { "type": "array", "items": { "type": "string" }, "description": "Explicitly out-of-scope items." },
+                    "dependencies": { "type": "array", "items": { "type": "string" }, "description": "Feature IDs this feature depends on." }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_feature_activate",
+            "title": "Activate Feature",
+            "description": "Set a feature as the active focus for the TDD workflow. Only one feature can be active at a time. Call this before activating an outcome to work on a feature's next outcome.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string", "description": "Feature identifier to activate." }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_feature_edit",
+            "title": "Edit Feature",
+            "description": "Update an existing feature's title, purpose, outcomes list, constraints, non-goals, or dependencies. All fields must be supplied (include unchanged values).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string", "description": "Feature identifier to edit." },
                     "title": { "type": "string" },
                     "purpose": { "type": "string" },
                     "outcomes": { "type": "array", "items": { "type": "string" } },
@@ -853,20 +1548,44 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
-            "name": "specrail_feature_activate",
-            "description": "Activate a feature.",
+            "name": "specrail_outcome_new",
+            "title": "New Outcome",
+            "description": "Create a new outcome for a feature. Outcomes are the step-by-step milestones that drive the TDD loop. Assign an order number (1, 2, 3…) so outcomes are activated in sequence. After creating, call specrail_outcome_activate.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "id": { "type": "string" }
+                    "feature_id": { "type": "string", "description": "Parent feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Unique slug identifier within the feature (e.g. 'login', 'register')." },
+                    "title": { "type": "string", "description": "Short outcome title." },
+                    "goal": { "type": "string", "description": "One sentence description of what this outcome proves when verified." },
+                    "order": { "type": "integer", "minimum": 1, "description": "Execution order (1 = first)." },
+                    "prerequisites": { "type": "array", "items": { "type": "string" }, "description": "Outcome IDs that must be verified first." },
+                    "allowed_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent is allowed to modify." },
+                    "forbidden_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent must not modify." },
+                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Test IDs or paths that must pass." }
                 },
-                "required": ["id"]
+                "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
         }),
         json!({
-            "name": "specrail_outcome_new",
-            "description": "Create an outcome for a feature.",
+            "name": "specrail_outcome_activate",
+            "title": "Activate Outcome",
+            "description": "Set an outcome as the active target for the implement → verify → advance TDD loop. Also sets the parent feature as active. Call this before specrail_implement. Cannot activate an already-verified outcome (use specrail_advance instead).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier to activate." }
+                },
+                "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_edit",
+            "title": "Edit Outcome",
+            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, or required tests. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -885,73 +1604,65 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
-            "name": "specrail_outcome_activate",
-            "description": "Activate an outcome for the current feature.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "cwd": { "type": "string" },
-                    "feature_id": { "type": "string" },
-                    "outcome_id": { "type": "string" }
-                },
-                "required": ["feature_id", "outcome_id"]
-            }
-        }),
-        json!({
             "name": "specrail_test_add",
-            "description": "Register a test in the specrail manifest.",
+            "title": "Add Test",
+            "description": "Register a test in the specrail manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "id": { "type": "string" },
-                    "feature_id": { "type": "string" },
-                    "outcome_id": { "type": "string" },
-                    "path": { "type": "string" },
-                    "kind": { "type": "string", "enum": ["unit", "integration", "e2e"] },
-                    "purpose_refs": { "type": "array", "items": { "type": "string" } }
+                    "id": { "type": "string", "description": "Unique test identifier." },
+                    "feature_id": { "type": "string", "description": "Feature this test belongs to." },
+                    "outcome_id": { "type": "string", "description": "Outcome this test validates." },
+                    "path": { "type": "string", "description": "Relative file path of the test (e.g. 'tests/auth_login_test.rs')." },
+                    "kind": { "type": "string", "enum": ["unit", "integration", "e2e"], "description": "Test kind. Defaults to 'unit'." },
+                    "purpose_refs": { "type": "array", "items": { "type": "string" }, "description": "Outcome IDs or acceptance criteria references this test covers." }
                 },
                 "required": ["id", "feature_id", "outcome_id", "path"]
             }
         }),
         json!({
             "name": "specrail_test_generate",
-            "description": "Generate required tests using the configured or selected agent.",
+            "title": "Generate Tests",
+            "description": "Use the configured AI agent to generate test files for planned tests in the active outcome. After generating, set test status to 'written' with specrail_test_set_status.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "agent": { "type": "string" }
+                    "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }
         }),
         json!({
             "name": "specrail_test_set_status",
-            "description": "Update a test status in the manifest.",
+            "title": "Update Test Status",
+            "description": "Update a test's status in the manifest. Allowed transitions: planned → written (test file written), written → passing (test now passes), written/passing → failing (regression). All tests must be non-planned before specrail_implement can run.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "id": { "type": "string" },
-                    "status": { "type": "string", "enum": ["planned", "written", "passing", "failing"] }
+                    "id": { "type": "string", "description": "Test identifier to update." },
+                    "status": { "type": "string", "enum": ["planned", "written", "passing", "failing"], "description": "New status for the test." }
                 },
                 "required": ["id", "status"]
             }
         }),
         json!({
             "name": "specrail_implement",
-            "description": "Run the implementation agent for the active outcome.",
+            "title": "Implement",
+            "description": "Run the AI implementation agent for the active outcome. Requires: active feature, active outcome, at least one registered test, and no tests in 'planned' status. The agent receives a structured prompt and the list of test paths to pass. After implementing, run specrail_verify.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "agent": { "type": "string" }
+                    "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }
         }),
         json!({
             "name": "specrail_verify",
-            "description": "Run the project's configured verification command for the active outcome.",
+            "title": "Verify",
+            "description": "Run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome 'verified' on success or 'failed' on failure. After a failed verify, fix the implementation and call verify again. After verified, call specrail_advance.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -961,7 +1672,8 @@ fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "specrail_advance",
-            "description": "Advance from the verified outcome to the next one.",
+            "title": "Advance",
+            "description": "Advance from a verified outcome to the next one in sequence (by order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be in 'verified' status.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
