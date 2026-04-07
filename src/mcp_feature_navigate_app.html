@@ -213,6 +213,58 @@
             transition: border-color 120ms;
         }
 
+        .card-collapsible,
+        .outcome-item-collapsible {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .card-summary,
+        .outcome-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+        }
+
+        .card-summary::-webkit-details-marker,
+        .outcome-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .card-summary:hover,
+        .outcome-summary:hover {
+            background: color-mix(in srgb, var(--bg-card-hover) 78%, transparent);
+        }
+
+        .card-content,
+        .outcome-content {
+            padding: 0 14px 12px;
+        }
+
+        .card-toggle,
+        .outcome-toggle {
+            font-size: 11px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .card-toggle::before,
+        .outcome-toggle::before {
+            content: "\25B8";
+            font-size: 10px;
+            transition: transform 120ms ease;
+        }
+
+        .card-collapsible[open] .card-toggle::before,
+        .outcome-item-collapsible[open] .outcome-toggle::before {
+            transform: rotate(90deg);
+        }
+
         .card:hover {
             border-color: var(--accent);
         }
@@ -563,6 +615,11 @@
             .card-row {
                 flex-direction: column;
             }
+
+            .card-toggle,
+            .outcome-toggle {
+                margin-left: 0;
+            }
         }
     </style>
 </head>
@@ -586,6 +643,7 @@
                 featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
                 isSaving: false, isActivating: null,
                 runningAction: null, lastToolRun: null,
+                expandedCards: {},
             };
             let nextId = 1;
             const pending = new Map();
@@ -612,6 +670,60 @@
             }
             function linesToArray(v) { return String(v ?? "").split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
             function arrayToLines(v) { return Array.isArray(v) ? v.join("\n") : ""; }
+
+            function cardStateKey(kind, ...parts) {
+                return [kind, ...parts.map(part => String(part ?? ""))].join(":");
+            }
+
+            function isCardExpanded(key) {
+                return state.expandedCards[key] === true;
+            }
+
+            function setCardExpanded(key, expanded) {
+                state.expandedCards[key] = expanded;
+            }
+
+            function ensureCardExpanded(key) {
+                if (!isCardExpanded(key)) setCardExpanded(key, true);
+            }
+
+            function makeCollapsibleCard(options) {
+                const {
+                    key,
+                    baseClass,
+                    extraClass = "",
+                    summaryClass,
+                    contentClass,
+                    toggleClass,
+                    collapsedLabel,
+                    expandedLabel,
+                    buildSummary,
+                    buildContent,
+                } = options;
+                const details = document.createElement("details");
+                details.className = `${baseClass} ${extraClass}`.trim();
+                details.open = isCardExpanded(key);
+                details.addEventListener("toggle", () => {
+                    setCardExpanded(key, details.open);
+                    reportSize();
+                });
+
+                const summary = document.createElement("summary");
+                summary.className = summaryClass;
+                buildSummary(summary, details.open);
+
+                const toggle = document.createElement("span");
+                toggle.className = toggleClass;
+                toggle.textContent = details.open ? expandedLabel : collapsedLabel;
+                summary.appendChild(toggle);
+                details.appendChild(summary);
+
+                const content = document.createElement("div");
+                content.className = contentClass;
+                buildContent(content);
+                details.appendChild(content);
+                return details;
+            }
 
             function badge(status) {
                 const map = {
@@ -891,6 +1003,7 @@
                 try {
                     const res = await callTool("specrail_feature_show", { ...state.toolArguments, id: featureId });
                     const f = res?.structuredContent?.feature ?? {};
+                    ensureCardExpanded(cardStateKey("feature", featureId));
                     state.editingFeatureId = featureId;
                     state.featureDraft = {
                         id: f.id ?? featureId, title: f.title ?? "", purpose: f.purpose ?? "",
@@ -922,6 +1035,7 @@
                 try {
                     const res = await callTool("specrail_outcome_show", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId });
                     const o = res?.structuredContent?.outcome ?? {};
+                    ensureCardExpanded(cardStateKey("outcome", featureId, outcomeId));
                     state.editingOutcomeId = outcomeId;
                     state.outcomeDraft = {
                         feature_id: featureId, outcome_id: o.id ?? outcomeId, title: o.title ?? "",
@@ -1063,50 +1177,79 @@
                     const verifiedCount = Number(feature.verifiedOutcomeCount ?? 0);
                     const pct = outcomeCount > 0 ? Math.round((verifiedCount / outcomeCount) * 100) : 0;
 
-                    const card = document.createElement("div"); card.className = "card" + (isActive ? " active-card" : "");
-                    const row = document.createElement("div"); row.className = "card-row";
-                    const body = document.createElement("div"); body.className = "card-body";
-                    body.innerHTML = `<div class="card-id">${esc(feature.id)}</div><div class="card-title">${esc(feature.title || feature.id)}</div>`;
-                    row.appendChild(body); row.appendChild(badge(isActive ? "active" : String(feature.status ?? "pending")));
-                    card.appendChild(row);
+                    const featureKey = cardStateKey("feature", feature.id);
+                    const card = makeCollapsibleCard({
+                        key: featureKey,
+                        baseClass: "card card-collapsible",
+                        extraClass: isActive ? "active-card" : "",
+                        summaryClass: "card-summary",
+                        contentClass: "card-content",
+                        toggleClass: "card-toggle",
+                        collapsedLabel: "Show details",
+                        expandedLabel: "Hide details",
+                        buildSummary(summary) {
+                            const row = document.createElement("div"); row.className = "card-row";
+                            const body = document.createElement("div"); body.className = "card-body";
+                            body.innerHTML = `<div class="card-id">${esc(feature.id)}</div><div class="card-title">${esc(feature.title || feature.id)}</div>`;
+                            row.appendChild(body);
+                            row.appendChild(badge(isActive ? "active" : String(feature.status ?? "pending")));
+                            summary.appendChild(row);
+                        },
+                        buildContent(content) {
+                            if (outcomeCount > 0) {
+                                const prog = document.createElement("div"); prog.className = "progress-wrap";
+                                prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+                                content.appendChild(prog);
+                            } else {
+                                const meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; content.appendChild(meta);
+                            }
 
-                    if (outcomeCount > 0) {
-                        const prog = document.createElement("div"); prog.className = "progress-wrap";
-                        prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
-                        card.appendChild(prog);
-                    } else {
-                        const meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; card.appendChild(meta);
-                    }
+                            const actions = document.createElement("div"); actions.className = "card-actions";
+                            const openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
+                            openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
+                            openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open";
+                            openBtn.addEventListener("click", event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                selectFeature(feature.id);
+                            });
+                            actions.appendChild(openBtn);
 
-                    const actions = document.createElement("div"); actions.className = "card-actions";
-                    const openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
-                    openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
-                    openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open";
-                    openBtn.addEventListener("click", () => selectFeature(feature.id)); actions.appendChild(openBtn);
+                            if (!isActive) {
+                                const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                                actBtn.disabled = state.isActivating === feature.id || state.isSaving;
+                                actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Set Active";
+                                actBtn.addEventListener("click", event => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    activateFeature(feature.id);
+                                });
+                                actions.appendChild(actBtn);
+                            }
+                            const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                            editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
+                            editBtn.addEventListener("click", event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                startFeatureEdit(feature.id);
+                            });
+                            actions.appendChild(editBtn);
+                            appendActionButton(actions, { title: "Status", tool: "specrail_status" });
+                            appendActionButton(actions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
+                            content.appendChild(actions);
 
-                    if (!isActive) {
-                        const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
-                        actBtn.disabled = state.isActivating === feature.id || state.isSaving;
-                        actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Set Active";
-                        actBtn.addEventListener("click", () => activateFeature(feature.id)); actions.appendChild(actBtn);
-                    }
-                    const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                    editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                    editBtn.addEventListener("click", () => startFeatureEdit(feature.id)); actions.appendChild(editBtn);
-                    appendActionButton(actions, { title: "Status", tool: "specrail_status" });
-                    appendActionButton(actions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
-                    card.appendChild(actions);
-
-                    if (state.editingFeatureId === feature.id && state.featureDraft) {
-                        const d = state.featureDraft;
-                        card.appendChild(renderEditor(`Edit: ${feature.id}`, [
-                            mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
-                            mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
-                            mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
-                            mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
-                            mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
-                        ], saveFeatureEdit, cancelFeatureEdit));
-                    }
+                            if (state.editingFeatureId === feature.id && state.featureDraft) {
+                                const d = state.featureDraft;
+                                content.appendChild(renderEditor(`Edit: ${feature.id}`, [
+                                    mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
+                                    mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                                    mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                                    mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                                    mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                                ], saveFeatureEdit, cancelFeatureEdit));
+                            }
+                        },
+                    });
                     grid.appendChild(card);
                 }
                 root.appendChild(grid);
@@ -1139,37 +1282,64 @@
                 renderToolOutput(root);
 
                 const isActive = data.activeFeatureId === featureId;
-                const fCard = document.createElement("div"); fCard.className = "card" + (isActive ? " active-card" : ""); fCard.style.marginBottom = "14px";
-                const fRow = document.createElement("div"); fRow.className = "card-row";
-                const fBody = document.createElement("div"); fBody.className = "card-body";
-                fBody.innerHTML = `<div class="card-id">${esc(featureId)}</div><div class="card-title">${esc(selectedFeature.title || featureId)}</div>`;
-                fRow.appendChild(fBody); fRow.appendChild(badge(isActive ? "active" : String(selectedFeature.status ?? "pending")));
-                fCard.appendChild(fRow);
-                const fActions = document.createElement("div"); fActions.className = "card-actions";
-                if (!isActive) {
-                    const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
-                    actBtn.disabled = state.isActivating === featureId || state.isSaving;
-                    actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Set Active";
-                    actBtn.addEventListener("click", () => activateFeature(featureId)); fActions.appendChild(actBtn);
-                }
-                const feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
-                feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
-                feEditBtn.addEventListener("click", () => startFeatureEdit(featureId)); fActions.appendChild(feEditBtn);
-                appendActionButton(fActions, { title: "Feature Details", tool: "specrail_feature_show", args: { id: featureId } });
-                appendActionButton(fActions, { title: "Feature Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
-                appendActionButton(fActions, { title: "Status", tool: "specrail_status" });
-                appendActionButton(fActions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
-                fCard.appendChild(fActions);
-                if (state.editingFeatureId === featureId && state.featureDraft) {
-                    const d = state.featureDraft;
-                    fCard.appendChild(renderEditor(`Edit: ${featureId}`, [
-                        mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
-                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
-                        mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
-                        mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
-                        mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
-                    ], saveFeatureEdit, cancelFeatureEdit));
-                }
+                const selectedFeatureKey = cardStateKey("selected-feature", featureId);
+                const fCard = makeCollapsibleCard({
+                    key: selectedFeatureKey,
+                    baseClass: "card card-collapsible",
+                    extraClass: isActive ? "active-card" : "",
+                    summaryClass: "card-summary",
+                    contentClass: "card-content",
+                    toggleClass: "card-toggle",
+                    collapsedLabel: "Show details",
+                    expandedLabel: "Hide details",
+                    buildSummary(summary) {
+                        const fRow = document.createElement("div"); fRow.className = "card-row";
+                        const fBody = document.createElement("div"); fBody.className = "card-body";
+                        fBody.innerHTML = `<div class="card-id">${esc(featureId)}</div><div class="card-title">${esc(selectedFeature.title || featureId)}</div>`;
+                        fRow.appendChild(fBody);
+                        fRow.appendChild(badge(isActive ? "active" : String(selectedFeature.status ?? "pending")));
+                        summary.appendChild(fRow);
+                    },
+                    buildContent(content) {
+                        const fActions = document.createElement("div"); fActions.className = "card-actions";
+                        if (!isActive) {
+                            const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                            actBtn.disabled = state.isActivating === featureId || state.isSaving;
+                            actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Set Active";
+                            actBtn.addEventListener("click", event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                activateFeature(featureId);
+                            });
+                            fActions.appendChild(actBtn);
+                        }
+                        const feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
+                        feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
+                        feEditBtn.addEventListener("click", event => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            ensureCardExpanded(selectedFeatureKey);
+                            startFeatureEdit(featureId);
+                        });
+                        fActions.appendChild(feEditBtn);
+                        appendActionButton(fActions, { title: "Feature Details", tool: "specrail_feature_show", args: { id: featureId } });
+                        appendActionButton(fActions, { title: "Feature Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
+                        appendActionButton(fActions, { title: "Status", tool: "specrail_status" });
+                        appendActionButton(fActions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
+                        content.appendChild(fActions);
+                        if (state.editingFeatureId === featureId && state.featureDraft) {
+                            const d = state.featureDraft;
+                            content.appendChild(renderEditor(`Edit: ${featureId}`, [
+                                mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
+                                mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                                mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                                mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                                mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                            ], saveFeatureEdit, cancelFeatureEdit));
+                        }
+                    },
+                });
+                fCard.style.marginBottom = "14px";
                 root.appendChild(fCard);
 
                 if (state.creatingOutcome && state.newOutcomeDraft) {
@@ -1199,82 +1369,111 @@
                     const list = document.createElement("ul"); list.className = "outcome-list";
                     for (const outcome of outcomes) {
                         const isActiveOutcome = !!outcome.isActive;
-                        const item = document.createElement("li");
                         let cls = "outcome-item";
                         if (isActiveOutcome) cls += " active-outcome";
                         if (outcome.status === "verified") cls += " verified-outcome";
                         if (outcome.status === "failed") cls += " failed-outcome";
-                        item.className = cls;
+                        const outcomeKey = cardStateKey("outcome", featureId, outcome.id);
+                        const item = makeCollapsibleCard({
+                            key: outcomeKey,
+                            baseClass: `${cls} outcome-item-collapsible`,
+                            summaryClass: "outcome-summary",
+                            contentClass: "outcome-content",
+                            toggleClass: "outcome-toggle",
+                            collapsedLabel: "Show actions",
+                            expandedLabel: "Hide actions",
+                            buildSummary(summary) {
+                                const row = document.createElement("div"); row.className = "outcome-row";
+                                const body = document.createElement("div"); body.className = "outcome-body";
+                                body.innerHTML = `<div class="outcome-num">Outcome ${esc(outcome.order ?? "?")}</div><div class="outcome-title">${esc(outcome.title || outcome.id)}</div><div class="outcome-id">${esc(outcome.id)}</div>`;
 
-                        const row = document.createElement("div"); row.className = "outcome-row";
-                        const body = document.createElement("div"); body.className = "outcome-body";
-                        body.innerHTML = `<div class="outcome-num">Outcome ${esc(outcome.order ?? "?")}</div><div class="outcome-title">${esc(outcome.title || outcome.id)}</div><div class="outcome-id">${esc(outcome.id)}</div>`;
+                                const testCount = Number(outcome.testCount ?? 0);
+                                const passingCount = Number(outcome.passingTestCount ?? 0);
+                                const plannedCount = Number(outcome.plannedTestCount ?? 0);
+                                const chips = document.createElement("div"); chips.className = "test-chips";
+                                if (testCount > 0) {
+                                    const all = document.createElement("span"); all.className = "test-chip"; all.textContent = `${testCount} test${testCount !== 1 ? "s" : ""}`;
+                                    chips.appendChild(all);
+                                    if (passingCount > 0) { const p = document.createElement("span"); p.className = "test-chip passing"; p.textContent = `${passingCount} passing`; chips.appendChild(p); }
+                                    if (plannedCount > 0) { const p = document.createElement("span"); p.className = "test-chip warning"; p.textContent = `${plannedCount} planned`; chips.appendChild(p); }
+                                } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                                    const noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
+                                }
+                                if (chips.childNodes.length > 0) body.appendChild(chips);
 
-                        const testCount = Number(outcome.testCount ?? 0);
-                        const passingCount = Number(outcome.passingTestCount ?? 0);
-                        const plannedCount = Number(outcome.plannedTestCount ?? 0);
-                        const chips = document.createElement("div"); chips.className = "test-chips";
-                        if (testCount > 0) {
-                            const all = document.createElement("span"); all.className = "test-chip"; all.textContent = `${testCount} test${testCount !== 1 ? "s" : ""}`;
-                            chips.appendChild(all);
-                            if (passingCount > 0) { const p = document.createElement("span"); p.className = "test-chip passing"; p.textContent = `${passingCount} passing`; chips.appendChild(p); }
-                            if (plannedCount > 0) { const p = document.createElement("span"); p.className = "test-chip warning"; p.textContent = `${plannedCount} planned`; chips.appendChild(p); }
-                        } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
-                            const noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
-                        }
-                        if (chips.childNodes.length > 0) body.appendChild(chips);
+                                row.appendChild(body);
+                                row.appendChild(badge(String(outcome.status ?? "pending")));
+                                summary.appendChild(row);
+                            },
+                            buildContent(content) {
+                                const actions = document.createElement("div"); actions.className = "card-actions";
+                                if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
+                                    const actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
+                                    actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
+                                    actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate";
+                                    actBtn.addEventListener("click", event => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        activateOutcome(featureId, outcome.id);
+                                    });
+                                    actions.appendChild(actBtn);
+                                }
+                                if (isActiveOutcome) {
+                                    if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                                        appendActionButton(actions, { title: "Implement", tool: "specrail_implement", refresh: true });
+                                        appendActionButton(actions, { title: "Verify", tool: "specrail_verify", refresh: true });
+                                        appendActionButton(actions, { title: "Generate Tests", tool: "specrail_test_generate", refresh: true });
+                                    }
+                                    if (outcome.status === "verified") {
+                                        appendActionButton(actions, { title: "Advance", tool: "specrail_advance", refresh: true });
+                                    }
+                                }
+                                if (["verified", "failed", "skipped"].includes(String(outcome.status ?? ""))) {
+                                    appendActionButton(actions, {
+                                        title: "Unverify",
+                                        tool: "specrail_outcome_unverify",
+                                        args: { feature_id: featureId, outcome_id: outcome.id },
+                                        refresh: true,
+                                        successMessage: `Outcome reset to pending: ${outcome.id}`,
+                                    });
+                                }
+                                const gapBtn = document.createElement("button"); gapBtn.className = "btn btn-sm";
+                                gapBtn.disabled = state.isSaving || state.runningAction === `gap-check:${featureId}:${outcome.id}`;
+                                gapBtn.textContent = state.runningAction === `gap-check:${featureId}:${outcome.id}` ? "Checking Gaps\u2026" : "Check Test Gaps";
+                                gapBtn.addEventListener("click", event => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    checkOutcomeTestGaps(featureId, outcome.id);
+                                });
+                                actions.appendChild(gapBtn);
+                                appendActionButton(actions, { title: "Tests", tool: "specrail_test_list", args: { feature_id: featureId, outcome_id: outcome.id } });
+                                appendActionButton(actions, { title: "Details", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
+                                const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                                editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
+                                editBtn.addEventListener("click", event => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    startOutcomeEdit(featureId, outcome.id);
+                                });
+                                actions.appendChild(editBtn);
+                                content.appendChild(actions);
 
-                        row.appendChild(body); row.appendChild(badge(String(outcome.status ?? "pending"))); item.appendChild(row);
-
-                        const actions = document.createElement("div"); actions.className = "card-actions";
-                        if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
-                            const actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
-                            actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
-                            actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate";
-                            actBtn.addEventListener("click", () => activateOutcome(featureId, outcome.id)); actions.appendChild(actBtn);
-                        }
-                        if (isActiveOutcome) {
-                            if (outcome.status !== "verified" && outcome.status !== "skipped") {
-                                appendActionButton(actions, { title: "Implement", tool: "specrail_implement", refresh: true });
-                                appendActionButton(actions, { title: "Verify", tool: "specrail_verify", refresh: true });
-                                appendActionButton(actions, { title: "Generate Tests", tool: "specrail_test_generate", refresh: true });
-                            }
-                            if (outcome.status === "verified") {
-                                appendActionButton(actions, { title: "Advance", tool: "specrail_advance", refresh: true });
-                            }
-                        }
-                        if (["verified", "failed", "skipped"].includes(String(outcome.status ?? ""))) {
-                            appendActionButton(actions, {
-                                title: "Unverify",
-                                tool: "specrail_outcome_unverify",
-                                args: { feature_id: featureId, outcome_id: outcome.id },
-                                refresh: true,
-                                successMessage: `Outcome reset to pending: ${outcome.id}`,
-                            });
-                        }
-                        const gapBtn = document.createElement("button"); gapBtn.className = "btn btn-sm";
-                        gapBtn.disabled = state.isSaving || state.runningAction === `gap-check:${featureId}:${outcome.id}`;
-                        gapBtn.textContent = state.runningAction === `gap-check:${featureId}:${outcome.id}` ? "Checking Gaps\u2026" : "Check Test Gaps";
-                        gapBtn.addEventListener("click", () => checkOutcomeTestGaps(featureId, outcome.id)); actions.appendChild(gapBtn);
-                        appendActionButton(actions, { title: "Tests", tool: "specrail_test_list", args: { feature_id: featureId, outcome_id: outcome.id } });
-                        appendActionButton(actions, { title: "Details", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
-                        const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                        editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                        editBtn.addEventListener("click", () => startOutcomeEdit(featureId, outcome.id)); actions.appendChild(editBtn);
-                        item.appendChild(actions);
-
-                        if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
-                            const d = state.outcomeDraft;
-                            item.appendChild(renderEditor(`Edit: ${outcome.id}`, [
-                                mkField("Title", "title", d.title, "outcome"), mkField("Goal", "goal", d.goal, "outcome", true),
-                                mkField("Order", "order", d.order, "outcome"),
-                                mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
-                                mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
-                                mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
-                                mkField("Required tests (one path/ID per line)", "required_tests", d.required_tests, "outcome", true),
-                            ], saveOutcomeEdit, cancelOutcomeEdit));
-                        }
-                        list.appendChild(item);
+                                if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
+                                    const d = state.outcomeDraft;
+                                    content.appendChild(renderEditor(`Edit: ${outcome.id}`, [
+                                        mkField("Title", "title", d.title, "outcome"), mkField("Goal", "goal", d.goal, "outcome", true),
+                                        mkField("Order", "order", d.order, "outcome"),
+                                        mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
+                                        mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
+                                        mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
+                                        mkField("Required tests (one path/ID per line)", "required_tests", d.required_tests, "outcome", true),
+                                    ], saveOutcomeEdit, cancelOutcomeEdit));
+                                }
+                            },
+                        });
+                        const listItem = document.createElement("li");
+                        listItem.appendChild(item);
+                        list.appendChild(listItem);
                     }
                     root.appendChild(list);
                 }
