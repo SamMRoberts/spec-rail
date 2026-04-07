@@ -60,6 +60,7 @@ pub enum LedgerEventType {
     PhaseCreated,
     PhaseActivated,
     TestAdded,
+    TestGenerationRun,
     ImplementationRun,
     VerificationRun,
     PhaseVerified,

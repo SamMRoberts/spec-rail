@@ -3,7 +3,7 @@ use std::io::{self, BufRead, Write};
 use anyhow::{bail, Result};
 
 use crate::{
-    commands::{feature, phase},
+    commands::{feature, phase, test},
     core::repository::Repository,
 };
 
@@ -71,7 +71,18 @@ fn run_with_io<R: BufRead, W: Write>(
     }
 
     if created_any {
-        writeln!(writer, "\nContinue with `specrail test add`, `specrail implement`, and `specrail verify`.")?;
+        if confirm(reader, writer, "Generate required tests with Copilot now?", true)? {
+            match test::generate(repo, Some("copilot")) {
+                Ok(()) => {
+                    writeln!(writer, "Required tests generated and registered.")?;
+                }
+                Err(error) => {
+                    writeln!(writer, "Test generation skipped: {error}")?;
+                }
+            }
+        }
+
+        writeln!(writer, "\nContinue with `specrail implement`, `specrail verify`, and `specrail advance`.")?;
     }
     writer.flush()?;
 

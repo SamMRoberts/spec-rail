@@ -186,6 +186,13 @@ pub enum TestCommands {
         purpose_refs: Vec<String>,
     },
 
+    /// Generate required tests from feature and phase YAML using an AI agent
+    Generate {
+        /// Override the agent used for generation (defaults to `copilot`)
+        #[arg(long, short)]
+        agent: Option<String>,
+    },
+
     /// List tests in the manifest
     List {
         /// Filter by feature ID

@@ -1,4 +1,7 @@
-use crate::core::models::{FeatureSpec, PhaseSpec, TestManifest};
+use crate::core::{
+    config::ProjectConfig,
+    models::{FeatureSpec, PhaseSpec, TestManifest},
+};
 
 /// Build the implementation prompt sent to an AI coding agent.
 ///
@@ -114,4 +117,61 @@ fn format_kind(kind: &crate::core::models::TestKind) -> &'static str {
         TestKind::Integration => "integration",
         TestKind::E2e => "e2e",
     }
+}
+
+pub fn build_test_generation_prompt(
+    config: &ProjectConfig,
+    features: &[(FeatureSpec, Vec<PhaseSpec>)],
+    manifest: &TestManifest,
+) -> anyhow::Result<String> {
+    let mut prompt = String::new();
+
+    prompt.push_str("# specrail - Test Generation Task\n\n");
+    prompt.push_str("Generate the required test files declared in phase YAML.\n");
+    prompt.push_str("Return JSON only. Do not wrap the JSON in markdown fences.\n\n");
+
+    prompt.push_str("## Response format\n");
+    prompt.push_str("Return a JSON object with this shape:\n");
+    prompt.push_str("{\n");
+    prompt.push_str("  \"tests\": [\n");
+    prompt.push_str("    {\n");
+    prompt.push_str("      \"feature_id\": \"auth\",\n");
+    prompt.push_str("      \"phase_id\": \"phase-1\",\n");
+    prompt.push_str("      \"path\": \"tests/auth/validate.rs\",\n");
+    prompt.push_str("      \"kind\": \"unit\",\n");
+    prompt.push_str("      \"purpose_refs\": [\"goal:Validate credentials\"],\n");
+    prompt.push_str("      \"content\": \"full file contents here\"\n");
+    prompt.push_str("    }\n");
+    prompt.push_str("  ]\n");
+    prompt.push_str("}\n\n");
+
+    prompt.push_str("## Rules\n");
+    prompt.push_str("1. Generate exactly one test object for each required test path declared in phase.required_tests.\n");
+    prompt.push_str("2. Do not invent extra test paths.\n");
+    prompt.push_str("3. Use the declared feature_id and phase_id for each generated test.\n");
+    prompt.push_str("4. The content must be a complete file that can be written directly to disk.\n");
+    prompt.push_str("5. Prefer minimal, focused tests that align to the feature purpose and phase goal.\n");
+    prompt.push_str("6. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+
+    prompt.push_str("## Project YAML\n```yaml\n");
+    prompt.push_str(&serde_yaml::to_string(config)?);
+    prompt.push_str("```\n\n");
+
+    for (feature, phases) in features {
+        prompt.push_str("## Feature YAML\n```yaml\n");
+        prompt.push_str(&serde_yaml::to_string(feature)?);
+        prompt.push_str("```\n\n");
+
+        for phase in phases {
+            prompt.push_str("### Phase YAML\n```yaml\n");
+            prompt.push_str(&serde_yaml::to_string(phase)?);
+            prompt.push_str("```\n\n");
+        }
+    }
+
+    prompt.push_str("## Existing Manifest YAML\n```yaml\n");
+    prompt.push_str(&serde_yaml::to_string(manifest)?);
+    prompt.push_str("```\n");
+
+    Ok(prompt)
 }

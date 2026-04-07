@@ -51,6 +51,7 @@ fn init_walkthrough_creates_feature_and_multiple_phases() {
              tests/auth/persist.rs\n\
              \n\
              n\n\
+             n\n\
              n\n",
         )
         .assert()
@@ -61,17 +62,13 @@ fn init_walkthrough_creates_feature_and_multiple_phases() {
     assert!(feature.contains("Users can sign in"));
     assert!(feature.contains("phase-2"), "feature should point to the active phase");
 
-    let phase_one = fs::read_to_string(
-        dir.path().join(".specrail/phases/auth/phase-1.yaml"),
-    )
-    .unwrap();
+    let phase_one = fs::read_to_string(dir.path().join(".specrail/phases/auth/phase-1.yaml"))
+        .unwrap();
     assert!(phase_one.contains("src/auth/**"));
     assert!(phase_one.contains("tests/auth/validate.rs"));
 
-    let phase_two = fs::read_to_string(
-        dir.path().join(".specrail/phases/auth/phase-2.yaml"),
-    )
-    .unwrap();
+    let phase_two = fs::read_to_string(dir.path().join(".specrail/phases/auth/phase-2.yaml"))
+        .unwrap();
     assert!(phase_two.contains("phase-1"));
     assert!(phase_two.contains("src/auth/persistence/**"));
 
@@ -125,6 +122,7 @@ fn init_walkthrough_can_repeat_features() {
              \n\
              \n\
              \n\
+             n\n\
              n\n\
              n\n",
         )

@@ -50,6 +50,7 @@ fn format_event_type(et: &LedgerEventType) -> &'static str {
         LedgerEventType::PhaseCreated => "phase_created",
         LedgerEventType::PhaseActivated => "phase_activated",
         LedgerEventType::TestAdded => "test_added",
+        LedgerEventType::TestGenerationRun => "test_generation_run",
         LedgerEventType::ImplementationRun => "implementation_run",
         LedgerEventType::VerificationRun => "verification_run",
         LedgerEventType::PhaseVerified => "phase_verified",

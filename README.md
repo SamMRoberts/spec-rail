@@ -96,6 +96,12 @@ specrail test add validate-email \
   --kind unit
 ```
 
+Or let an AI agent generate the required tests declared in your phase YAML:
+
+```bash
+specrail test generate --agent copilot
+```
+
 Mark a test as ready for implementation:
 
 ```bash
@@ -162,6 +168,7 @@ Optional phase flags:
 ### Tests
 
 - `specrail test add <id> --feature <feature_id> --phase <phase_id> --path <path>`
+- `specrail test generate --agent <generic-shell|copilot|codex>`
 - `specrail test list [--feature <feature_id>] [--phase <phase_id>]`
 - `specrail test set-status <id> <planned|written|passing|failing>`
 

@@ -141,6 +141,9 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 )
             }
+            TestCommands::Generate { agent } => {
+                commands::test::generate(&repo, agent.as_deref())
+            }
             TestCommands::List { feature, phase } => {
                 commands::test::list(&repo, feature.as_deref(), phase.as_deref())
             }
