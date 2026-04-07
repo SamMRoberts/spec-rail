@@ -263,6 +263,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_outcome_new" => tool_outcome_new(arguments),
         "specrail_outcome_activate" => tool_outcome_activate(arguments),
         "specrail_outcome_edit" => tool_outcome_edit(arguments),
+        "specrail_outcome_unverify" => tool_outcome_unverify(arguments),
         "specrail_test_add" => tool_test_add(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
@@ -495,7 +496,13 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "isActive": active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                     "testCount": test_count,
                     "plannedTestCount": planned_test_count,
-                    "passingTestCount": passing_test_count
+                    "passingTestCount": passing_test_count,
+                    "availableActions": outcome_available_actions(
+                        &outcome.status,
+                        active_outcome_id.as_deref() == Some(outcome.id.as_str()),
+                        test_count,
+                        planned_test_count,
+                    )
                 })
             })
             .collect();
@@ -518,7 +525,17 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "selectOutcomeTool": "specrail_outcome_activate",
                     "createOutcomeTool": "specrail_outcome_new",
                     "editOutcomeTool": "specrail_outcome_edit",
-                    "activateOutcomeTool": "specrail_outcome_activate"
+                    "activateOutcomeTool": "specrail_outcome_activate",
+                    "unverifyOutcomeTool": "specrail_outcome_unverify",
+                    "implementTool": "specrail_implement",
+                    "verifyTool": "specrail_verify",
+                    "advanceTool": "specrail_advance",
+                    "testListTool": "specrail_test_list",
+                    "testGenerateTool": "specrail_test_generate",
+                    "featureShowTool": "specrail_feature_show",
+                    "outcomeShowTool": "specrail_outcome_show",
+                    "statusTool": "specrail_status",
+                    "traceTool": "specrail_trace"
                 }
             })),
         ));
@@ -539,10 +556,47 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "selectFeatureTool": "specrail_feature_navigate",
                 "createFeatureTool": "specrail_feature_new",
                 "editFeatureTool": "specrail_feature_edit",
-                "activateFeatureTool": "specrail_feature_activate"
+                "activateFeatureTool": "specrail_feature_activate",
+                "statusTool": "specrail_status",
+                "traceTool": "specrail_trace"
             }
         })),
     ))
+}
+
+fn outcome_available_actions(
+    status: &OutcomeStatus,
+    is_active: bool,
+    test_count: usize,
+    planned_test_count: usize,
+) -> Vec<&'static str> {
+    let mut actions = vec!["edit", "show"];
+
+    if test_count > 0 {
+        actions.push("tests");
+    }
+
+    if !matches!(status, OutcomeStatus::Verified | OutcomeStatus::Skipped) && !is_active {
+        actions.push("activate");
+    }
+
+    if is_active {
+        actions.push("implement");
+        actions.push("verify");
+        if planned_test_count > 0 {
+            actions.push("generate_tests");
+        }
+    }
+
+    if *status == OutcomeStatus::Verified && is_active {
+        actions.push("advance");
+    }
+
+    if matches!(status, OutcomeStatus::Verified | OutcomeStatus::Failed | OutcomeStatus::Skipped) {
+        actions.push("unverify");
+    }
+
+    actions
 }
 
 fn resource_definitions() -> Vec<Value> {
@@ -825,6 +879,20 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--test", required_tests);
 
     run_cli_tool(&cwd, args)
+}
+
+fn tool_outcome_unverify(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let outcome = crate::commands::outcome::reset_status_to_pending(&repo, &feature_id, &outcome_id)?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Outcome '{outcome_id}' for feature '{feature_id}' reset to pending."
+        ),
+        Some(json!({ "outcome": outcome })),
+    ))
 }
 
 fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1601,6 +1669,20 @@ fn tool_definitions() -> Vec<Value> {
                     "required_tests": { "type": "array", "items": { "type": "string" } }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_unverify",
+            "title": "Reset Outcome To Pending",
+            "description": "Reset a verified, failed, or skipped outcome back to pending without changing its title, goal, or path constraints. Use this when you want to reopen an outcome for more implementation work.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier to reset." }
+                },
+                "required": ["feature_id", "outcome_id"]
             }
         }),
         json!({

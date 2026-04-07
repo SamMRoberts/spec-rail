@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,84 +38,535 @@
             --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: var(--font-ui); font-size: 13px; background: var(--bg); color: var(--fg); line-height: 1.5; }
-        .app { max-width: 680px; margin: 0 auto; padding: 12px 14px 24px; }
-        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-        .header-logo { font-size: 18px; }
-        .header-title { font-size: 15px; font-weight: 600; }
-        .header-actions { margin-left: auto; display: flex; gap: 6px; }
-        .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-muted); margin-bottom: 12px; }
-        .breadcrumb-item.clickable { color: var(--accent); cursor: pointer; }
-        .breadcrumb-item.clickable:hover { text-decoration: underline; }
-        .breadcrumb-sep { color: var(--fg-dim); }
-        .dashboard { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-        .stat-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
-        .stat-chip strong { color: var(--fg); font-weight: 600; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); }
-        .btn { appearance: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--fg); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; transition: background 120ms, border-color 120ms; white-space: nowrap; }
-        .btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); }
-        .btn:disabled { opacity: 0.55; cursor: default; pointer-events: none; }
-        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn-primary:hover { filter: brightness(0.88); }
-        .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); }
-        .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border); color: var(--fg); }
-        .btn-sm { padding: 3px 8px; font-size: 11px; }
-        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-        .feature-grid { display: grid; gap: 8px; margin-bottom: 10px; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; transition: border-color 120ms; }
-        .card:hover { border-color: var(--accent); }
-        .card.active-card { border-color: var(--active-border); background: var(--active-bg); }
-        .card-row { display: flex; align-items: flex-start; gap: 10px; }
-        .card-body { flex: 1; min-width: 0; }
-        .card-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 2px; }
-        .card-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-meta { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
-        .card-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
-        .progress-wrap { margin-top: 8px; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-muted); margin-bottom: 3px; }
-        .progress-bar { height: 5px; background: var(--progress-track); border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--progress-fill); border-radius: 3px; transition: width 300ms; }
-        .badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
-        .badge-active { background: var(--active-bg); border-color: var(--active-border); color: var(--active-fg); }
-        .badge-verified { background: var(--verified-bg); border-color: var(--verified-border); color: var(--verified-fg); }
-        .badge-failed { background: var(--failed-bg); border-color: var(--failed-border); color: var(--failed-fg); }
-        .badge-pending { background: var(--pending-bg); border-color: var(--pending-border); color: var(--pending-fg); }
-        .badge-skipped { background: var(--pending-bg); border-color: var(--pending-border); color: var(--skipped-fg); }
-        .test-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
-        .test-chip { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-section); color: var(--fg-muted); }
-        .test-chip.passing { color: var(--verified-fg); border-color: var(--verified-border); background: var(--verified-bg); }
-        .test-chip.warning { color: var(--active-fg); border-color: var(--active-border); background: var(--active-bg); }
-        .outcome-list { list-style: none; display: grid; gap: 7px; margin-bottom: 10px; }
-        .outcome-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; transition: border-color 120ms; }
-        .outcome-item:hover { border-color: var(--accent); }
-        .outcome-item.active-outcome { border-color: var(--active-border); background: var(--active-bg); }
-        .outcome-item.verified-outcome { border-left: 3px solid var(--verified-border); }
-        .outcome-item.failed-outcome { border-left: 3px solid var(--failed-border); }
-        .outcome-num { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); margin-bottom: 2px; }
-        .outcome-title { font-size: 13px; font-weight: 600; }
-        .outcome-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
-        .outcome-row { display: flex; align-items: flex-start; gap: 8px; }
-        .outcome-body { flex: 1; min-width: 0; }
-        .editor { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-        .editor-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
-        .field-grid { display: grid; gap: 9px; }
-        label { display: grid; gap: 4px; font-size: 12px; }
-        label span { font-weight: 600; }
-        input[type="text"], input[type="number"], textarea { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-section); color: var(--fg); padding: 6px 8px; font: inherit; font-size: 12px; transition: border-color 120ms; }
-        input:focus, textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent); }
-        textarea { min-height: 70px; resize: vertical; }
-        .field-hint { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
-        .status-bar { border-radius: var(--radius); padding: 8px 10px; font-size: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--fg-muted); }
-        .status-bar.error { border-color: var(--failed-border); background: var(--failed-bg); color: var(--failed-fg); }
-        .status-bar.success { border-color: var(--verified-border); background: var(--verified-bg); color: var(--verified-fg); }
-        .empty { text-align: center; padding: 28px 16px; color: var(--fg-muted); border: 1px dashed var(--border); border-radius: var(--radius-lg); font-size: 13px; line-height: 1.6; }
-        .empty-icon { font-size: 28px; margin-bottom: 8px; }
-        .empty-title { font-weight: 600; color: var(--fg); margin-bottom: 4px; }
-        @media (max-width: 520px) { .app { padding: 8px 10px 20px; } .dashboard { gap: 5px; } .card-row { flex-direction: column; } }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            font-size: 13px;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.5;
+        }
+
+        .app {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 12px 14px 24px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .header-logo {
+            font-size: 18px;
+        }
+
+        .header-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 6px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--fg-muted);
+            margin-bottom: 12px;
+        }
+
+        .breadcrumb-item.clickable {
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .breadcrumb-item.clickable:hover {
+            text-decoration: underline;
+        }
+
+        .breadcrumb-sep {
+            color: var(--fg-dim);
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+        }
+
+        .stat-chip strong {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-card);
+            color: var(--fg);
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            padding: 5px 10px;
+            transition: background 120ms, border-color 120ms;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-focus);
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(0.88);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--fg-muted);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border);
+            color: var(--fg);
+        }
+
+        .btn-sm {
+            padding: 3px 8px;
+            font-size: 11px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 12px 14px;
+            transition: border-color 120ms;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+        }
+
+        .card.active-card {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .card-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-id {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-bottom: 2px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: var(--fg-muted);
+            margin-top: 4px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .progress-wrap {
+            margin-top: 8px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 5px;
+            background: var(--progress-track);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--progress-fill);
+            border-radius: 3px;
+            transition: width 300ms;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+            border: 1px solid;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge-active {
+            background: var(--active-bg);
+            border-color: var(--active-border);
+            color: var(--active-fg);
+        }
+
+        .badge-verified {
+            background: var(--verified-bg);
+            border-color: var(--verified-border);
+            color: var(--verified-fg);
+        }
+
+        .badge-failed {
+            background: var(--failed-bg);
+            border-color: var(--failed-border);
+            color: var(--failed-fg);
+        }
+
+        .badge-pending {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--pending-fg);
+        }
+
+        .badge-skipped {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--skipped-fg);
+        }
+
+        .test-chips {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+
+        .test-chip {
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg-muted);
+        }
+
+        .test-chip.passing {
+            color: var(--verified-fg);
+            border-color: var(--verified-border);
+            background: var(--verified-bg);
+        }
+
+        .test-chip.warning {
+            color: var(--active-fg);
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .outcome-list {
+            list-style: none;
+            display: grid;
+            gap: 7px;
+            margin-bottom: 10px;
+        }
+
+        .outcome-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 10px 12px;
+            transition: border-color 120ms;
+        }
+
+        .outcome-item:hover {
+            border-color: var(--accent);
+        }
+
+        .outcome-item.active-outcome {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .outcome-item.verified-outcome {
+            border-left: 3px solid var(--verified-border);
+        }
+
+        .outcome-item.failed-outcome {
+            border-left: 3px solid var(--failed-border);
+        }
+
+        .outcome-num {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--fg-muted);
+            margin-bottom: 2px;
+        }
+
+        .outcome-title {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .outcome-id {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--fg-muted);
+        }
+
+        .outcome-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .outcome-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .editor {
+            margin-top: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+
+        .editor-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 9px;
+        }
+
+        label {
+            display: grid;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        label span {
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg);
+            padding: 6px 8px;
+            font: inherit;
+            font-size: 12px;
+            transition: border-color 120ms;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent);
+        }
+
+        textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+
+        .status-bar {
+            border-radius: var(--radius);
+            padding: 8px 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--fg-muted);
+        }
+
+        .status-bar.error {
+            border-color: var(--failed-border);
+            background: var(--failed-bg);
+            color: var(--failed-fg);
+        }
+
+        .status-bar.success {
+            border-color: var(--verified-border);
+            background: var(--verified-bg);
+            color: var(--verified-fg);
+        }
+
+        .output-panel {
+            margin-bottom: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 10px 12px;
+        }
+
+        .output-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .output-title strong {
+            font-size: 12px;
+        }
+
+        .output-body {
+            white-space: pre-wrap;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--fg-muted);
+            max-height: 240px;
+            overflow: auto;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 28px 16px;
+            color: var(--fg-muted);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .empty-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .empty-title {
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 520px) {
+            .app {
+                padding: 8px 10px 20px;
+            }
+
+            .dashboard {
+                gap: 5px;
+            }
+
+            .card-row {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="app">
         <div class="header">
@@ -133,6 +585,7 @@
                 creatingFeature: false, creatingOutcome: false,
                 featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
                 isSaving: false, isActivating: null,
+                runningAction: null, lastToolRun: null,
             };
             let nextId = 1;
             const pending = new Map();
@@ -147,8 +600,8 @@
             async function callTool(name, args) { return sendRequest("tools/call", { name, arguments: args }); }
 
             function esc(v) {
-                return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-                    .replaceAll('"','&quot;').replaceAll("'","&#39;");
+                return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+                    .replaceAll('"', '&quot;').replaceAll("'", "&#39;");
             }
             function toolText(r) { return r?.content?.find?.(b => b?.type === "text")?.text ?? ""; }
             function merge(t, s) {
@@ -175,6 +628,16 @@
                 const el = document.getElementById("statusBar");
                 if (!msg) { el.innerHTML = ""; return; }
                 el.innerHTML = `<div class="status-bar${variant ? " " + variant : ""}">${esc(msg)}</div>`;
+            }
+
+            function setLastToolRun(title, result) {
+                const text = toolText(result) || "Command completed successfully.";
+                state.lastToolRun = { title, text, isError: !!result?.isError };
+            }
+
+            function clearLastToolRun() {
+                state.lastToolRun = null;
+                render();
             }
 
             function applyHostStyles() {
@@ -210,6 +673,207 @@
                     : await callTool("specrail_feature_navigate", { ...state.toolArguments });
             }
 
+            async function runToolAction(title, name, args = {}, options = {}) {
+                const { refresh = false, successMessage = null } = options;
+                const actionKey = `${name}:${JSON.stringify(args)}`;
+                state.runningAction = actionKey;
+                render();
+
+                try {
+                    const result = await callTool(name, { ...state.toolArguments, ...args });
+                    setLastToolRun(title, result);
+                    if (result?.isError) {
+                        state.runningAction = null;
+                        showStatus(toolText(result) || `${title} failed.`, "error");
+                        render();
+                        return;
+                    }
+
+                    if (refresh) {
+                        await refreshView();
+                    }
+
+                    state.runningAction = null;
+                    showStatus(successMessage || toolText(result), "success");
+                    render();
+                } catch (e) {
+                    state.runningAction = null;
+                    showStatus(e?.message ?? String(e), "error");
+                    render();
+                }
+            }
+
+            function isActionRunning(name, args = {}) {
+                return state.runningAction === `${name}:${JSON.stringify(args)}`;
+            }
+
+            function appendActionButton(container, config) {
+                const { title, tool, args = {}, kind = "default", refresh = false, successMessage = null } = config;
+                const button = document.createElement("button");
+                button.className = kind === "primary" ? "btn btn-primary btn-sm" : kind === "ghost" ? "btn btn-ghost btn-sm" : "btn btn-sm";
+                button.disabled = state.isSaving || isActionRunning(tool, args);
+                button.textContent = isActionRunning(tool, args) ? `${title}\u2026` : title;
+                button.addEventListener("click", () => runToolAction(title, tool, args, { refresh, successMessage }));
+                container.appendChild(button);
+            }
+
+            function buildOutcomeGapReview(outcome, tests) {
+                const declaredRequired = Array.isArray(outcome?.required_tests) ? outcome.required_tests : [];
+                const relatedTests = Array.isArray(tests) ? tests : [];
+                const testsByPath = new Map(relatedTests.map(test => [test.path, test]));
+                const missingRequired = declaredRequired.filter(path => !testsByPath.has(path));
+                const plannedRequired = declaredRequired.filter(path => testsByPath.get(path)?.status === "planned");
+                const undeclaredTests = declaredRequired.length > 0
+                    ? relatedTests.filter(test => !declaredRequired.includes(test.path))
+                    : [];
+                const hasNoRequiredTests = declaredRequired.length === 0;
+                const hasNoRelatedTests = relatedTests.length === 0;
+                const needsGeneration = declaredRequired.length > 0 && (missingRequired.length > 0 || plannedRequired.length > 0);
+                const hasGaps = hasNoRequiredTests || hasNoRelatedTests || missingRequired.length > 0 || plannedRequired.length > 0;
+
+                return {
+                    declaredRequired,
+                    relatedTests,
+                    missingRequired,
+                    plannedRequired,
+                    undeclaredTests,
+                    hasNoRequiredTests,
+                    hasNoRelatedTests,
+                    hasGaps,
+                    needsGeneration,
+                };
+            }
+
+            function formatOutcomeGapReview(outcome, review) {
+                const lines = [
+                    `Outcome: ${outcome?.feature_id ?? "?"}:${outcome?.id ?? "?"}`,
+                    `Goal: ${outcome?.goal ?? "No goal recorded."}`,
+                    "",
+                    `Declared required tests: ${review.declaredRequired.length}`,
+                    `Manifest tests for outcome: ${review.relatedTests.length}`,
+                ];
+
+                if (review.hasNoRequiredTests) {
+                    lines.push("", "Gap: no required test paths are declared on this outcome.");
+                    lines.push("Next step: edit the outcome and add required test paths before generating tests.");
+                }
+
+                if (review.hasNoRelatedTests && !review.hasNoRequiredTests) {
+                    lines.push("", "Gap: no tests for this outcome exist in the manifest yet.");
+                }
+
+                if (review.missingRequired.length > 0) {
+                    lines.push("", "Missing required test entries:");
+                    review.missingRequired.forEach(path => lines.push(`- ${path}`));
+                }
+
+                if (review.plannedRequired.length > 0) {
+                    lines.push("", "Required tests still in planned status:");
+                    review.plannedRequired.forEach(path => lines.push(`- ${path}`));
+                }
+
+                if (review.undeclaredTests.length > 0) {
+                    lines.push("", "Manifest tests not listed in required_tests:");
+                    review.undeclaredTests.forEach(test => lines.push(`- ${test.path} (${test.status})`));
+                }
+
+                if (!review.hasGaps) {
+                    lines.push("", "No testing gaps found for this outcome.");
+                } else if (review.needsGeneration) {
+                    lines.push("", "Generation can help: running specrail_test_generate to fill declared required tests.");
+                }
+
+                lines.push("", "Note: test generation uses outcome.required_tests across the project and writes any missing declared tests.");
+                return lines.join("\n");
+            }
+
+            async function checkOutcomeTestGaps(featureId, outcomeId) {
+                const actionKey = `gap-check:${featureId}:${outcomeId}`;
+                state.runningAction = actionKey;
+                render();
+
+                try {
+                    const outcomeResult = await callTool("specrail_outcome_show", {
+                        ...state.toolArguments,
+                        feature_id: featureId,
+                        outcome_id: outcomeId,
+                    });
+                    const testsResult = await callTool("specrail_test_list", {
+                        ...state.toolArguments,
+                        feature_id: featureId,
+                        outcome_id: outcomeId,
+                    });
+
+                    const outcome = outcomeResult?.structuredContent?.outcome ?? {};
+                    const tests = testsResult?.structuredContent?.tests ?? [];
+                    const review = buildOutcomeGapReview(outcome, tests);
+                    let report = formatOutcomeGapReview(outcome, review);
+                    let variant = review.hasGaps ? "error" : "success";
+                    let statusMessage = review.hasGaps
+                        ? `Testing gaps found for ${outcomeId}.`
+                        : `No testing gaps found for ${outcomeId}.`;
+
+                    if (review.needsGeneration) {
+                        const generationResult = await callTool("specrail_test_generate", { ...state.toolArguments });
+                        const generationText = toolText(generationResult) || "Test generation completed.";
+                        report += `\n\nTest generation output:\n${generationText}`;
+
+                        if (generationResult?.isError) {
+                            variant = "error";
+                            statusMessage = `Gap check completed, but test generation failed for ${outcomeId}.`;
+                        } else {
+                            await refreshView();
+                            variant = "success";
+                            statusMessage = `Gap check completed and additional tests were generated for ${outcomeId}.`;
+                        }
+                    }
+
+                    state.lastToolRun = {
+                        title: `Test Gap Review: ${outcomeId}`,
+                        text: report,
+                        isError: variant === "error",
+                    };
+                    state.runningAction = null;
+                    showStatus(statusMessage, variant);
+                    render();
+                } catch (e) {
+                    state.runningAction = null;
+                    showStatus(e?.message ?? String(e), "error");
+                    render();
+                }
+            }
+
+            function renderToolOutput(root) {
+                if (!state.lastToolRun) return;
+
+                const panel = document.createElement("div");
+                panel.className = "output-panel";
+
+                const title = document.createElement("div");
+                title.className = "output-title";
+                title.innerHTML = `<strong>${esc(state.lastToolRun.title)}</strong>`;
+
+                const dismiss = document.createElement("button");
+                dismiss.className = "btn btn-ghost btn-sm";
+                dismiss.textContent = "Clear";
+                dismiss.addEventListener("click", clearLastToolRun);
+                title.appendChild(dismiss);
+
+                const body = document.createElement("div");
+                body.className = "output-body";
+                body.textContent = state.lastToolRun.text;
+
+                panel.appendChild(title);
+                panel.appendChild(body);
+                root.appendChild(panel);
+            }
+
+            function appendUtilityActions(container, context = {}) {
+                appendActionButton(container, { title: "Refresh", tool: "specrail_feature_navigate", args: context.featureId ? { feature_id: context.featureId } : {}, refresh: true, successMessage: "Refreshed." });
+                appendActionButton(container, { title: "Status", tool: "specrail_status" });
+                appendActionButton(container, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
+            }
+
             async function activateFeature(id) {
                 state.isActivating = id; render();
                 try { await callTool("specrail_feature_activate", { ...state.toolArguments, id }); await refreshView(); state.isActivating = null; showStatus("Feature activated: " + id, "success"); render(); }
@@ -228,9 +892,11 @@
                     const res = await callTool("specrail_feature_show", { ...state.toolArguments, id: featureId });
                     const f = res?.structuredContent?.feature ?? {};
                     state.editingFeatureId = featureId;
-                    state.featureDraft = { id: f.id ?? featureId, title: f.title ?? "", purpose: f.purpose ?? "",
+                    state.featureDraft = {
+                        id: f.id ?? featureId, title: f.title ?? "", purpose: f.purpose ?? "",
                         outcomes: arrayToLines(f.outcomes), constraints: arrayToLines(f.constraints),
-                        non_goals: arrayToLines(f.non_goals), dependencies: arrayToLines(f.dependencies) };
+                        non_goals: arrayToLines(f.non_goals), dependencies: arrayToLines(f.dependencies)
+                    };
                     showStatus(""); render();
                 } catch (e) { showStatus(e?.message ?? String(e), "error"); }
             }
@@ -240,10 +906,12 @@
                 e.preventDefault(); if (!state.featureDraft) return;
                 state.isSaving = true; render();
                 try {
-                    await callTool("specrail_feature_edit", { ...state.toolArguments, id: state.featureDraft.id,
+                    await callTool("specrail_feature_edit", {
+                        ...state.toolArguments, id: state.featureDraft.id,
                         title: state.featureDraft.title, purpose: state.featureDraft.purpose,
                         outcomes: linesToArray(state.featureDraft.outcomes), constraints: linesToArray(state.featureDraft.constraints),
-                        non_goals: linesToArray(state.featureDraft.non_goals), dependencies: linesToArray(state.featureDraft.dependencies) });
+                        non_goals: linesToArray(state.featureDraft.non_goals), dependencies: linesToArray(state.featureDraft.dependencies)
+                    });
                     state.editingFeatureId = null; state.featureDraft = null;
                     await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
                 } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
@@ -255,10 +923,12 @@
                     const res = await callTool("specrail_outcome_show", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId });
                     const o = res?.structuredContent?.outcome ?? {};
                     state.editingOutcomeId = outcomeId;
-                    state.outcomeDraft = { feature_id: featureId, outcome_id: o.id ?? outcomeId, title: o.title ?? "",
+                    state.outcomeDraft = {
+                        feature_id: featureId, outcome_id: o.id ?? outcomeId, title: o.title ?? "",
                         goal: o.goal ?? "", order: String(o.order ?? 1),
                         prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
-                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests) };
+                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests)
+                    };
                     showStatus(""); render();
                 } catch (e) { showStatus(e?.message ?? String(e), "error"); }
             }
@@ -268,13 +938,15 @@
                 e.preventDefault(); if (!state.outcomeDraft) return;
                 state.isSaving = true; render();
                 try {
-                    await callTool("specrail_outcome_edit", { ...state.toolArguments,
+                    await callTool("specrail_outcome_edit", {
+                        ...state.toolArguments,
                         feature_id: state.outcomeDraft.feature_id, outcome_id: state.outcomeDraft.outcome_id,
                         title: state.outcomeDraft.title, goal: state.outcomeDraft.goal, order: Number(state.outcomeDraft.order ?? 1),
                         prerequisites: linesToArray(state.outcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.outcomeDraft.required_tests) });
+                        required_tests: linesToArray(state.outcomeDraft.required_tests)
+                    });
                     state.editingOutcomeId = null; state.outcomeDraft = null;
                     await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
                 } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
@@ -349,6 +1021,7 @@
                     btn.textContent = "+ New Feature"; btn.disabled = state.isSaving;
                     btn.addEventListener("click", startNewFeature); ha.appendChild(btn);
                 }
+                appendUtilityActions(ha);
 
                 if (features.length > 0) {
                     const dash = document.createElement("div"); dash.className = "dashboard";
@@ -358,6 +1031,8 @@
                     dash.innerHTML = `<span class="stat-chip"><strong>${total}</strong> feature${total !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${totalOutcomes}</strong> outcome${totalOutcomes !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${verified}</strong> verified</span>`;
                     root.appendChild(dash);
                 }
+
+                renderToolOutput(root);
 
                 if (state.creatingFeature && state.newFeatureDraft) {
                     const d = state.newFeatureDraft;
@@ -418,6 +1093,8 @@
                     const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
                     editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
                     editBtn.addEventListener("click", () => startFeatureEdit(feature.id)); actions.appendChild(editBtn);
+                    appendActionButton(actions, { title: "Status", tool: "specrail_status" });
+                    appendActionButton(actions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
                     card.appendChild(actions);
 
                     if (state.editingFeatureId === feature.id && state.featureDraft) {
@@ -457,6 +1134,9 @@
                     newBtn.textContent = "+ New Outcome"; newBtn.disabled = state.isSaving;
                     newBtn.addEventListener("click", () => startNewOutcome(featureId, suggestedOrder)); ha.appendChild(newBtn);
                 }
+                appendUtilityActions(ha, { featureId });
+
+                renderToolOutput(root);
 
                 const isActive = data.activeFeatureId === featureId;
                 const fCard = document.createElement("div"); fCard.className = "card" + (isActive ? " active-card" : ""); fCard.style.marginBottom = "14px";
@@ -475,6 +1155,10 @@
                 const feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
                 feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
                 feEditBtn.addEventListener("click", () => startFeatureEdit(featureId)); fActions.appendChild(feEditBtn);
+                appendActionButton(fActions, { title: "Feature Details", tool: "specrail_feature_show", args: { id: featureId } });
+                appendActionButton(fActions, { title: "Feature Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
+                appendActionButton(fActions, { title: "Status", tool: "specrail_status" });
+                appendActionButton(fActions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
                 fCard.appendChild(fActions);
                 if (state.editingFeatureId === featureId && state.featureDraft) {
                     const d = state.featureDraft;
@@ -549,6 +1233,31 @@
                             actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate";
                             actBtn.addEventListener("click", () => activateOutcome(featureId, outcome.id)); actions.appendChild(actBtn);
                         }
+                        if (isActiveOutcome) {
+                            if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                                appendActionButton(actions, { title: "Implement", tool: "specrail_implement", refresh: true });
+                                appendActionButton(actions, { title: "Verify", tool: "specrail_verify", refresh: true });
+                                appendActionButton(actions, { title: "Generate Tests", tool: "specrail_test_generate", refresh: true });
+                            }
+                            if (outcome.status === "verified") {
+                                appendActionButton(actions, { title: "Advance", tool: "specrail_advance", refresh: true });
+                            }
+                        }
+                        if (["verified", "failed", "skipped"].includes(String(outcome.status ?? ""))) {
+                            appendActionButton(actions, {
+                                title: "Unverify",
+                                tool: "specrail_outcome_unverify",
+                                args: { feature_id: featureId, outcome_id: outcome.id },
+                                refresh: true,
+                                successMessage: `Outcome reset to pending: ${outcome.id}`,
+                            });
+                        }
+                        const gapBtn = document.createElement("button"); gapBtn.className = "btn btn-sm";
+                        gapBtn.disabled = state.isSaving || state.runningAction === `gap-check:${featureId}:${outcome.id}`;
+                        gapBtn.textContent = state.runningAction === `gap-check:${featureId}:${outcome.id}` ? "Checking Gaps\u2026" : "Check Test Gaps";
+                        gapBtn.addEventListener("click", () => checkOutcomeTestGaps(featureId, outcome.id)); actions.appendChild(gapBtn);
+                        appendActionButton(actions, { title: "Tests", tool: "specrail_test_list", args: { feature_id: featureId, outcome_id: outcome.id } });
+                        appendActionButton(actions, { title: "Details", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
                         const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
                         editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
                         editBtn.addEventListener("click", () => startOutcomeEdit(featureId, outcome.id)); actions.appendChild(editBtn);
@@ -630,4 +1339,5 @@
         })();
     </script>
 </body>
+
 </html>

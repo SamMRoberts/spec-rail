@@ -175,6 +175,31 @@ pub fn edit(repo: &Repository, args: EditArgs) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn reset_status_to_pending(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+) -> Result<OutcomeSpec> {
+    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
+
+    if matches!(outcome.status, OutcomeStatus::Pending | OutcomeStatus::Active) {
+        bail!(
+            "outcome '{outcome_id}' is already editable (status: {:?})",
+            outcome.status
+        );
+    }
+
+    outcome.status = OutcomeStatus::Pending;
+    repo.save_outcome(&outcome)?;
+
+    let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
+        .with_feature(feature_id)
+        .with_outcome(outcome_id);
+    Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(outcome)
+}
+
 // ── outcome activate ──────────────────────────────────────────────────────────
 
 pub(crate) fn activate_outcome(

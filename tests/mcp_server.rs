@@ -124,6 +124,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_feature_navigate"));
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
+    assert!(tool_names.contains(&"specrail_outcome_unverify"));
     let feature_navigate = tools["result"]["tools"]
         .as_array()
         .unwrap()
@@ -158,6 +159,18 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .as_str()
         .unwrap()
         .contains("specrail_feature_navigate"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("specrail_outcome_unverify"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("specrail_implement"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Check Test Gaps"));
 
     let status_before = client.request(
         "tools/call",
@@ -385,9 +398,22 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         "specrail_outcome_edit"
     );
     assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["unverifyOutcomeTool"],
+        "specrail_outcome_unverify"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["implementTool"],
+        "specrail_implement"
+    );
+    assert_eq!(
         outcome_picker["result"]["structuredContent"]["suggestedNewOutcomeOrder"],
         2
     );
+    assert!(outcomes[0]["availableActions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|value| value == "activate"));
 
     client.shutdown();
 }
@@ -472,6 +498,84 @@ fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
     );
 
     let outcomes = refreshed["result"]["structuredContent"]["outcomes"]
+        .as_array()
+        .unwrap();
+    assert_eq!(outcomes[0]["status"], "pending");
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_outcome_unverify_resets_verified_outcome_to_pending() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1
+            }
+        }),
+    );
+
+    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
+    let updated = fs::read_to_string(&outcome_path)
+        .unwrap()
+        .replace("status: pending", "status: verified");
+    fs::write(&outcome_path, updated).unwrap();
+
+    let reset = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_unverify",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login"
+            }
+        }),
+    );
+    assert_eq!(reset["result"]["isError"], json!(false));
+    assert_eq!(reset["result"]["structuredContent"]["outcome"]["status"], "pending");
+
+    let navigate = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {
+                "feature_id": "auth"
+            }
+        }),
+    );
+    let outcomes = navigate["result"]["structuredContent"]["outcomes"]
         .as_array()
         .unwrap();
     assert_eq!(outcomes[0]["status"], "pending");
