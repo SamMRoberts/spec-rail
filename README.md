@@ -271,6 +271,99 @@ Inside `your-ai-wrapper`, read:
 - `SPECRAIL_ALLOWED_PATHS` for editable path hints
 - `SPECRAIL_FORBIDDEN_PATHS` for restricted path hints
 
+### Full example: GitHub Copilot CLI
+
+The `copilot` adapter is a good fit when you want `specrail` to own the workflow state and prompt construction, while GitHub Copilot CLI suggests the shell commands to run next.
+
+Prerequisites:
+
+- `specrail` is installed and on `PATH`
+- `gh` is installed and authenticated
+- `gh copilot suggest -t shell "echo ready"` works in your shell
+
+Example end-to-end flow for a small Rust project:
+
+```bash
+mkdir demo-auth
+cd demo-auth
+cargo init --lib .
+specrail init
+```
+
+Set Copilot as the default implementation agent:
+
+```yaml
+# .specrail/project.yaml
+version: 1
+name: demo-auth
+test_command: cargo test
+default_agent: copilot
+```
+
+Create a feature, a phase, and a test entry:
+
+```bash
+specrail feature new email-validation \
+  --title "Email validation" \
+  --purpose "Reject malformed email addresses before account creation." \
+  --outcome "Only valid email addresses are accepted."
+
+specrail phase new email-validation phase-1 \
+  --title "Reject invalid email input" \
+  --goal "Add validation logic for malformed email addresses." \
+  --order 1 \
+  --allow "src/**" \
+  --allow "tests/**"
+
+specrail test add rejects-invalid-email \
+  --feature email-validation \
+  --phase phase-1 \
+  --path tests/email_validation.rs \
+  --kind integration
+```
+
+Use Copilot CLI directly to draft the phase test, then register it as ready:
+
+```bash
+gh copilot suggest -t shell \
+  "Create tests/email_validation.rs with an integration test that proves malformed email addresses are rejected."
+
+# Review or adapt the suggested shell command, run it, then mark the test as written.
+specrail test set-status rejects-invalid-email written
+```
+
+Activate the feature and phase, then hand the structured implementation brief to Copilot through `specrail`:
+
+```bash
+specrail feature activate email-validation
+specrail phase activate email-validation phase-1
+specrail implement --agent copilot
+```
+
+`specrail implement --agent copilot` sends Copilot a prompt containing:
+
+- the feature purpose and outcomes
+- the active phase goal and order
+- the allowed and forbidden paths for the phase
+- the registered tests that must pass
+
+Copilot CLI prints a suggested shell command. Review it, run or adapt it yourself, then continue the gated workflow:
+
+```bash
+cargo test
+specrail verify
+specrail advance
+```
+
+For the next phase, repeat the same loop:
+
+1. write or update the next phase tests with Copilot CLI
+2. mark those tests as `written`
+3. run `specrail implement --agent copilot`
+4. review and execute Copilot's suggested command
+5. run `specrail verify`
+6. run `specrail advance`
+
 ### Practical orchestration loop
 
 If you want a Copilot-or-other-agent driven workflow, the safest sequence is:
