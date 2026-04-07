@@ -223,6 +223,146 @@ fn mcp_server_can_create_and_read_feature_state() {
     client.shutdown();
 }
 
+#[test]
+fn mcp_status_guides_the_end_to_end_tdd_flow() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let status_before_init = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_before_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
+        "specrail-init"
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let status_after_init = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_after_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
+        "specrail-workflow"
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1
+            }
+        }),
+    );
+
+    let status_needs_tests = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_needs_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
+        "specrail-testing"
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_add",
+            "arguments": {
+                "id": "auth-login-valid-credentials",
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login.rs"
+            }
+        }),
+    );
+
+    let status_planned_tests = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_planned_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
+        "specrail-testing"
+    );
+    assert!(status_planned_tests["result"]["structuredContent"]["workflow"]["blockers"][0]
+        .as_str()
+        .unwrap()
+        .contains("planned status"));
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_set_status",
+            "arguments": {
+                "id": "auth-login-valid-credentials",
+                "status": "written"
+            }
+        }),
+    );
+
+    let status_ready = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_ready["result"]["structuredContent"]["workflow"]["recommended_skill"],
+        "specrail-activation"
+    );
+    assert_eq!(
+        status_ready["result"]["structuredContent"]["workflow"]["candidate_feature_id"],
+        "auth"
+    );
+    assert_eq!(
+        status_ready["result"]["structuredContent"]["workflow"]["candidate_outcome_id"],
+        "login"
+    );
+
+    client.shutdown();
+}
+
 fn write_message(writer: &mut impl Write, message: &Value) {
     let payload = serde_json::to_vec(message).unwrap();
     write!(writer, "Content-Length: {}\r\n\r\n", payload.len()).unwrap();

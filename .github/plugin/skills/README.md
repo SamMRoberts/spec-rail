@@ -4,6 +4,16 @@ This directory contains the workflow skills used by the specrail plugin.
 
 ## Skill Index
 
+### `specrail-tdd`
+Use when the user wants an end-to-end, test-driven specrail workflow and you need one entry point that routes to the right stage.
+
+Responsibilities:
+- Call `specrail_status` first.
+- Read the workflow guidance from `structuredContent.workflow`.
+- Route into init, workflow planning, testing, or activation based on the recommended stage.
+- Re-check status after each workflow mutation.
+- Keep the user on the test-first path until the workflow is complete.
+
 ### `specrail-init`
 Use when the repository does not yet have a `.specrail/` project.
 
@@ -55,9 +65,10 @@ Responsibilities:
 
 ## Recommended Flow
 
-1. Start with `specrail-init` if the project is not initialized.
-2. Use `specrail-workflow` to gather and create features and outcomes.
-3. Use `specrail-testing` to register and prepare tests.
-4. Use `specrail-activation` to execute the workflow.
+1. Start with `specrail-tdd` for the normal end-to-end experience.
+2. Let `specrail-tdd` route into `specrail-init` if the project is not initialized.
+3. Use `specrail-workflow` to gather and create features and outcomes.
+4. Use `specrail-testing` to register and prepare tests.
+5. Use `specrail-activation` to execute the workflow.
 
-If the repository is already in progress, begin with `specrail-resume` or whichever skill matches the current state.
+If the repository is already in progress, `specrail-tdd` should use `specrail_status` to route into `specrail-resume` or whichever stage matches the current state.
