@@ -183,6 +183,110 @@ Default values created by `specrail init` include:
 - `test_command: cargo test`
 - `default_agent: generic-shell`
 
+## Integrating specrail into another CLI or program
+
+`specrail` works best as the workflow state machine around another AI tool, not as the tool that invents the work on its own. Your outer CLI or program should translate requirements into `specrail` features, phases, and tests, then let `specrail` enforce the handoff points.
+
+Recommended model:
+
+1. Your program collects requirements from the user.
+2. Your program turns those requirements into:
+   - one `feature`
+   - one or more ordered `phase`s
+   - one or more tests per phase
+3. Your program calls `specrail` commands to persist that plan under `.specrail/`.
+4. Your AI coding CLI writes tests and implementation code.
+5. `specrail` verifies the phase and decides whether work can advance.
+
+Use the `specrail` CLI as the write interface:
+
+```bash
+specrail init
+specrail feature new <id> --title <title> --purpose <purpose> ...
+specrail phase new <feature> <phase> --title <title> --goal <goal> --order <n> ...
+specrail test add <test-id> --feature <feature> --phase <phase> --path <path> ...
+specrail test set-status <test-id> written
+specrail feature activate <feature>
+specrail phase activate <feature> <phase>
+```
+
+Use the CLI as the read interface too when your orchestrator needs to inspect progress:
+
+- `specrail status`
+- `specrail trace --limit <n>`
+- `specrail feature show <feature>`
+- `specrail phase show <feature> <phase>`
+- `specrail test list --feature <feature> --phase <phase>`
+
+Then run the control loop:
+
+1. **Requirements → specrail**
+   - Ask your AI tool to break the requirement into a feature, ordered phases, and tests.
+   - Register each artifact with `specrail feature new`, `specrail phase new`, and `specrail test add`.
+2. **Test authoring**
+   - Hand the active phase goal to your coding CLI and ask it to create the test files for that phase.
+   - After each test file exists, mark it ready with `specrail test set-status <id> written`.
+3. **Implementation**
+   - Activate the feature and phase.
+   - Either call your coding CLI directly from your program, or run `specrail implement` to hand the structured phase prompt to an adapter.
+4. **Verification**
+   - Run `specrail verify`.
+   - If verification fails, hand the failure output back to your coding CLI and repeat the implementation step.
+5. **Advancement**
+   - When verification passes, run `specrail advance`.
+   - Repeat until there is no next phase.
+
+### Best integration pattern
+
+For another CLI or automation layer, prefer this ownership split:
+
+- **Your orchestrator** decides what feature, phases, and tests to create.
+- **specrail** stores the plan, tracks active state, blocks implementation until tests are registered, and blocks advancement until verification passes.
+- **Your AI coding CLI** writes the tests and code.
+- **Your project's test command** is the final authority through `specrail verify`.
+
+### Calling another AI CLI from `specrail`
+
+There are three practical options:
+
+- `specrail implement --agent generic-shell`
+  - Best when you have a wrapper command that can read `SPECRAIL_PROMPT`, `SPECRAIL_ALLOWED_PATHS`, and `SPECRAIL_FORBIDDEN_PATHS` and then invoke your preferred AI CLI.
+  - Configure it with `SPECRAIL_AGENT_CMD`.
+- `specrail implement --agent copilot`
+  - Uses `gh copilot suggest -t shell` with the generated prompt.
+  - Treat this as a prompt/suggestion adapter, not a full autonomous edit pipeline.
+- `specrail implement --agent codex`
+  - Sends the generated prompt to the `codex` CLI.
+
+Example generic-shell setup:
+
+```bash
+export SPECRAIL_AGENT_CMD="your-ai-wrapper"
+specrail implement --agent generic-shell
+```
+
+Inside `your-ai-wrapper`, read:
+
+- `SPECRAIL_PROMPT` for the full implementation brief
+- `SPECRAIL_ALLOWED_PATHS` for editable path hints
+- `SPECRAIL_FORBIDDEN_PATHS` for restricted path hints
+
+### Practical orchestration loop
+
+If you want a Copilot-or-other-agent driven workflow, the safest sequence is:
+
+1. Feed requirements into your own orchestrator.
+2. Use the orchestrator to call `specrail feature new` and `specrail phase new`.
+3. Ask the coding agent to write the phase tests.
+4. Register those tests with `specrail test add`.
+5. Mark them `written`.
+6. Activate the feature and phase.
+7. Ask the coding agent to implement only the active phase.
+8. Run `specrail verify`.
+9. If tests pass, run `specrail advance`; otherwise loop back to step 7 with the failure output.
+
+This gives you a repeatable contract: the AI can generate code, but `specrail` decides when implementation may start and when the work is allowed to move forward.
+
 ## Development notes
 
 - The binary name is `specrail`.
