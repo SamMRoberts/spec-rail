@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use super::{
     config::ProjectConfig,
-    models::{FeatureSpec, PhaseSpec, ProjectState, TestManifest},
+    models::{FeatureSpec, OutcomeSpec, ProjectState, TestManifest},
 };
 
 const SPECRAIL_DIR: &str = ".specrail";
@@ -48,8 +48,8 @@ impl Repository {
         self.specrail_dir().join("features")
     }
 
-    pub fn phases_dir(&self) -> PathBuf {
-        self.specrail_dir().join("phases")
+    pub fn outcomes_dir(&self) -> PathBuf {
+        self.specrail_dir().join("outcomes")
     }
 
     pub fn tests_dir(&self) -> PathBuf {
@@ -86,14 +86,14 @@ impl Repository {
         self.features_dir().join(format!("{feature_id}.yaml"))
     }
 
-    pub fn phase_path(&self, feature_id: &str, phase_id: &str) -> PathBuf {
-        self.phases_dir()
+    pub fn outcome_path(&self, feature_id: &str, outcome_id: &str) -> PathBuf {
+        self.outcomes_dir()
             .join(feature_id)
-            .join(format!("{phase_id}.yaml"))
+            .join(format!("{outcome_id}.yaml"))
     }
 
-    pub fn feature_phases_dir(&self, feature_id: &str) -> PathBuf {
-        self.phases_dir().join(feature_id)
+    pub fn feature_outcomes_dir(&self, feature_id: &str) -> PathBuf {
+        self.outcomes_dir().join(feature_id)
     }
 
     // ── Load helpers ───────────────────────────────────────────────────────
@@ -125,20 +125,20 @@ impl Repository {
             .with_context(|| format!("writing feature to {}", path.display()))
     }
 
-    pub fn load_phase(&self, feature_id: &str, phase_id: &str) -> Result<PhaseSpec> {
-        let path = self.phase_path(feature_id, phase_id);
+    pub fn load_outcome(&self, feature_id: &str, outcome_id: &str) -> Result<OutcomeSpec> {
+        let path = self.outcome_path(feature_id, outcome_id);
         let content = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading phase '{phase_id}' from {}", path.display()))?;
+            .with_context(|| format!("reading outcome '{outcome_id}' from {}", path.display()))?;
         serde_yaml::from_str(&content)
-            .with_context(|| format!("parsing phase file {}", path.display()))
+            .with_context(|| format!("parsing outcome file {}", path.display()))
     }
 
-    pub fn save_phase(&self, phase: &PhaseSpec) -> Result<()> {
-        let path = self.phase_path(&phase.feature_id, &phase.id);
+    pub fn save_outcome(&self, outcome: &OutcomeSpec) -> Result<()> {
+        let path = self.outcome_path(&outcome.feature_id, &outcome.id);
         std::fs::create_dir_all(path.parent().unwrap())?;
-        let content = serde_yaml::to_string(phase)?;
+        let content = serde_yaml::to_string(outcome)?;
         std::fs::write(&path, content)
-            .with_context(|| format!("writing phase to {}", path.display()))
+            .with_context(|| format!("writing outcome to {}", path.display()))
     }
 
     pub fn load_manifest(&self) -> Result<TestManifest> {
@@ -180,25 +180,25 @@ impl Repository {
         Ok(features)
     }
 
-    /// List all phases for a given feature, sorted by `order`.
-    pub fn list_phases(&self, feature_id: &str) -> Result<Vec<PhaseSpec>> {
-        let dir = self.feature_phases_dir(feature_id);
+    /// List all outcomes for a given feature, sorted by `order`.
+    pub fn list_outcomes(&self, feature_id: &str) -> Result<Vec<OutcomeSpec>> {
+        let dir = self.feature_outcomes_dir(feature_id);
         if !dir.exists() {
             return Ok(vec![]);
         }
-        let mut phases = Vec::new();
+        let mut outcomes = Vec::new();
         for entry in walkdir::WalkDir::new(&dir).max_depth(1).min_depth(1) {
             let entry = entry?;
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) == Some("yaml") {
                 let content = std::fs::read_to_string(path)?;
-                if let Ok(p) = serde_yaml::from_str::<PhaseSpec>(&content) {
-                    phases.push(p);
+                if let Ok(o) = serde_yaml::from_str::<OutcomeSpec>(&content) {
+                    outcomes.push(o);
                 }
             }
         }
-        phases.sort_by_key(|p| p.order);
-        Ok(phases)
+        outcomes.sort_by_key(|o| o.order);
+        Ok(outcomes)
     }
 
     /// Return `true` when `.specrail/` exists at this repository root.

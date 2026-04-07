@@ -26,7 +26,7 @@ fn test_generate_creates_files_and_manifest_entries() {
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth", "phase-1",
+            "outcome", "new", "auth", "outcome-1",
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
@@ -42,7 +42,7 @@ fn test_generate_creates_files_and_manifest_entries() {
   "tests": [
     {
       "feature_id": "auth",
-      "phase_id": "phase-1",
+      "outcome_id": "outcome-1",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -89,7 +89,7 @@ fn test_generate_requires_declared_required_tests() {
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth", "phase-1",
+            "outcome", "new", "auth", "outcome-1",
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
@@ -101,5 +101,5 @@ fn test_generate_requires_declared_required_tests() {
         .args(["test", "generate", "--agent", "generic-shell"])
         .assert()
         .failure()
-        .stderr(contains("no phase.required_tests entries found"));
+        .stderr(contains("no outcome.required_tests entries found"));
 }

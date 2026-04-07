@@ -8,7 +8,7 @@ use crate::{
     core::{
         ledger::Ledger,
         models::{
-            AgentTask, LedgerEvent, LedgerEventType, PhaseSpec, TestKind, TestManifest,
+            AgentTask, LedgerEvent, LedgerEventType, OutcomeSpec, TestKind, TestManifest,
             TestSpec, TestStatus,
         },
         repository::Repository,
@@ -22,7 +22,7 @@ use crate::{
 pub struct AddArgs {
     pub id: String,
     pub feature_id: String,
-    pub phase_id: String,
+    pub outcome_id: String,
     pub path: String,
     pub kind: crate::core::models::TestKind,
     pub purpose_refs: Vec<String>,
@@ -36,7 +36,7 @@ struct GeneratedTestsResponse {
 #[derive(Deserialize)]
 struct GeneratedTest {
     feature_id: String,
-    phase_id: String,
+    outcome_id: String,
     path: String,
     kind: String,
     #[serde(default)]
@@ -44,15 +44,15 @@ struct GeneratedTest {
     content: String,
 }
 
-struct PhaseGenerationContext {
+struct OutcomeGenerationContext {
     feature_id: String,
-    phase: PhaseSpec,
+    outcome: OutcomeSpec,
 }
 
 pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
-    // Verify feature and phase exist
+    // Verify feature and outcome exist
     repo.load_feature(&args.feature_id)?;
-    repo.load_phase(&args.feature_id, &args.phase_id)?;
+    repo.load_outcome(&args.feature_id, &args.outcome_id)?;
 
     let mut manifest = repo.load_manifest()?;
 
@@ -63,7 +63,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 
     let event = LedgerEvent::new(LedgerEventType::TestAdded)
         .with_feature(&test.feature_id)
-        .with_phase(&test.phase_id)
+        .with_outcome(&test.outcome_id)
         .with_message(format!("test '{}' added", test.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
@@ -81,34 +81,34 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     let features = repo.list_features()?;
 
     if features.is_empty() {
-        bail!("no features found — define features and phases before generating tests");
+        bail!("no features found — define features and outcomes before generating tests");
     }
 
     let mut prompt_features = Vec::new();
-    let mut phase_contexts = Vec::new();
+    let mut outcome_contexts = Vec::new();
     let mut expected_paths = BTreeSet::new();
 
     for feature in features {
-        let phases = repo.list_phases(&feature.id)?;
-        for phase in &phases {
-            if phase.required_tests.is_empty() {
+        let outcomes = repo.list_outcomes(&feature.id)?;
+        for outcome in &outcomes {
+            if outcome.required_tests.is_empty() {
                 continue;
             }
 
-            for path in &phase.required_tests {
-                expected_paths.insert((feature.id.clone(), phase.id.clone(), path.clone()));
+            for path in &outcome.required_tests {
+                expected_paths.insert((feature.id.clone(), outcome.id.clone(), path.clone()));
             }
 
-            phase_contexts.push(PhaseGenerationContext {
+            outcome_contexts.push(OutcomeGenerationContext {
                 feature_id: feature.id.clone(),
-                phase: phase.clone(),
+                outcome: outcome.clone(),
             });
         }
-        prompt_features.push((feature, phases));
+        prompt_features.push((feature, outcomes));
     }
 
     if expected_paths.is_empty() {
-        bail!("no phase.required_tests entries found — add required test paths to your phases first");
+        bail!("no outcome.required_tests entries found — add required test paths to your outcomes first");
     }
 
     let prompt = builder::build_test_generation_prompt(&config, &prompt_features, &manifest)?;
@@ -119,7 +119,7 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
 
     let task = AgentTask {
         feature_id: "project".to_string(),
-        phase_id: "all-required-tests".to_string(),
+        outcome_id: "all-required-tests".to_string(),
         agent: agent_name.to_string(),
         prompt,
         allowed_paths: expected_paths.iter().map(|(_, _, path)| path.clone()).collect(),
@@ -148,40 +148,40 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     let actual_paths: BTreeSet<_> = response
         .tests
         .iter()
-        .map(|test| (test.feature_id.clone(), test.phase_id.clone(), test.path.clone()))
+        .map(|test| (test.feature_id.clone(), test.outcome_id.clone(), test.path.clone()))
         .collect();
 
     if actual_paths != expected_paths {
-        bail!("generated tests did not match phase.required_tests declarations");
+        bail!("generated tests did not match outcome.required_tests declarations");
     }
 
     let mut generated_count = 0usize;
     for generated in response.tests {
-        let phase = phase_contexts
+        let outcome = outcome_contexts
             .iter()
             .find(|context| {
                 context.feature_id == generated.feature_id
-                    && context.phase.id == generated.phase_id
+                    && context.outcome.id == generated.outcome_id
             })
-            .map(|context| &context.phase)
+            .map(|context| &context.outcome)
             .with_context(|| {
                 format!(
-                    "generated unknown phase '{}:{}'",
-                    generated.feature_id, generated.phase_id
+                    "generated unknown outcome '{}:{}'",
+                    generated.feature_id, generated.outcome_id
                 )
             })?;
 
-        if !phase.required_tests.iter().any(|path| path == &generated.path) {
+        if !outcome.required_tests.iter().any(|path| path == &generated.path) {
             bail!(
-                "generated test path '{}' is not declared in phase.required_tests for '{}:{}'",
+                "generated test path '{}' is not declared in outcome.required_tests for '{}:{}'",
                 generated.path,
                 generated.feature_id,
-                generated.phase_id
+                generated.outcome_id
             );
         }
 
         let kind = parse_generated_test_kind(&generated.kind)?;
-        let id = generate_test_id(&generated.feature_id, &generated.phase_id, &generated.path);
+        let id = generate_test_id(&generated.feature_id, &generated.outcome_id, &generated.path);
 
         write_file(&repo.root.join(&generated.path), &generated.content)?;
 
@@ -190,7 +190,7 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
             AddArgs {
                 id: id.clone(),
                 feature_id: generated.feature_id.clone(),
-                phase_id: generated.phase_id.clone(),
+                outcome_id: generated.outcome_id.clone(),
                 path: generated.path.clone(),
                 kind,
                 purpose_refs: generated.purpose_refs.clone(),
@@ -200,7 +200,7 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
 
         let event = LedgerEvent::new(LedgerEventType::TestAdded)
             .with_feature(&generated.feature_id)
-            .with_phase(&generated.phase_id)
+            .with_outcome(&generated.outcome_id)
             .with_message(format!("test '{}' generated", id));
         Ledger::append(&repo.ledger_path(), &event)?;
         generated_count = generated_count.saturating_add(1);
@@ -215,14 +215,14 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
 
 // ── test list ─────────────────────────────────────────────────────────────────
 
-pub fn list(repo: &Repository, feature_id: Option<&str>, phase_id: Option<&str>) -> Result<()> {
+pub fn list(repo: &Repository, feature_id: Option<&str>, outcome_id: Option<&str>) -> Result<()> {
     let manifest = repo.load_manifest()?;
     let tests: Vec<_> = manifest
         .tests
         .iter()
         .filter(|t| {
             feature_id.map_or(true, |f| t.feature_id == f)
-                && phase_id.map_or(true, |p| t.phase_id == p)
+                && outcome_id.map_or(true, |o| t.outcome_id == o)
         })
         .collect();
 
@@ -233,7 +233,7 @@ pub fn list(repo: &Repository, feature_id: Option<&str>, phase_id: Option<&str>)
 
     println!(
         "{:<35} {:<20} {:<20} {:<12} {}",
-        "ID", "FEATURE", "PHASE", "KIND", "STATUS"
+        "ID", "FEATURE", "OUTCOME", "KIND", "STATUS"
     );
     println!("{}", "─".repeat(100));
     for t in &tests {
@@ -241,7 +241,7 @@ pub fn list(repo: &Repository, feature_id: Option<&str>, phase_id: Option<&str>)
         let status = format!("{:?}", t.status).to_lowercase();
         println!(
             "{:<35} {:<20} {:<20} {:<12} {}",
-            t.id, t.feature_id, t.phase_id, kind, status
+            t.id, t.feature_id, t.outcome_id, kind, status
         );
     }
     Ok(())
@@ -276,7 +276,7 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
     }
 
     if let Some(existing) = manifest.tests.iter_mut().find(|t| {
-        t.feature_id == args.feature_id && t.phase_id == args.phase_id && t.path == args.path
+        t.feature_id == args.feature_id && t.outcome_id == args.outcome_id && t.path == args.path
     }) {
         existing.kind = args.kind;
         existing.purpose_refs = args.purpose_refs;
@@ -287,7 +287,7 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
     manifest.tests.push(TestSpec {
         id: args.id,
         feature_id: args.feature_id,
-        phase_id: args.phase_id,
+        outcome_id: args.outcome_id,
         path: args.path,
         purpose_refs: args.purpose_refs,
         kind: args.kind,
@@ -321,8 +321,8 @@ fn parse_generated_test_kind(value: &str) -> Result<TestKind> {
     }
 }
 
-fn generate_test_id(feature_id: &str, phase_id: &str, path: &str) -> String {
-    format!("{feature_id}-{phase_id}-{path}")
+fn generate_test_id(feature_id: &str, outcome_id: &str, path: &str) -> String {
+    format!("{feature_id}-{outcome_id}-{path}")
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
         .collect::<String>()

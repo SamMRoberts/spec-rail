@@ -33,7 +33,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
         non_goals: args.non_goals,
         dependencies: args.dependencies,
         status: FeatureStatus::Draft,
-        current_phase: None,
+        current_outcome: None,
     };
 
     repo.save_feature(&feature)?;
@@ -52,7 +52,7 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
 
     println!("✓ Feature '{}' created: {}", feature.id, feature.title);
     println!("  Path: {}", path.display());
-    println!("  Next: specrail phase new {} <phase-id>", feature.id);
+    println!("  Next: specrail outcome new {} <outcome-id>", feature.id);
     Ok(())
 }
 
@@ -99,8 +99,8 @@ pub fn show(repo: &Repository, id: &str) -> Result<()> {
             println!("  • {ng}");
         }
     }
-    if let Some(phase) = &f.current_phase {
-        println!("\nCurrent phase: {phase}");
+    if let Some(outcome) = &f.current_outcome {
+        println!("\nCurrent outcome: {outcome}");
     }
     Ok(())
 }
@@ -130,15 +130,15 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
     Ok(())
 }
 
-// ── feature set-phase ─────────────────────────────────────────────────────────
+// ── feature set-outcome ───────────────────────────────────────────────────────
 
-/// Update the `current_phase` field on a feature (called by `advance`).
-pub fn set_current_phase(
+/// Update the `current_outcome` field on a feature (called by `advance`).
+pub fn set_current_outcome(
     repo: &Repository,
     feature_id: &str,
-    phase_id: Option<&str>,
+    outcome_id: Option<&str>,
 ) -> Result<()> {
     let mut feature = repo.load_feature(feature_id)?;
-    feature.current_phase = phase_id.map(str::to_string);
+    feature.current_outcome = outcome_id.map(str::to_string);
     repo.save_feature(&feature)
 }
