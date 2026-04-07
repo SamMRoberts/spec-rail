@@ -5,6 +5,8 @@ description: Use specrail MCP tools to manage the workflow state instead of edit
 
 When a repository uses specrail, prefer the `specrail_*` MCP tools for reading and changing workflow state.
 
+If `specrail_status` shows that the project is not initialized yet, start with the `specrail-init` skill or call `specrail_init` before gathering features and outcomes.
+
 Use this sequence by default:
 
 1. Call `specrail_status` to confirm whether the project is initialized and which feature or outcome is active.
@@ -14,6 +16,8 @@ Use this sequence by default:
 5. Summarize the collected features and outcomes back to the user so they can confirm the structure before creation.
 6. Use the mutating tools to create or activate features, outcomes, and tests instead of writing `.specrail/*` files by hand.
 7. After any mutating tool call, check `specrail_status` again to verify the new state.
+8. After defining the features and outcomes, hand off to the `specrail-testing` skill to register the required tests for each outcome before implementation begins.
+9. Once tests are ready, hand off to the `specrail-activation` skill to drive the `implement`, `verify`, and `advance` loop.
 
 Discovery behavior:
 
