@@ -2,7 +2,7 @@ use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -82,7 +82,8 @@ fn summarize_for_log(text: &str) -> String {
     if text.len() <= LIMIT {
         text.to_string()
     } else {
-        format!("{}…", &text[..LIMIT])
+        let truncated: String = text.chars().take(LIMIT).collect();
+        format!("{truncated}…")
     }
 }
 
@@ -108,9 +109,9 @@ pub fn run() -> Result<()> {
     ));
 
     while let Some((message, transport)) = read_message(&mut reader)? {
-        mcp_debug_log(format!("received message: {}", summarize_for_log(&message.to_string())));
+        mcp_debug_log(format!("received message: {}", summarize_for_log(&serde_json::to_string(&message).unwrap_or_default())));
         if let Some(response) = server.handle_message(message) {
-            mcp_debug_log(format!("sending response: {}", summarize_for_log(&response.to_string())));
+            mcp_debug_log(format!("sending response: {}", summarize_for_log(&serde_json::to_string(&response).unwrap_or_default())));
             write_message(&mut writer, &response, transport)?;
             writer.flush()?;
         }
@@ -835,6 +836,7 @@ fn run_cli_tool(cwd: &Path, args: Vec<String>) -> Result<Value> {
     let output = Command::new(&executable)
         .args(&args)
         .current_dir(cwd)
+        .stdin(Stdio::null())
         .output()
         .with_context(|| format!("running specrail {}", args.join(" ")))?;
 
