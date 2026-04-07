@@ -10,6 +10,8 @@ Use when the user wants an end-to-end, test-driven specrail workflow and you nee
 Responsibilities:
 - Call `specrail_status` first.
 - Read the workflow guidance from `structuredContent.workflow`.
+- Prompt the user for missing features and outcomes.
+- Help expand rough feature and outcome ideas before creation.
 - Route into init, workflow planning, testing, or activation based on the recommended stage.
 - Re-check status after each workflow mutation.
 - Keep the user on the test-first path until the workflow is complete.

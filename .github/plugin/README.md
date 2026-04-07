@@ -6,7 +6,7 @@ This plugin exposes the specrail MCP server and a set of workflow skills for dri
 
 The plugin is organized around one top-level TDD entry point plus the detailed stage skills:
 
-1. `specrail-tdd`: Start here for the full end-to-end test-driven workflow. It checks `specrail_status`, follows the recommended next stage, and keeps looping until work is done.
+1. `specrail-tdd`: Start here for the full end-to-end test-driven workflow. It checks `specrail_status`, prompts for missing features and outcomes, follows the recommended next stage, and keeps looping until work is done.
 2. `specrail-init`: Bootstrap a new `.specrail/` project when the repository is not initialized.
 3. `specrail-resume`: Inspect the current state, determine where work was left off, and confirm where to resume.
 4. `specrail-workflow`: Gather and structure features and outcomes through follow-up questions.
