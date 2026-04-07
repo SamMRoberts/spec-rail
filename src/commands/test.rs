@@ -298,18 +298,102 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
 }
 
 fn parse_generated_tests(output: &str) -> Result<GeneratedTestsResponse> {
-    let trimmed = output.trim();
-    let json = if trimmed.starts_with("```") {
-        trimmed
-            .trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim()
-    } else {
-        trimmed
-    };
+    let cleaned = strip_ansi_escape_sequences(output);
+    let trimmed = cleaned.trim();
 
-    serde_json::from_str(json).with_context(|| "parsing generated test response as JSON")
+    if let Ok(response) = serde_json::from_str(trimmed) {
+        return Ok(response);
+    }
+
+    let mut last_error = None;
+    for candidate in extract_json_object_candidates(trimmed) {
+        match serde_json::from_str(&candidate) {
+            Ok(response) => return Ok(response),
+            Err(error) => last_error = Some(error),
+        }
+    }
+
+    match last_error {
+        Some(error) => Err(error).with_context(|| "parsing generated test response as JSON"),
+        None => bail!("parsing generated test response as JSON: no JSON object found in agent output"),
+    }
+}
+
+fn strip_ansi_escape_sequences(value: &str) -> String {
+    let mut cleaned = String::with_capacity(value.len());
+    let mut chars = value.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' && matches!(chars.peek(), Some('[')) {
+            chars.next();
+            while let Some(next) = chars.next() {
+                if ('@'..='~').contains(&next) {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        cleaned.push(ch);
+    }
+
+    cleaned
+}
+
+fn extract_json_object_candidates(value: &str) -> Vec<String> {
+    let mut candidates = Vec::new();
+
+    for (start, ch) in value.char_indices() {
+        if ch != '{' {
+            continue;
+        }
+
+        if let Some(end) = find_balanced_json_object_end(&value[start..]) {
+            candidates.push(value[start..start + end].to_string());
+        }
+    }
+
+    candidates
+}
+
+fn find_balanced_json_object_end(value: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (index, ch) in value.char_indices() {
+        if in_string {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+
+            match ch {
+                '\\' => escaped = true,
+                '"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => in_string = true,
+            '{' => depth = depth.saturating_add(1),
+            '}' => {
+                if depth == 0 {
+                    return None;
+                }
+
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index + ch.len_utf8());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
 }
 
 fn parse_generated_test_kind(value: &str) -> Result<TestKind> {
@@ -328,4 +412,54 @@ fn generate_test_id(feature_id: &str, outcome_id: &str, path: &str) -> String {
         .collect::<String>()
         .trim_matches('-')
         .to_lowercase()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_generated_tests;
+
+    #[test]
+    fn parse_generated_tests_accepts_fenced_json_with_leading_text() {
+        let output = r##"
+Here are the required tests.
+
+```json
+{
+    "tests": [
+        {
+            "feature_id": "auth",
+            "outcome_id": "outcome-1",
+            "path": "tests/auth/validate.rs",
+            "kind": "unit",
+            "purpose_refs": ["goal:Validate credentials."],
+            "content": "#[test]\nfn validates_credentials() {\n    assert!(true);\n}\n"
+        }
+    ]
+}
+```
+"##;
+
+        let parsed = parse_generated_tests(output).expect("expected fenced JSON to parse");
+        assert_eq!(parsed.tests.len(), 1);
+        assert_eq!(parsed.tests[0].path, "tests/auth/validate.rs");
+    }
+
+    #[test]
+    fn parse_generated_tests_accepts_ansi_wrapped_json() {
+        let output = "\u{1b}[32m{\n  \"tests\": [{\n    \"feature_id\": \"auth\",\n    \"outcome_id\": \"outcome-1\",\n    \"path\": \"tests/auth/validate.rs\",\n    \"kind\": \"unit\",\n    \"purpose_refs\": [],\n    \"content\": \"#[test]\\nfn validates_credentials() {\\n    assert!(true);\\n}\\n\"\n  }]\n}\u{1b}[0m";
+
+        let parsed = parse_generated_tests(output).expect("expected ANSI-wrapped JSON to parse");
+        assert_eq!(parsed.tests.len(), 1);
+        assert_eq!(parsed.tests[0].feature_id, "auth");
+    }
+
+    #[test]
+    fn parse_generated_tests_reports_missing_json() {
+        let error = match parse_generated_tests("No JSON here") {
+            Ok(_) => panic!("expected parse to fail"),
+            Err(error) => error,
+        };
+
+        assert!(error.to_string().contains("no JSON object found"));
+    }
 }
