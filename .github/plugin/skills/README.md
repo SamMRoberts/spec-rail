@@ -13,6 +13,16 @@ Responsibilities:
 - Verify the initialized state.
 - Hand off into planning, testing, and activation.
 
+### `specrail-resume`
+Use when the repository is already in progress and the user wants to continue from where work stopped.
+
+Responsibilities:
+- Inspect current feature, outcome, test, and ledger state.
+- Determine the most likely resume point.
+- Tell the user what is complete and what is still in progress.
+- Ask the user to confirm where to resume before making changes.
+- Hand off to testing or activation based on the recommended next step.
+
 ### `specrail-workflow`
 Use when features and outcomes need to be discovered, clarified, and created.
 
@@ -50,4 +60,4 @@ Responsibilities:
 3. Use `specrail-testing` to register and prepare tests.
 4. Use `specrail-activation` to execute the workflow.
 
-If the repository is already in progress, begin with whichever skill matches the current state.
+If the repository is already in progress, begin with `specrail-resume` or whichever skill matches the current state.
