@@ -105,6 +105,12 @@ fn mcp_server_lists_tools_and_initializes_project() {
     let initialize = client.initialize();
     assert_eq!(initialize["result"]["serverInfo"]["name"], "specrail");
     assert!(initialize["result"]["capabilities"]["tools"].is_object());
+    assert!(initialize["result"]["capabilities"]["resources"].is_object());
+    assert_eq!(
+        initialize["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]
+            ["mimeTypes"][0],
+        "text/html;profile=mcp-app"
+    );
 
     let tools = client.request("tools/list", json!({}));
     let tool_names: Vec<_> = tools["result"]["tools"]
@@ -117,6 +123,40 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_feature_navigate"));
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
+    let feature_navigate = tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "specrail_feature_navigate")
+        .unwrap();
+    assert_eq!(
+        feature_navigate["_meta"]["ui"]["resourceUri"],
+        "ui://specrail/feature-navigate"
+    );
+
+    let resources = client.request("resources/list", json!({}));
+    let feature_picker = resources["result"]["resources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|resource| resource["uri"] == "ui://specrail/feature-navigate")
+        .unwrap();
+    assert_eq!(feature_picker["mimeType"], "text/html;profile=mcp-app");
+
+    let feature_picker_html = client.request(
+        "resources/read",
+        json!({
+            "uri": "ui://specrail/feature-navigate"
+        }),
+    );
+    assert_eq!(
+        feature_picker_html["result"]["contents"][0]["mimeType"],
+        "text/html;profile=mcp-app"
+    );
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Select a feature"));
 
     let status_before = client.request(
         "tools/call",

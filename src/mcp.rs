@@ -16,6 +16,10 @@ use crate::core::{
 };
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
+const UI_EXTENSION_NAME: &str = "io.modelcontextprotocol/ui";
+const UI_RESOURCE_MIME_TYPE: &str = "text/html;profile=mcp-app";
+const FEATURE_NAVIGATE_APP_URI: &str = "ui://specrail/feature-navigate";
+const FEATURE_NAVIGATE_APP_HTML: &str = include_str!("mcp_feature_navigate_app.html");
 const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     DEFAULT_PROTOCOL_VERSION,
     "2025-06-18",
@@ -35,6 +39,14 @@ fn server_capabilities() -> Value {
     json!({
         "tools": {
             "listChanged": false
+        },
+        "resources": {
+            "listChanged": false
+        },
+        "extensions": {
+            UI_EXTENSION_NAME: {
+                "mimeTypes": [UI_RESOURCE_MIME_TYPE]
+            }
         }
     })
 }
@@ -195,6 +207,13 @@ impl McpServer {
             }
             "ping" => id.map(|id| jsonrpc_result(id, json!({}))),
             "tools/list" => id.map(|id| jsonrpc_result(id, json!({ "tools": tool_definitions() }))),
+            "resources/list" => {
+                id.map(|id| jsonrpc_result(id, json!({ "resources": resource_definitions() })))
+            }
+            "resources/read" => id.map(|id| match read_resource(message.get("params")) {
+                Ok(result) => jsonrpc_result(id, result),
+                Err(error) => jsonrpc_error(id, -32002, error.to_string()),
+            }),
             "tools/call" => {
                 let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
                 let result = handle_tool_call(&params).unwrap_or_else(|error| tool_error_payload(error));
@@ -462,6 +481,41 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
             }
         })),
     ))
+}
+
+fn resource_definitions() -> Vec<Value> {
+    vec![json!({
+        "uri": FEATURE_NAVIGATE_APP_URI,
+        "name": "specrail_feature_navigate",
+        "title": "Specrail Feature Picker",
+        "description": "Interactive feature and outcome picker for the specrail workflow.",
+        "mimeType": UI_RESOURCE_MIME_TYPE
+    })]
+}
+
+fn read_resource(params: Option<&Value>) -> Result<Value> {
+    let uri = params
+        .and_then(|value| value.get("uri"))
+        .and_then(Value::as_str)
+        .context("missing resource uri")?;
+
+    match uri {
+        FEATURE_NAVIGATE_APP_URI => Ok(json!({
+            "contents": [
+                {
+                    "uri": FEATURE_NAVIGATE_APP_URI,
+                    "mimeType": UI_RESOURCE_MIME_TYPE,
+                    "text": FEATURE_NAVIGATE_APP_HTML,
+                    "_meta": {
+                        "ui": {
+                            "prefersBorder": true
+                        }
+                    }
+                }
+            ]
+        })),
+        other => bail!("resource not found: {other}"),
+    }
 }
 
 fn tool_feature_show(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1179,6 +1233,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_feature_navigate",
             "description": "List features and, when a feature is selected, list its outcomes plus the next actions to activate or create an outcome.",
+            "_meta": {
+                "ui": {
+                    "resourceUri": FEATURE_NAVIGATE_APP_URI,
+                    "visibility": ["model", "app"]
+                }
+            },
             "inputSchema": {
                 "type": "object",
                 "properties": {

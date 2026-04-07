@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Specrail Feature Picker</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --color-background-primary: light-dark(#fcfbf7, #14161a);
+            --color-background-secondary: light-dark(#f0eadf, #1b1f25);
+            --color-background-tertiary: light-dark(#e6dccd, #222831);
+            --color-text-primary: light-dark(#1b1b18, #f3efe7);
+            --color-text-secondary: light-dark(#5b564c, #b7b0a2);
+            --color-border-primary: light-dark(#d0c2ad, #363d48);
+            --color-ring-primary: light-dark(#8b5e34, #d39a5e);
+            --color-background-info: light-dark(#fff8ee, #201b13);
+            --font-sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            --font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+            --border-radius-md: 14px;
+            --border-radius-lg: 20px;
+            --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(circle at top right, rgba(211, 154, 94, 0.22), transparent 32%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 55%),
+                var(--color-background-primary);
+            color: var(--color-text-primary);
+            font-family: var(--font-sans);
+        }
+
+        .shell {
+            padding: 18px;
+        }
+
+        .panel {
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--border-radius-lg);
+            background: color-mix(in srgb, var(--color-background-primary) 84%, var(--color-background-secondary));
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .hero {
+            padding: 18px 18px 10px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--color-background-secondary) 82%, transparent), transparent),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.1;
+        }
+
+        .summary {
+            margin: 10px 0 0;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            padding: 0 18px 18px;
+            flex-wrap: wrap;
+        }
+
+        .button,
+        .feature-button {
+            appearance: none;
+            border: 1px solid var(--color-border-primary);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-background-primary) 72%, var(--color-background-tertiary));
+            color: var(--color-text-primary);
+            cursor: pointer;
+            font: inherit;
+            transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+        }
+
+        .button {
+            padding: 8px 14px;
+            font-size: 14px;
+        }
+
+        .button:hover,
+        .feature-button:hover {
+            transform: translateY(-1px);
+            border-color: var(--color-ring-primary);
+        }
+
+        .button:disabled,
+        .feature-button:disabled {
+            cursor: progress;
+            opacity: 0.72;
+            transform: none;
+        }
+
+        .list {
+            display: grid;
+            gap: 12px;
+            padding: 0 18px 18px;
+        }
+
+        .feature-button {
+            width: 100%;
+            padding: 16px;
+            text-align: left;
+        }
+
+        .feature-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .feature-id {
+            margin: 0 0 4px;
+            color: var(--color-text-secondary);
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+
+        .feature-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .feature-meta {
+            margin: 10px 0 0;
+            color: var(--color-text-secondary);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .badge {
+            flex: 0 0 auto;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: var(--color-background-info);
+            border: 1px solid var(--color-border-primary);
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .active-chip {
+            display: inline-flex;
+            margin-top: 10px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-ring-primary) 18%, transparent);
+            color: var(--color-text-primary);
+            font-size: 12px;
+        }
+
+        .empty,
+        .status {
+            padding: 18px;
+            margin: 0 18px 18px;
+            border-radius: var(--border-radius-md);
+            border: 1px dashed var(--color-border-primary);
+            color: var(--color-text-secondary);
+            background: color-mix(in srgb, var(--color-background-secondary) 66%, transparent);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .status[data-variant="error"] {
+            border-style: solid;
+        }
+
+        .outcome-list {
+            list-style: none;
+            margin: 0;
+            padding: 0 18px 18px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .outcome-item {
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--border-radius-md);
+            background: color-mix(in srgb, var(--color-background-primary) 76%, var(--color-background-tertiary));
+            padding: 14px;
+        }
+
+        .outcome-order {
+            margin: 0 0 6px;
+            color: var(--color-text-secondary);
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+
+        .outcome-title {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .outcome-meta {
+            margin: 8px 0 0;
+            color: var(--color-text-secondary);
+            font-size: 13px;
+        }
+
+        @media (max-width: 520px) {
+            .shell {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .feature-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <section class="panel">
+            <div class="hero">
+                <p class="eyebrow" id="eyebrow">Specrail workflow</p>
+                <h1 id="title">Loading feature picker</h1>
+                <p class="summary" id="summary">Waiting for tool results from the host.</p>
+            </div>
+            <div class="actions" id="actions"></div>
+            <div id="status" class="status" hidden></div>
+            <div id="content"></div>
+        </section>
+    </div>
+
+    <script>
+        (() => {
+            const state = {
+                hostContext: {},
+                toolArguments: {},
+                toolResult: null,
+                pendingFeatureId: null,
+            };
+
+            const elements = {
+                eyebrow: document.getElementById("eyebrow"),
+                title: document.getElementById("title"),
+                summary: document.getElementById("summary"),
+                actions: document.getElementById("actions"),
+                status: document.getElementById("status"),
+                content: document.getElementById("content"),
+            };
+
+            let nextId = 1;
+            const pending = new Map();
+
+            function merge(target, source) {
+                if (!source || typeof source !== "object") {
+                    return target;
+                }
+
+                for (const [key, value] of Object.entries(source)) {
+                    if (value && typeof value === "object" && !Array.isArray(value)) {
+                        target[key] = merge(target[key] && typeof target[key] === "object" ? target[key] : {}, value);
+                    } else {
+                        target[key] = value;
+                    }
+                }
+
+                return target;
+            }
+
+            function sendRequest(method, params) {
+                const id = nextId++;
+                window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+
+                return new Promise((resolve, reject) => {
+                    pending.set(id, { resolve, reject });
+                });
+            }
+
+            function sendNotification(method, params) {
+                window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+            }
+
+            function sendResponse(id, result) {
+                window.parent.postMessage({ jsonrpc: "2.0", id, result }, "*");
+            }
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#39;");
+            }
+
+            function toolText(result) {
+                if (!result || !Array.isArray(result.content)) {
+                    return "";
+                }
+
+                const textBlock = result.content.find((item) => item && item.type === "text");
+                return textBlock && typeof textBlock.text === "string" ? textBlock.text : "";
+            }
+
+            function showStatus(message, variant) {
+                if (!message) {
+                    elements.status.hidden = true;
+                    elements.status.textContent = "";
+                    elements.status.removeAttribute("data-variant");
+                    return;
+                }
+
+                elements.status.hidden = false;
+                elements.status.textContent = message;
+                if (variant) {
+                    elements.status.setAttribute("data-variant", variant);
+                } else {
+                    elements.status.removeAttribute("data-variant");
+                }
+            }
+
+            function applyHostStyles() {
+                const root = document.documentElement;
+                const variables = state.hostContext.styles && state.hostContext.styles.variables;
+                if (variables && typeof variables === "object") {
+                    for (const [name, value] of Object.entries(variables)) {
+                        if (typeof value === "string") {
+                            root.style.setProperty(name, value);
+                        }
+                    }
+                }
+
+                if (state.hostContext.theme === "dark" || state.hostContext.theme === "light") {
+                    root.style.colorScheme = state.hostContext.theme;
+                }
+            }
+
+            async function selectFeature(featureId) {
+                state.pendingFeatureId = featureId;
+                showStatus(`Loading outcomes for ${featureId}...`);
+                render();
+
+                try {
+                    const result = await sendRequest("tools/call", {
+                        name: "specrail_feature_navigate",
+                        arguments: {
+                            ...state.toolArguments,
+                            feature_id: featureId,
+                        },
+                    });
+                    state.toolResult = result;
+                    state.pendingFeatureId = null;
+                    showStatus("");
+                    render();
+                } catch (error) {
+                    state.pendingFeatureId = null;
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                    render();
+                }
+            }
+
+            async function returnToFeatures() {
+                showStatus("Loading features...");
+                render();
+
+                try {
+                    const result = await sendRequest("tools/call", {
+                        name: "specrail_feature_navigate",
+                        arguments: {
+                            ...state.toolArguments,
+                        },
+                    });
+                    state.toolResult = result;
+                    showStatus("");
+                    render();
+                } catch (error) {
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                    render();
+                }
+            }
+
+            function renderFeatureSelection(data) {
+                const features = Array.isArray(data.features) ? data.features : [];
+                elements.content.innerHTML = "";
+
+                if (!features.length) {
+                    elements.content.innerHTML = '<div class="empty">No features are registered yet. Create one with <code>specrail_feature_new</code> to start planning work.</div>';
+                    return;
+                }
+
+                const list = document.createElement("div");
+                list.className = "list";
+
+                for (const feature of features) {
+                    const button = document.createElement("button");
+                    button.className = "feature-button";
+                    button.type = "button";
+                    button.disabled = state.pendingFeatureId === feature.id;
+                    button.addEventListener("click", () => selectFeature(feature.id));
+
+                    const activeChip = feature.isActive
+                        ? '<span class="active-chip">Active feature</span>'
+                        : "";
+                    const verifiedCount = Number(feature.verifiedOutcomeCount || 0);
+                    const outcomeCount = Number(feature.outcomeCount || 0);
+
+                    button.innerHTML = `
+              <div class="feature-row">
+                <div>
+                  <p class="feature-id">${escapeHtml(feature.id)}</p>
+                  <p class="feature-title">${escapeHtml(feature.title || feature.id)}</p>
+                  <p class="feature-meta">${escapeHtml(feature.status || "planned")} · ${outcomeCount} outcome(s) · ${verifiedCount} verified</p>
+                  ${activeChip}
+                </div>
+                <span class="badge">Select</span>
+              </div>
+            `;
+
+                    list.appendChild(button);
+                }
+
+                elements.content.appendChild(list);
+            }
+
+            function renderOutcomeSelection(data) {
+                const selectedFeature = data.selectedFeature || {};
+                const outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
+                elements.content.innerHTML = "";
+
+                const list = document.createElement("ul");
+                list.className = "outcome-list";
+
+                if (!outcomes.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty";
+                    empty.textContent = `No outcomes exist for ${selectedFeature.id || data.selectedFeatureId}. Create one with specrail_outcome_new.`;
+                    elements.content.appendChild(empty);
+                    return;
+                }
+
+                for (const outcome of outcomes) {
+                    const item = document.createElement("li");
+                    item.className = "outcome-item";
+                    item.innerHTML = `
+              <p class="outcome-order">Outcome ${escapeHtml(outcome.order || "?")}</p>
+              <p class="outcome-title">${escapeHtml(outcome.title || outcome.id)}</p>
+              <p class="outcome-meta">${escapeHtml(outcome.id)} · ${escapeHtml(outcome.status || "planned")}${outcome.isActive ? " · active" : ""}</p>
+            `;
+                    list.appendChild(item);
+                }
+
+                elements.content.appendChild(list);
+            }
+
+            function renderActions(data) {
+                elements.actions.innerHTML = "";
+
+                if (data.mode === "outcome_selection") {
+                    const backButton = document.createElement("button");
+                    backButton.className = "button";
+                    backButton.type = "button";
+                    backButton.textContent = "Back to features";
+                    backButton.addEventListener("click", returnToFeatures);
+                    elements.actions.appendChild(backButton);
+                }
+            }
+
+            function render() {
+                const result = state.toolResult;
+                const data = result && result.structuredContent && typeof result.structuredContent === "object"
+                    ? result.structuredContent
+                    : {};
+
+                applyHostStyles();
+                renderActions(data);
+
+                if (result && result.isError) {
+                    elements.eyebrow.textContent = "Specrail workflow";
+                    elements.title.textContent = "Feature navigation failed";
+                    elements.summary.textContent = toolText(result) || "The MCP tool returned an error.";
+                    elements.content.innerHTML = "";
+                    showStatus(toolText(result), "error");
+                    return;
+                }
+
+                if (data.mode === "outcome_selection") {
+                    const selectedFeature = data.selectedFeature || {};
+                    elements.eyebrow.textContent = "Specrail outcome picker";
+                    elements.title.textContent = selectedFeature.title || selectedFeature.id || "Selected feature";
+                    elements.summary.textContent = toolText(result) || "Choose an outcome in chat or create a new one.";
+                    renderOutcomeSelection(data);
+                    return;
+                }
+
+                elements.eyebrow.textContent = "Specrail feature picker";
+                elements.title.textContent = "Select a feature";
+                elements.summary.textContent = toolText(result) || "Choose a feature to inspect its outcomes.";
+                renderFeatureSelection(data);
+            }
+
+            function reportSize() {
+                const width = Math.ceil(document.documentElement.scrollWidth || document.body.scrollWidth || 0);
+                const height = Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 0);
+                sendNotification("ui/notifications/size-changed", { width, height });
+            }
+
+            window.addEventListener("message", (event) => {
+                const message = event.data;
+                if (!message || message.jsonrpc !== "2.0") {
+                    return;
+                }
+
+                if (typeof message.id !== "undefined" && pending.has(message.id)) {
+                    const request = pending.get(message.id);
+                    pending.delete(message.id);
+
+                    if (Object.prototype.hasOwnProperty.call(message, "result")) {
+                        request.resolve(message.result);
+                    } else {
+                        const error = message.error && message.error.message ? message.error.message : "Unknown host error";
+                        request.reject(new Error(error));
+                    }
+                    return;
+                }
+
+                if (message.method === "ui/resource-teardown" && typeof message.id !== "undefined") {
+                    sendResponse(message.id, {});
+                    return;
+                }
+
+                if (message.method === "ui/notifications/tool-input") {
+                    state.toolArguments = message.params && message.params.arguments && typeof message.params.arguments === "object"
+                        ? message.params.arguments
+                        : {};
+                    return;
+                }
+
+                if (message.method === "ui/notifications/tool-result") {
+                    state.toolResult = message.params;
+                    render();
+                    reportSize();
+                    return;
+                }
+
+                if (message.method === "ui/notifications/tool-cancelled") {
+                    showStatus(message.params && message.params.reason ? message.params.reason : "Tool execution was cancelled.", "error");
+                    return;
+                }
+
+                if (message.method === "ui/notifications/host-context-changed") {
+                    state.hostContext = merge(state.hostContext, message.params || {});
+                    render();
+                }
+            });
+
+            new ResizeObserver(() => reportSize()).observe(document.body);
+
+            (async () => {
+                try {
+                    const init = await sendRequest("ui/initialize", {
+                        protocolVersion: "2026-01-26",
+                        clientInfo: {
+                            name: "specrail-feature-picker",
+                            version: "1.0.0",
+                        },
+                        capabilities: {},
+                        appCapabilities: {
+                            availableDisplayModes: ["inline", "fullscreen"],
+                        },
+                    });
+
+                    state.hostContext = init && init.hostContext && typeof init.hostContext === "object" ? init.hostContext : {};
+                    applyHostStyles();
+                    sendNotification("ui/notifications/initialized", {});
+                    render();
+                    reportSize();
+                } catch (error) {
+                    showStatus(error instanceof Error ? error.message : String(error), "error");
+                }
+            })();
+        })();
+    </script>
+</body>
+
+</html>
