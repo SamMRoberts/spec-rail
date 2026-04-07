@@ -9,7 +9,11 @@ use anyhow::{anyhow, bail, Context, Result};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 
-use crate::core::{ledger::Ledger, models::TestStatus, repository::Repository};
+use crate::core::{
+    ledger::Ledger,
+    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestStatus},
+    repository::Repository,
+};
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
 const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
@@ -246,6 +250,26 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
     }
 }
 
+#[derive(Serialize)]
+struct WorkflowGuidance {
+    stage: String,
+    recommended_skill: String,
+    summary: String,
+    blockers: Vec<String>,
+    next_tools: Vec<String>,
+    active_feature_id: Option<String>,
+    active_outcome_id: Option<String>,
+    candidate_feature_id: Option<String>,
+    candidate_outcome_id: Option<String>,
+}
+
+struct OutcomeWorkflowSnapshot {
+    feature_id: String,
+    outcome: OutcomeSpec,
+    test_count: usize,
+    planned_test_ids: Vec<String>,
+}
+
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let repo = match Repository::discover(&cwd) {
@@ -255,7 +279,18 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                 format!("No specrail project found from {}.", cwd.display()),
                 Some(json!({
                     "initialized": false,
-                    "cwd": cwd.display().to_string()
+                    "cwd": cwd.display().to_string(),
+                    "workflow": WorkflowGuidance {
+                        stage: "init".to_string(),
+                        recommended_skill: "specrail-init".to_string(),
+                        summary: "Initialize specrail before planning features, tests, or implementation.".to_string(),
+                        blockers: vec!["No .specrail project was found from this working directory.".to_string()],
+                        next_tools: vec!["specrail_init".to_string()],
+                        active_feature_id: None,
+                        active_outcome_id: None,
+                        candidate_feature_id: None,
+                        candidate_outcome_id: None,
+                    }
                 })),
             ));
         }
@@ -305,10 +340,12 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     let project_name = config.name.clone();
     let feature_count = feature_summaries.len();
     let test_count = manifest.tests.len();
+    let workflow = build_workflow_guidance(&repo, &state, &features, &manifest)?;
 
     Ok(tool_success_payload(
         format!(
-            "Project '{project_name}' is initialized. Active feature: {active_feature}. Active outcome: {active_outcome}. Features: {feature_count}. Tests: {test_count} (passing {passing}, written {written}, planned {planned})."
+            "Project '{project_name}' is initialized. Active feature: {active_feature}. Active outcome: {active_outcome}. Features: {feature_count}. Tests: {test_count} (passing {passing}, written {written}, planned {planned}). Next: {}",
+            workflow.summary
         ),
         Some(json!({
             "initialized": true,
@@ -321,7 +358,8 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                 "passing": passing,
                 "written": written,
                 "planned": planned
-            }
+            },
+            "workflow": workflow
         })),
     ))
 }
@@ -636,6 +674,301 @@ fn build_cli_tool_text(
     }
 
     parts.join("\n\n")
+}
+
+fn build_workflow_guidance(
+    repo: &Repository,
+    state: &ProjectState,
+    features: &[FeatureSpec],
+    manifest: &TestManifest,
+) -> Result<WorkflowGuidance> {
+    if features.is_empty() {
+        return Ok(WorkflowGuidance {
+            stage: "workflow".to_string(),
+            recommended_skill: "specrail-workflow".to_string(),
+            summary: "No features exist yet. Gather the first feature and break it into ordered outcomes before planning tests.".to_string(),
+            blockers: vec!["The project has been initialized, but no features are registered yet.".to_string()],
+            next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: None,
+            candidate_outcome_id: None,
+        });
+    }
+
+    let mut any_outcomes = false;
+    for feature in features {
+        if !repo.list_outcomes(&feature.id)?.is_empty() {
+            any_outcomes = true;
+            break;
+        }
+    }
+
+    if !any_outcomes {
+        return Ok(WorkflowGuidance {
+            stage: "workflow".to_string(),
+            recommended_skill: "specrail-workflow".to_string(),
+            summary: "Features exist, but no outcomes are defined yet. Split the next feature into outcome-sized slices before planning tests.".to_string(),
+            blockers: vec!["At least one feature is present, but there are no outcomes to drive the TDD loop yet.".to_string()],
+            next_tools: vec!["specrail_outcome_new".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: state.active_feature.clone(),
+            candidate_outcome_id: None,
+        });
+    }
+
+    if let (Some(feature_id), Some(outcome_id)) =
+        (state.active_feature.as_deref(), state.active_outcome.as_deref())
+    {
+        let active = workflow_snapshot(repo, manifest, feature_id, outcome_id)?;
+        return workflow_guidance_for_snapshot(
+            repo,
+            state,
+            Some(&active),
+            find_first_incomplete_outcome(repo, features, manifest)?,
+        );
+    }
+
+    let candidate = find_first_incomplete_outcome(repo, features, manifest)?;
+    workflow_guidance_for_snapshot(repo, state, None, candidate)
+}
+
+fn workflow_guidance_for_snapshot(
+    repo: &Repository,
+    state: &ProjectState,
+    active: Option<&OutcomeWorkflowSnapshot>,
+    candidate: Option<OutcomeWorkflowSnapshot>,
+) -> Result<WorkflowGuidance> {
+    if let Some(active) = active {
+        let next_tools = if active.outcome.status == OutcomeStatus::Verified {
+            vec!["specrail_advance".to_string()]
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
+        } else if active.test_count == 0 || !active.planned_test_ids.is_empty() {
+            vec![
+                "specrail_test_add".to_string(),
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ]
+        } else {
+            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
+        };
+
+        let blockers = if active.test_count == 0 {
+            vec![format!(
+                "Active outcome '{}:{}' has no registered tests yet.",
+                active.feature_id, active.outcome.id
+            )]
+        } else if !active.planned_test_ids.is_empty() {
+            vec![format!(
+                "Active outcome '{}:{}' still has tests in planned status: {}.",
+                active.feature_id,
+                active.outcome.id,
+                active.planned_test_ids.join(", ")
+            )]
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec![format!(
+                "Active outcome '{}:{}' failed verification and must be fixed before advancing.",
+                active.feature_id, active.outcome.id
+            )]
+        } else {
+            Vec::new()
+        };
+
+        let summary = match active.outcome.status {
+            OutcomeStatus::Verified => {
+                let outcomes = repo.list_outcomes(&active.feature_id)?;
+                let has_next = outcomes.iter().any(|outcome| outcome.order == active.outcome.order + 1);
+                if has_next {
+                    format!(
+                        "Active outcome '{}:{}' is verified. Advance to unlock the next outcome.",
+                        active.feature_id, active.outcome.id
+                    )
+                } else {
+                    format!(
+                        "Active outcome '{}:{}' is verified. Advance once more to mark the feature complete.",
+                        active.feature_id, active.outcome.id
+                    )
+                }
+            }
+            OutcomeStatus::Failed => format!(
+                "Active outcome '{}:{}' failed verification. Keep it active, fix the implementation, then verify again.",
+                active.feature_id, active.outcome.id
+            ),
+            _ if active.test_count == 0 => format!(
+                "Active outcome '{}:{}' is blocked on test planning. Register at least one test before implementation.",
+                active.feature_id, active.outcome.id
+            ),
+            _ if !active.planned_test_ids.is_empty() => format!(
+                "Active outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
+                active.feature_id, active.outcome.id
+            ),
+            _ => format!(
+                "Active outcome '{}:{}' is ready for the implement → verify loop.",
+                active.feature_id, active.outcome.id
+            ),
+        };
+
+        return Ok(WorkflowGuidance {
+            stage: workflow_stage(active),
+            recommended_skill: workflow_skill(active).to_string(),
+            summary,
+            blockers,
+            next_tools,
+            active_feature_id: Some(active.feature_id.clone()),
+            active_outcome_id: Some(active.outcome.id.clone()),
+            candidate_feature_id: Some(active.feature_id.clone()),
+            candidate_outcome_id: Some(active.outcome.id.clone()),
+        });
+    }
+
+    let Some(candidate) = candidate else {
+        return Ok(WorkflowGuidance {
+            stage: "done".to_string(),
+            recommended_skill: "specrail-activation".to_string(),
+            summary: "All known outcomes are already verified or skipped. The TDD workflow is complete.".to_string(),
+            blockers: Vec::new(),
+            next_tools: vec!["specrail_status".to_string(), "specrail_trace".to_string()],
+            active_feature_id: state.active_feature.clone(),
+            active_outcome_id: state.active_outcome.clone(),
+            candidate_feature_id: None,
+            candidate_outcome_id: None,
+        });
+    };
+
+    let (summary, blockers, next_tools, stage, recommended_skill) = if candidate.test_count == 0 {
+        (
+            format!(
+                "Next outcome '{}:{}' is blocked on test planning. Register at least one test before activation.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            vec![format!(
+                "Outcome '{}:{}' has no registered tests yet.",
+                candidate.feature_id, candidate.outcome.id
+            )],
+            vec![
+                "specrail_test_add".to_string(),
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ],
+            "testing".to_string(),
+            "specrail-testing".to_string(),
+        )
+    } else if !candidate.planned_test_ids.is_empty() {
+        (
+            format!(
+                "Next outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            vec![format!(
+                "Outcome '{}:{}' still has tests in planned status: {}.",
+                candidate.feature_id,
+                candidate.outcome.id,
+                candidate.planned_test_ids.join(", ")
+            )],
+            vec![
+                "specrail_test_generate".to_string(),
+                "specrail_test_set_status".to_string(),
+            ],
+            "testing".to_string(),
+            "specrail-testing".to_string(),
+        )
+    } else {
+        (
+            format!(
+                "Next outcome '{}:{}' is ready to activate and run through implement → verify → advance.",
+                candidate.feature_id, candidate.outcome.id
+            ),
+            Vec::new(),
+            vec![
+                "specrail_feature_activate".to_string(),
+                "specrail_outcome_activate".to_string(),
+                "specrail_implement".to_string(),
+                "specrail_verify".to_string(),
+                "specrail_advance".to_string(),
+            ],
+            "activation".to_string(),
+            "specrail-activation".to_string(),
+        )
+    };
+
+    Ok(WorkflowGuidance {
+        stage,
+        recommended_skill,
+        summary,
+        blockers,
+        next_tools,
+        active_feature_id: state.active_feature.clone(),
+        active_outcome_id: state.active_outcome.clone(),
+        candidate_feature_id: Some(candidate.feature_id),
+        candidate_outcome_id: Some(candidate.outcome.id),
+    })
+}
+
+fn workflow_stage(snapshot: &OutcomeWorkflowSnapshot) -> String {
+    if snapshot.outcome.status != OutcomeStatus::Failed
+        && snapshot.outcome.status != OutcomeStatus::Verified
+        && (snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty())
+    {
+        "testing".to_string()
+    } else {
+        "activation".to_string()
+    }
+}
+
+fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
+    if snapshot.outcome.status == OutcomeStatus::Verified
+        || snapshot.outcome.status == OutcomeStatus::Failed
+    {
+        "specrail-activation"
+    } else if snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty() {
+        "specrail-testing"
+    } else {
+        "specrail-activation"
+    }
+}
+
+fn find_first_incomplete_outcome(
+    repo: &Repository,
+    features: &[FeatureSpec],
+    manifest: &TestManifest,
+) -> Result<Option<OutcomeWorkflowSnapshot>> {
+    for feature in features {
+        for outcome in repo.list_outcomes(&feature.id)? {
+            if outcome.status != OutcomeStatus::Verified && outcome.status != OutcomeStatus::Skipped {
+                return workflow_snapshot(repo, manifest, &feature.id, &outcome.id).map(Some);
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn workflow_snapshot(
+    repo: &Repository,
+    manifest: &TestManifest,
+    feature_id: &str,
+    outcome_id: &str,
+) -> Result<OutcomeWorkflowSnapshot> {
+    let outcome = repo.load_outcome(feature_id, outcome_id)?;
+    let tests: Vec<_> = manifest
+        .tests
+        .iter()
+        .filter(|test| test.feature_id == feature_id && test.outcome_id == outcome_id)
+        .collect();
+    let planned_test_ids = tests
+        .iter()
+        .filter(|test| test.status == TestStatus::Planned)
+        .map(|test| test.id.clone())
+        .collect();
+
+    Ok(OutcomeWorkflowSnapshot {
+        feature_id: feature_id.to_string(),
+        outcome,
+        test_count: tests.len(),
+        planned_test_ids,
+    })
 }
 
 fn discover_repo(arguments: &Map<String, Value>) -> Result<Repository> {

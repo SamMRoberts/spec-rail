@@ -31,7 +31,7 @@ fn plugin_mcp_config_runs_specrail_mcp_server() {
 }
 
 #[test]
-fn plugin_skill_exists() {
+fn plugin_workflow_stage_skill_exists() {
     let skill_path = format!(
         "{}/.github/plugin/skills/specrail-workflow/SKILL.md",
         env!("CARGO_MANIFEST_DIR")
@@ -39,5 +39,18 @@ fn plugin_skill_exists() {
     let skill = fs::read_to_string(skill_path).unwrap();
 
     assert!(skill.contains("name: specrail-workflow"));
+    assert!(skill.contains("specrail_status"));
+}
+
+#[test]
+fn plugin_tdd_skill_exists() {
+    let skill_path = format!(
+        "{}/.github/plugin/skills/specrail-tdd/SKILL.md",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let skill = fs::read_to_string(skill_path).unwrap();
+
+    assert!(skill.contains("name: specrail-tdd"));
+    assert!(skill.contains("workflow.recommended_skill"));
     assert!(skill.contains("specrail_status"));
 }
