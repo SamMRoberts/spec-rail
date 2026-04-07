@@ -6,10 +6,9 @@ use crate::runtime::process::run_command;
 
 use super::adapter::AgentAdapter;
 
-/// Adapter for the GitHub Copilot CLI (`gh copilot suggest`).
+/// Adapter for the GitHub Copilot CLI (`copilot`).
 ///
-/// The prompt is written to a temporary file and passed to the CLI.  
-/// Requires `gh` with the `copilot` extension installed.
+/// Passes the prompt with `-p` to the standalone Copilot CLI.
 pub struct CopilotAdapter;
 
 impl AgentAdapter for CopilotAdapter {
@@ -18,12 +17,7 @@ impl AgentAdapter for CopilotAdapter {
     }
 
     fn run(&self, task: &AgentTask, cwd: Option<&Path>) -> Result<AgentRunResult> {
-        // gh copilot suggest -t shell "<prompt>"
-        let output = run_command(
-            "gh",
-            &["copilot", "suggest", "-t", "shell", &task.prompt],
-            cwd,
-        )?;
+        let output = run_command("copilot", &["-p", &task.prompt], cwd)?;
 
         let exit_code = output.status.code();
         let success = output.status.success();
