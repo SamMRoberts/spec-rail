@@ -229,6 +229,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
 
     match name {
         "specrail_status" => tool_status(arguments),
+        "specrail_feature_navigate" => tool_feature_navigate(arguments),
         "specrail_feature_list" => tool_feature_list(arguments),
         "specrail_feature_show" => tool_feature_show(arguments),
         "specrail_outcome_list" => tool_outcome_list(arguments),
@@ -371,6 +372,95 @@ fn tool_feature_list(arguments: &Map<String, Value>) -> Result<Value> {
     Ok(tool_success_payload(
         format!("Found {count} feature(s)."),
         Some(json!({ "features": features })),
+    ))
+}
+
+fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let state = repo.load_state()?;
+    let features = repo.list_features()?;
+    let feature_summaries: Vec<Value> = features
+        .iter()
+        .map(|feature| {
+            let outcomes = repo.list_outcomes(&feature.id).unwrap_or_default();
+            let verified_outcome_count = outcomes
+                .iter()
+                .filter(|outcome| outcome.status == OutcomeStatus::Verified)
+                .count();
+            json!({
+                "id": feature.id,
+                "title": feature.title,
+                "status": feature.status,
+                "outcomeCount": outcomes.len(),
+                "verifiedOutcomeCount": verified_outcome_count,
+                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str())
+            })
+        })
+        .collect();
+
+    let active_feature_id = state.active_feature.clone();
+    let active_outcome_id = state.active_outcome.clone();
+
+    if let Some(feature_id) = optional_string(arguments, "feature_id") {
+        let feature = repo.load_feature(&feature_id)?;
+        let outcomes = repo.list_outcomes(&feature_id)?;
+        let next_order = outcomes
+            .iter()
+            .map(|outcome| outcome.order)
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let outcome_summaries: Vec<Value> = outcomes
+            .iter()
+            .map(|outcome| {
+                json!({
+                    "id": outcome.id,
+                    "title": outcome.title,
+                    "status": outcome.status,
+                    "order": outcome.order,
+                    "isActive": active_outcome_id.as_deref() == Some(outcome.id.as_str())
+                })
+            })
+            .collect();
+
+        let count = outcome_summaries.len();
+        return Ok(tool_success_payload(
+            format!(
+                "Feature '{feature_id}' selected. Found {count} outcome(s). Select an outcome with specrail_outcome_activate or create a new one with specrail_outcome_new."
+            ),
+            Some(json!({
+                "mode": "outcome_selection",
+                "activeFeatureId": active_feature_id,
+                "activeOutcomeId": active_outcome_id,
+                "selectedFeatureId": feature_id,
+                "selectedFeature": feature,
+                "features": feature_summaries,
+                "outcomes": outcome_summaries,
+                "suggestedNewOutcomeOrder": next_order,
+                "nextActions": {
+                    "selectOutcomeTool": "specrail_outcome_activate",
+                    "createOutcomeTool": "specrail_outcome_new"
+                }
+            })),
+        ));
+    }
+
+    let count = feature_summaries.len();
+    Ok(tool_success_payload(
+        format!(
+            "Found {count} feature(s). Select a feature by calling specrail_feature_navigate with feature_id, or create a new feature with specrail_feature_new."
+        ),
+        Some(json!({
+            "mode": "feature_selection",
+            "activeFeatureId": active_feature_id,
+            "activeOutcomeId": active_outcome_id,
+            "selectedFeatureId": Value::Null,
+            "features": feature_summaries,
+            "nextActions": {
+                "selectFeatureTool": "specrail_feature_navigate",
+                "createFeatureTool": "specrail_feature_new"
+            }
+        })),
     ))
 }
 
@@ -1083,6 +1173,17 @@ fn tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string", "description": "Workspace or project path to inspect." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_feature_navigate",
+            "description": "List features and, when a feature is selected, list its outcomes plus the next actions to activate or create an outcome.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature identifier to inspect outcomes for." }
                 }
             }
         }),

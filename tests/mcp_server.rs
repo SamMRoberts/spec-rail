@@ -114,6 +114,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .filter_map(|tool| tool["name"].as_str())
         .collect();
     assert!(tool_names.contains(&"specrail_status"));
+    assert!(tool_names.contains(&"specrail_feature_navigate"));
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
 
@@ -218,6 +219,117 @@ fn mcp_server_can_create_and_read_feature_state() {
     assert_eq!(
         feature_show["result"]["structuredContent"]["feature"]["title"],
         "Authentication"
+    );
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "billing",
+                "title": "Billing",
+                "purpose": "Charge customers for subscriptions."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1
+            }
+        }),
+    );
+
+    let feature_picker = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["mode"],
+        "feature_selection"
+    );
+    let features = feature_picker["result"]["structuredContent"]["features"]
+        .as_array()
+        .unwrap();
+    assert_eq!(features.len(), 2);
+    assert!(features.iter().any(|feature| feature["id"] == "auth"));
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["nextActions"]["selectFeatureTool"],
+        "specrail_feature_navigate"
+    );
+
+    let outcome_picker = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {
+                "feature_id": "auth"
+            }
+        }),
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["mode"],
+        "outcome_selection"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["selectedFeature"]["id"],
+        "auth"
+    );
+    let outcomes = outcome_picker["result"]["structuredContent"]["outcomes"]
+        .as_array()
+        .unwrap();
+    assert_eq!(outcomes.len(), 1);
+    assert_eq!(outcomes[0]["id"], "login");
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],
+        "specrail_outcome_activate"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["createOutcomeTool"],
+        "specrail_outcome_new"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["suggestedNewOutcomeOrder"],
+        2
     );
 
     client.shutdown();
