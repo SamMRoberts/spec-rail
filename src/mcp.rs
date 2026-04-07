@@ -109,9 +109,9 @@ pub fn run() -> Result<()> {
     ));
 
     while let Some((message, transport)) = read_message(&mut reader)? {
-        mcp_debug_log(format!("received message: {}", summarize_for_log(&serde_json::to_string(&message).unwrap_or_default())));
+        mcp_debug_log(format!("received message: {}", summarize_for_log(&serde_json::to_string(&message).unwrap_or_else(|e| format!("<serialization error: {e}>")))));
         if let Some(response) = server.handle_message(message) {
-            mcp_debug_log(format!("sending response: {}", summarize_for_log(&serde_json::to_string(&response).unwrap_or_default())));
+            mcp_debug_log(format!("sending response: {}", summarize_for_log(&serde_json::to_string(&response).unwrap_or_else(|e| format!("<serialization error: {e}>")))));
             write_message(&mut writer, &response, transport)?;
             writer.flush()?;
         }
