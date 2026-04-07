@@ -8,7 +8,7 @@ fn setup(dir: &TempDir) {
     Command::cargo_bin(bin)
         .unwrap()
         .current_dir(dir.path())
-        .arg("init")
+        .args(["init", "--no-wizard"])
         .assert()
         .success();
 
@@ -31,13 +31,13 @@ fn specrail(dir: &TempDir) -> Command {
 }
 
 #[test]
-fn phase_new_creates_file() {
+fn outcome_new_creates_file() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth-login", "phase-1-domain",
+            "outcome", "new", "auth-login", "outcome-1-domain",
             "--title", "Domain Validation",
             "--goal", "Establish domain invariants.",
             "--order", "1",
@@ -47,18 +47,18 @@ fn phase_new_creates_file() {
 
     let path = dir
         .path()
-        .join(".specrail/phases/auth-login/phase-1-domain.yaml");
-    assert!(path.exists(), "phase file not created");
+        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
+    assert!(path.exists(), "outcome file not created");
 }
 
 #[test]
-fn phase_new_records_ledger_event() {
+fn outcome_new_records_ledger_event() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth-login", "phase-1-domain",
+            "outcome", "new", "auth-login", "outcome-1-domain",
             "--title", "Domain Validation",
             "--goal", "Establish domain invariants.",
             "--order", "1",
@@ -68,62 +68,62 @@ fn phase_new_records_ledger_event() {
 
     let ledger =
         fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("phase_created"));
-    assert!(ledger.contains("phase-1-domain"));
+    assert!(ledger.contains("outcome_created"));
+    assert!(ledger.contains("outcome-1-domain"));
 }
 
 #[test]
-fn phase_list_shows_phases() {
+fn outcome_list_shows_outcomes() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth-login", "phase-1-domain",
+            "outcome", "new", "auth-login", "outcome-1-domain",
             "--title", "Domain", "--goal", "g", "--order", "1",
         ])
         .assert()
         .success();
 
     specrail(&dir)
-        .args(["phase", "list", "auth-login"])
+        .args(["outcome", "list", "auth-login"])
         .assert()
         .success()
-        .stdout(contains("phase-1-domain"));
+        .stdout(contains("outcome-1-domain"));
 }
 
 #[test]
-fn phase_activate_updates_state() {
+fn outcome_activate_updates_state() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth-login", "phase-1-domain",
+            "outcome", "new", "auth-login", "outcome-1-domain",
             "--title", "Domain", "--goal", "g", "--order", "1",
         ])
         .assert()
         .success();
 
     specrail(&dir)
-        .args(["phase", "activate", "auth-login", "phase-1-domain"])
+        .args(["outcome", "activate", "auth-login", "outcome-1-domain"])
         .assert()
         .success();
 
     let state =
         fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("phase-1-domain"), "state should reference active phase");
+    assert!(state.contains("outcome-1-domain"), "state should reference active outcome");
     assert!(state.contains("auth-login"), "state should reference active feature");
 }
 
 #[test]
-fn phase_new_fails_for_unknown_feature() {
+fn outcome_new_fails_for_unknown_feature() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "nonexistent-feature", "phase-1",
+            "outcome", "new", "nonexistent-feature", "outcome-1",
             "--title", "T", "--goal", "g", "--order", "1",
         ])
         .assert()
@@ -131,13 +131,13 @@ fn phase_new_fails_for_unknown_feature() {
 }
 
 #[test]
-fn phase_show_displays_details() {
+fn outcome_show_displays_details() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
     specrail(&dir)
         .args([
-            "phase", "new", "auth-login", "phase-1-domain",
+            "outcome", "new", "auth-login", "outcome-1-domain",
             "--title", "Domain Validation",
             "--goal", "Establish auth domain invariants.",
             "--order", "1",
@@ -148,7 +148,7 @@ fn phase_show_displays_details() {
         .success();
 
     specrail(&dir)
-        .args(["phase", "show", "auth-login", "phase-1-domain"])
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
         .assert()
         .success()
         .stdout(contains("Domain Validation"))

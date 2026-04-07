@@ -1,2 +1,2 @@
 pub mod manifest_rules;
-pub mod phase_gate;
+pub mod outcome_gate;

@@ -3,6 +3,7 @@ mod cli;
 mod commands;
 mod core;
 mod errors;
+mod mcp;
 mod policy;
 mod prompts;
 mod runtime;
@@ -12,12 +13,16 @@ use clap::Parser;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use cli::{
-    Cli, Commands, FeatureCommands, PhaseCommands, TestCommands,
+    Cli, Commands, FeatureCommands, OutcomeCommands, TestCommands,
 };
 use core::repository::Repository;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    if let Commands::McpServer = cli.command {
+        return mcp::run();
+    }
 
     // Initialise tracing based on verbosity flag
     let filter = match cli.verbose {
@@ -32,6 +37,7 @@ fn main() -> Result<()> {
         )
         .with_target(false)
         .compact()
+        .with_writer(std::io::stderr)
         .init();
 
     run(cli)
@@ -39,10 +45,14 @@ fn main() -> Result<()> {
 
 fn run(cli: Cli) -> Result<()> {
     // `init` is special — it does not need an existing project
-    if let Commands::Init = &cli.command {
+    if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;
         let repo = Repository::new(&cwd);
-        return commands::init::run(&repo);
+        let outcome = commands::init::run(&repo)?;
+        if !*no_wizard && outcome.should_start_wizard {
+            commands::wizard::run(&repo)?;
+        }
+        return Ok(());
     }
 
     // All other commands need an existing project
@@ -51,7 +61,7 @@ fn run(cli: Cli) -> Result<()> {
         .context("could not find a specrail project — run `specrail init` first")?;
 
     match cli.command {
-        Commands::Init => unreachable!(),
+        Commands::Init { .. } => unreachable!(),
 
         Commands::Feature(sub) => match sub {
             FeatureCommands::New {
@@ -79,10 +89,10 @@ fn run(cli: Cli) -> Result<()> {
             FeatureCommands::Activate { id } => commands::feature::activate(&repo, &id),
         },
 
-        Commands::Phase(sub) => match sub {
-            PhaseCommands::New {
+        Commands::Outcome(sub) => match sub {
+            OutcomeCommands::New {
                 feature_id,
-                phase_id,
+                outcome_id,
                 title,
                 goal,
                 order,
@@ -90,11 +100,11 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
-            } => commands::phase::new(
+            } => commands::outcome::new(
                 &repo,
-                commands::phase::NewArgs {
+                commands::outcome::NewArgs {
                     feature_id,
-                    phase_id,
+                    outcome_id,
                     title,
                     goal,
                     order,
@@ -104,22 +114,22 @@ fn run(cli: Cli) -> Result<()> {
                     required_tests,
                 },
             ),
-            PhaseCommands::List { feature_id } => commands::phase::list(&repo, &feature_id),
-            PhaseCommands::Show {
+            OutcomeCommands::List { feature_id } => commands::outcome::list(&repo, &feature_id),
+            OutcomeCommands::Show {
                 feature_id,
-                phase_id,
-            } => commands::phase::show(&repo, &feature_id, &phase_id),
-            PhaseCommands::Activate {
+                outcome_id,
+            } => commands::outcome::show(&repo, &feature_id, &outcome_id),
+            OutcomeCommands::Activate {
                 feature_id,
-                phase_id,
-            } => commands::phase::activate(&repo, &feature_id, &phase_id),
+                outcome_id,
+            } => commands::outcome::activate(&repo, &feature_id, &outcome_id),
         },
 
         Commands::Test(sub) => match sub {
             TestCommands::Add {
                 id,
                 feature,
-                phase,
+                outcome,
                 path,
                 kind,
                 purpose_refs,
@@ -130,15 +140,18 @@ fn run(cli: Cli) -> Result<()> {
                     commands::test::AddArgs {
                         id,
                         feature_id: feature,
-                        phase_id: phase,
+                        outcome_id: outcome,
                         path,
                         kind: test_kind,
                         purpose_refs,
                     },
                 )
             }
-            TestCommands::List { feature, phase } => {
-                commands::test::list(&repo, feature.as_deref(), phase.as_deref())
+            TestCommands::Generate { agent } => {
+                commands::test::generate(&repo, agent.as_deref())
+            }
+            TestCommands::List { feature, outcome } => {
+                commands::test::list(&repo, feature.as_deref(), outcome.as_deref())
             }
             TestCommands::SetStatus { id, status } => {
                 let test_status = parse_test_status(&status)?;
@@ -151,6 +164,7 @@ fn run(cli: Cli) -> Result<()> {
         Commands::Advance => commands::advance::run(&repo),
         Commands::Status => commands::status::run(&repo),
         Commands::Trace { limit } => commands::trace::run(&repo, limit),
+        Commands::McpServer => unreachable!(),
     }
 }
 

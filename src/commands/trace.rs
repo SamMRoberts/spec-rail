@@ -23,7 +23,7 @@ pub fn run(repo: &Repository, limit: Option<usize>) -> Result<()> {
 
     println!(
         "{:<30} {:<25} {:<20} {:<20} {}",
-        "TIMESTAMP", "EVENT", "FEATURE", "PHASE", "DETAILS"
+        "TIMESTAMP", "EVENT", "FEATURE", "OUTCOME", "DETAILS"
     );
     println!("{}", "─".repeat(120));
 
@@ -31,11 +31,11 @@ pub fn run(repo: &Repository, limit: Option<usize>) -> Result<()> {
         let ts = ev.timestamp.format("%Y-%m-%dT%H:%M:%SZ").to_string();
         let event_name = format_event_type(&ev.event_type);
         let feature = ev.feature_id.as_deref().unwrap_or("—");
-        let phase = ev.phase_id.as_deref().unwrap_or("—");
+        let outcome = ev.outcome_id.as_deref().unwrap_or("—");
         let details = build_details(ev);
         println!(
             "{:<30} {:<25} {:<20} {:<20} {}",
-            ts, event_name, feature, phase, details
+            ts, event_name, feature, outcome, details
         );
     }
 
@@ -47,14 +47,15 @@ fn format_event_type(et: &LedgerEventType) -> &'static str {
         LedgerEventType::ProjectInitialized => "project_initialized",
         LedgerEventType::FeatureCreated => "feature_created",
         LedgerEventType::FeatureActivated => "feature_activated",
-        LedgerEventType::PhaseCreated => "phase_created",
-        LedgerEventType::PhaseActivated => "phase_activated",
+        LedgerEventType::OutcomeCreated => "outcome_created",
+        LedgerEventType::OutcomeActivated => "outcome_activated",
         LedgerEventType::TestAdded => "test_added",
+        LedgerEventType::TestGenerationRun => "test_generation_run",
         LedgerEventType::ImplementationRun => "implementation_run",
         LedgerEventType::VerificationRun => "verification_run",
-        LedgerEventType::PhaseVerified => "phase_verified",
-        LedgerEventType::PhaseFailed => "phase_failed",
-        LedgerEventType::PhaseAdvanced => "phase_advanced",
+        LedgerEventType::OutcomeVerified => "outcome_verified",
+        LedgerEventType::OutcomeFailed => "outcome_failed",
+        LedgerEventType::OutcomeAdvanced => "outcome_advanced",
     }
 }
 

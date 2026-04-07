@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
@@ -13,7 +14,7 @@ fn init_creates_directory_structure() {
     let dir = TempDir::new().unwrap();
 
     specrail(&dir)
-        .arg("init")
+        .args(["init", "--no-wizard"])
         .assert()
         .success();
 
@@ -21,7 +22,7 @@ fn init_creates_directory_structure() {
     assert!(base.is_dir(), ".specrail/ not created");
     assert!(base.join("project.yaml").exists(), "project.yaml missing");
     assert!(base.join("features").is_dir(), "features/ missing");
-    assert!(base.join("phases").is_dir(), "phases/ missing");
+    assert!(base.join("outcomes").is_dir(), "outcomes/ missing");
     assert!(base.join("tests").is_dir(), "tests/ missing");
     assert!(base.join("tests/manifest.yaml").exists(), "manifest.yaml missing");
     assert!(base.join("state").is_dir(), "state/ missing");
@@ -34,13 +35,13 @@ fn init_creates_directory_structure() {
 fn init_is_idempotent() {
     let dir = TempDir::new().unwrap();
 
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     // Write a canary file to verify it is not overwritten
     let canary = dir.path().join(".specrail/project.yaml");
     let original = fs::read_to_string(&canary).unwrap();
 
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let after = fs::read_to_string(&canary).unwrap();
     assert_eq!(original, after, "project.yaml was overwritten on second init");
@@ -49,7 +50,7 @@ fn init_is_idempotent() {
 #[test]
 fn init_creates_valid_project_yaml() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let content = fs::read_to_string(dir.path().join(".specrail/project.yaml")).unwrap();
     assert!(content.contains("version:"), "version field missing");
@@ -60,7 +61,7 @@ fn init_creates_valid_project_yaml() {
 #[test]
 fn init_creates_valid_manifest_yaml() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let content =
         fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
@@ -70,7 +71,7 @@ fn init_creates_valid_manifest_yaml() {
 #[test]
 fn init_ledger_gets_project_initialized_event() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let ledger =
         fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
@@ -78,4 +79,26 @@ fn init_ledger_gets_project_initialized_event() {
         ledger.contains("project_initialized"),
         "ledger should contain project_initialized event"
     );
+}
+
+#[test]
+fn help_lists_mcp_server_command() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir)
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mcp-server"));
+}
+
+#[test]
+fn mcpserver_alias_resolves_to_mcp_server_command() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir)
+        .args(["mcpserver", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Run the specrail MCP server over stdio"));
 }

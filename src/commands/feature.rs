@@ -18,7 +18,7 @@ pub struct NewArgs {
     pub dependencies: Vec<String>,
 }
 
-pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
     let path = repo.feature_path(&args.id);
     if path.exists() {
         bail!("feature '{}' already exists at {}", args.id, path.display());
@@ -33,7 +33,7 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
         non_goals: args.non_goals,
         dependencies: args.dependencies,
         status: FeatureStatus::Draft,
-        current_phase: None,
+        current_outcome: None,
     };
 
     repo.save_feature(&feature)?;
@@ -43,9 +43,16 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
         .with_message(format!("feature '{}' created", args.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
+    Ok(feature)
+}
+
+pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+    let feature = create(repo, args)?;
+    let path = repo.feature_path(&feature.id);
+
     println!("✓ Feature '{}' created: {}", feature.id, feature.title);
     println!("  Path: {}", path.display());
-    println!("  Next: specrail phase new {} <phase-id>", feature.id);
+    println!("  Next: specrail outcome new {} <outcome-id>", feature.id);
     Ok(())
 }
 
@@ -92,15 +99,15 @@ pub fn show(repo: &Repository, id: &str) -> Result<()> {
             println!("  • {ng}");
         }
     }
-    if let Some(phase) = &f.current_phase {
-        println!("\nCurrent phase: {phase}");
+    if let Some(outcome) = &f.current_outcome {
+        println!("\nCurrent outcome: {outcome}");
     }
     Ok(())
 }
 
 // ── feature activate ──────────────────────────────────────────────────────────
 
-pub fn activate(repo: &Repository, id: &str) -> Result<()> {
+pub(crate) fn activate_feature(repo: &Repository, id: &str) -> Result<()> {
     let mut feature = repo.load_feature(id)?;
     let mut state = repo.load_state()?;
 
@@ -113,19 +120,25 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
     let event = LedgerEvent::new(LedgerEventType::FeatureActivated).with_feature(id);
     Ledger::append(&repo.ledger_path(), &event)?;
 
+    Ok(())
+}
+
+pub fn activate(repo: &Repository, id: &str) -> Result<()> {
+    activate_feature(repo, id)?;
+
     println!("✓ Feature '{id}' is now active.");
     Ok(())
 }
 
-// ── feature set-phase ─────────────────────────────────────────────────────────
+// ── feature set-outcome ───────────────────────────────────────────────────────
 
-/// Update the `current_phase` field on a feature (called by `advance`).
-pub fn set_current_phase(
+/// Update the `current_outcome` field on a feature (called by `advance`).
+pub fn set_current_outcome(
     repo: &Repository,
     feature_id: &str,
-    phase_id: Option<&str>,
+    outcome_id: Option<&str>,
 ) -> Result<()> {
     let mut feature = repo.load_feature(feature_id)?;
-    feature.current_phase = phase_id.map(str::to_string);
+    feature.current_outcome = outcome_id.map(str::to_string);
     repo.save_feature(&feature)
 }

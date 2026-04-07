@@ -13,7 +13,7 @@ pub fn run(repo: &Repository) -> Result<()> {
     println!("Default agent: {}", config.default_agent);
     println!();
 
-    // Active feature/phase
+    // Active feature/outcome
     match &state.active_feature {
         None => println!("Active feature: (none)"),
         Some(fid) => {
@@ -25,14 +25,14 @@ pub fn run(repo: &Repository) -> Result<()> {
         }
     }
 
-    match &state.active_phase {
-        None => println!("Active phase:   (none)"),
-        Some(pid) => {
-            println!("Active phase:   {pid}");
+    match &state.active_outcome {
+        None => println!("Active outcome:   (none)"),
+        Some(oid) => {
+            println!("Active outcome:   {oid}");
             if let Some(fid) = &state.active_feature {
-                if let Ok(phase) = repo.load_phase(fid, pid) {
-                    println!("  Goal:   {}", phase.goal);
-                    println!("  Status: {:?}", phase.status);
+                if let Ok(outcome) = repo.load_outcome(fid, oid) {
+                    println!("  Goal:   {}", outcome.goal);
+                    println!("  Status: {:?}", outcome.status);
                 }
             }
         }
@@ -45,16 +45,16 @@ pub fn run(repo: &Repository) -> Result<()> {
     println!("Features: {}", features.len());
     for f in &features {
         let status = format!("{:?}", f.status).to_lowercase();
-        let phases = repo.list_phases(&f.id)?;
-        let verified = phases
+        let outcomes = repo.list_outcomes(&f.id)?;
+        let verified = outcomes
             .iter()
-            .filter(|p| p.status == crate::core::models::PhaseStatus::Verified)
+            .filter(|o| o.status == crate::core::models::OutcomeStatus::Verified)
             .count();
         println!(
-            "  [{status:<8}] {} — {}/{} phases verified",
+            "  [{status:<8}] {} — {}/{} outcomes verified",
             f.id,
             verified,
-            phases.len()
+            outcomes.len()
         );
     }
 
