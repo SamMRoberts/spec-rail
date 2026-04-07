@@ -3,6 +3,7 @@ mod cli;
 mod commands;
 mod core;
 mod errors;
+mod mcp;
 mod policy;
 mod prompts;
 mod runtime;
@@ -38,6 +39,10 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: Cli) -> Result<()> {
+    if let Commands::McpServer = cli.command {
+        return mcp::run();
+    }
+
     // `init` is special — it does not need an existing project
     if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;
@@ -158,6 +163,7 @@ fn run(cli: Cli) -> Result<()> {
         Commands::Advance => commands::advance::run(&repo),
         Commands::Status => commands::status::run(&repo),
         Commands::Trace { limit } => commands::trace::run(&repo, limit),
+        Commands::McpServer => unreachable!(),
     }
 }
 

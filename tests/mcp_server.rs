@@ -1,0 +1,254 @@
+use std::{
+    io::{BufRead, BufReader, Write},
+    path::Path,
+    process::{Child, ChildStdin, ChildStdout, Command, Stdio},
+};
+
+use assert_cmd::cargo::cargo_bin;
+use serde_json::{json, Value};
+use tempfile::TempDir;
+
+struct McpClient {
+    child: Child,
+    stdin: ChildStdin,
+    stdout: BufReader<ChildStdout>,
+    next_id: u64,
+}
+
+impl McpClient {
+    fn spawn(cwd: &Path) -> Self {
+        let mut child = Command::new(cargo_bin("specrail"))
+            .current_dir(cwd)
+            .args(["mcp-server"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn specrail mcp-server");
+
+        let stdin = child.stdin.take().expect("capture stdin");
+        let stdout = child.stdout.take().expect("capture stdout");
+
+        Self {
+            child,
+            stdin,
+            stdout: BufReader::new(stdout),
+            next_id: 1,
+        }
+    }
+
+    fn initialize(&mut self) -> Value {
+        let response = self.request(
+            "initialize",
+            json!({
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "specrail-test-client",
+                    "version": "0.1.0"
+                }
+            }),
+        );
+        self.notify("notifications/initialized", json!({}));
+        response
+    }
+
+    fn request(&mut self, method: &str, params: Value) -> Value {
+        let id = self.next_id;
+        self.next_id += 1;
+
+        write_message(
+            &mut self.stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "method": method,
+                "params": params
+            }),
+        );
+
+        let response = read_message(&mut self.stdout);
+        assert_eq!(response["id"], json!(id));
+        response
+    }
+
+    fn notify(&mut self, method: &str, params: Value) {
+        write_message(
+            &mut self.stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": params
+            }),
+        );
+    }
+
+    fn shutdown(&mut self) {
+        let _ = self.request("shutdown", json!({}));
+        self.notify("exit", json!({}));
+        let _ = self.child.wait();
+    }
+}
+
+impl Drop for McpClient {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+#[test]
+fn mcp_server_lists_tools_and_initializes_project() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+
+    let initialize = client.initialize();
+    assert_eq!(initialize["result"]["serverInfo"]["name"], "specrail");
+    assert!(initialize["result"]["capabilities"]["tools"].is_object());
+
+    let tools = client.request("tools/list", json!({}));
+    let tool_names: Vec<_> = tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|tool| tool["name"].as_str())
+        .collect();
+    assert!(tool_names.contains(&"specrail_status"));
+    assert!(tool_names.contains(&"specrail_init"));
+    assert!(tool_names.contains(&"specrail_verify"));
+
+    let status_before = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_before["result"]["structuredContent"]["initialized"],
+        json!(false)
+    );
+
+    let init = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+    assert_eq!(init["result"]["isError"], json!(false));
+    assert!(dir.path().join(".specrail").is_dir());
+
+    let status_after = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_status",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        status_after["result"]["structuredContent"]["initialized"],
+        json!(true)
+    );
+    assert_eq!(
+        status_after["result"]["structuredContent"]["manifest"]["tests"]
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_server_can_create_and_read_feature_state() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let create_feature = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes.",
+                "outcomes": ["Users can sign in"]
+            }
+        }),
+    );
+    assert_eq!(create_feature["result"]["isError"], json!(false));
+
+    let feature_list = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_list",
+            "arguments": {}
+        }),
+    );
+    let features = feature_list["result"]["structuredContent"]["features"]
+        .as_array()
+        .unwrap();
+    assert_eq!(features.len(), 1);
+    assert_eq!(features[0]["id"], "auth");
+
+    let feature_show = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_show",
+            "arguments": {
+                "id": "auth"
+            }
+        }),
+    );
+    assert_eq!(
+        feature_show["result"]["structuredContent"]["feature"]["title"],
+        "Authentication"
+    );
+
+    client.shutdown();
+}
+
+fn write_message(writer: &mut impl Write, message: &Value) {
+    let payload = serde_json::to_vec(message).unwrap();
+    write!(writer, "Content-Length: {}\r\n\r\n", payload.len()).unwrap();
+    writer.write_all(&payload).unwrap();
+    writer.flush().unwrap();
+}
+
+fn read_message(reader: &mut impl BufRead) -> Value {
+    let mut content_length = None;
+
+    loop {
+        let mut line = String::new();
+        let read = reader.read_line(&mut line).unwrap();
+        assert!(read > 0, "unexpected EOF while reading MCP headers");
+
+        let line = line.trim_end_matches(['\r', '\n']);
+        if line.is_empty() {
+            break;
+        }
+
+        if let Some(value) = line.strip_prefix("Content-Length:") {
+            content_length = Some(value.trim().parse::<usize>().unwrap());
+        }
+    }
+
+    let mut payload = vec![0; content_length.expect("missing Content-Length header")];
+    reader.read_exact(&mut payload).unwrap();
+    serde_json::from_slice(&payload).unwrap()
+}

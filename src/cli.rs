@@ -59,6 +59,10 @@ pub enum Commands {
         #[arg(long, short)]
         limit: Option<usize>,
     },
+
+    /// Run the specrail MCP server over stdio
+    #[command(hide = true)]
+    McpServer,
 }
 
 // ── Feature sub-commands ──────────────────────────────────────────────────────

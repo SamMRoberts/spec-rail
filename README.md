@@ -268,7 +268,7 @@ There are three practical options:
   - Best when you have a wrapper command that can read `SPECRAIL_PROMPT`, `SPECRAIL_ALLOWED_PATHS`, and `SPECRAIL_FORBIDDEN_PATHS` and then invoke your preferred AI CLI.
   - Configure it with `SPECRAIL_AGENT_CMD`.
 - `specrail implement --agent copilot`
-  - Uses `gh copilot suggest -t shell` with the generated prompt.
+  - Uses `copilot -p <prompt>` with the generated implementation brief.
   - Treat this as a prompt/suggestion adapter, not a full autonomous edit pipeline.
 - `specrail implement --agent codex`
   - Sends the generated prompt to the `codex` CLI.
@@ -286,6 +286,52 @@ Inside `your-ai-wrapper`, read:
 - `SPECRAIL_ALLOWED_PATHS` for editable path hints
 - `SPECRAIL_FORBIDDEN_PATHS` for restricted path hints
 
+### GitHub Copilot CLI plugin and MCP server
+
+This repository now ships a first-party Copilot CLI plugin under `.github/plugin/` and a built-in MCP server entrypoint at `specrail mcp-server`.
+
+Prerequisites:
+
+- `specrail` is installed and on `PATH`
+- `copilot` is installed and authenticated
+- `copilot -p "echo ready"` works in your shell
+
+Install the plugin from the repository root or from GitHub:
+
+```bash
+copilot plugin install /path/to/spec-rail
+```
+
+Or:
+
+```bash
+copilot plugin install SamMRoberts/spec-rail
+```
+
+The plugin manifest points Copilot CLI at this MCP server command:
+
+```bash
+specrail mcp-server
+```
+
+After installing, verify that the plugin and MCP server are loaded:
+
+```bash
+copilot plugin list
+```
+
+In an interactive Copilot CLI session, you should see the plugin skill and the `specrail_*` MCP tools. The MCP server exposes workflow-aware tools such as:
+
+- `specrail_status`
+- `specrail_feature_new`
+- `specrail_outcome_new`
+- `specrail_test_add`
+- `specrail_implement`
+- `specrail_verify`
+- `specrail_advance`
+
+Use those tools instead of editing `.specrail/` files directly.
+
 ### Full example: GitHub Copilot CLI
 
 The `copilot` adapter is a good fit when you want `specrail` to own the workflow state and prompt construction, while GitHub Copilot CLI suggests the shell commands to run next.
@@ -293,8 +339,8 @@ The `copilot` adapter is a good fit when you want `specrail` to own the workflow
 Prerequisites:
 
 - `specrail` is installed and on `PATH`
-- `gh` is installed and authenticated
-- `gh copilot suggest -t shell "echo ready"` works in your shell
+- `copilot` is installed and authenticated
+- `copilot -p "echo ready"` works in your shell
 
 Example end-to-end flow for a small Rust project:
 
@@ -302,7 +348,7 @@ Example end-to-end flow for a small Rust project:
 mkdir demo-auth
 cd demo-auth
 cargo init --lib .
-specrail init
+specrail init --no-wizard
 ```
 
 Set Copilot as the default implementation agent:
@@ -315,7 +361,7 @@ test_command: cargo test
 default_agent: copilot
 ```
 
-Create a feature, a phase, and a test entry:
+Create a feature, an outcome, and a test entry:
 
 ```bash
 specrail feature new email-validation \
@@ -323,7 +369,7 @@ specrail feature new email-validation \
   --purpose "Reject malformed email addresses before account creation." \
   --outcome "Only valid email addresses are accepted."
 
-specrail phase new email-validation phase-1 \
+specrail outcome new email-validation outcome-1 \
   --title "Reject invalid email input" \
   --goal "Add validation logic for malformed email addresses." \
   --order 1 \
@@ -332,37 +378,37 @@ specrail phase new email-validation phase-1 \
 
 specrail test add rejects-invalid-email \
   --feature email-validation \
-  --phase phase-1 \
+  --outcome outcome-1 \
   --path tests/email_validation.rs \
   --kind integration
 ```
 
-Use Copilot CLI directly to draft the phase test, then register it as ready:
+Use Copilot CLI directly to draft the outcome test, then register it as ready:
 
 ```bash
-gh copilot suggest -t shell \
+copilot -p \
   "Create tests/email_validation.rs with an integration test that proves malformed email addresses are rejected."
 
 # Review or adapt the suggested shell command, run it, then mark the test as written.
 specrail test set-status rejects-invalid-email written
 ```
 
-Activate the feature and phase, then hand the structured implementation brief to Copilot through `specrail`:
+Activate the feature and outcome, then hand the structured implementation brief to Copilot through `specrail`:
 
 ```bash
 specrail feature activate email-validation
-specrail phase activate email-validation phase-1
+specrail outcome activate email-validation outcome-1
 specrail implement --agent copilot
 ```
 
 `specrail implement --agent copilot` sends Copilot a prompt containing:
 
 - the feature purpose and outcomes
-- the active phase goal and order
-- the allowed and forbidden paths for the phase
+- the active outcome goal and order
+- the allowed and forbidden paths for the outcome
 - the registered tests that must pass
 
-Copilot CLI prints a suggested shell command. Review it, run or adapt it yourself, then continue the gated workflow:
+Copilot CLI prints a suggested response from the generated prompt. Review it, run or adapt the suggested changes yourself, then continue the gated workflow:
 
 ```bash
 cargo test
@@ -370,12 +416,12 @@ specrail verify
 specrail advance
 ```
 
-For the next phase, repeat the same loop:
+For the next outcome, repeat the same loop:
 
-1. write or update the next phase tests with Copilot CLI
+1. write or update the next outcome tests with Copilot CLI
 2. mark those tests as `written`
 3. run `specrail implement --agent copilot`
-4. review and execute Copilot's suggested command
+4. review and apply Copilot's suggested changes
 5. run `specrail verify`
 6. run `specrail advance`
 

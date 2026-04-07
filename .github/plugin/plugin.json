@@ -1,0 +1,19 @@
+{
+    "name": "specrail",
+    "description": "Phase-gated workflow tools for GitHub Copilot CLI backed by the specrail MCP server.",
+    "version": "0.1.0",
+    "author": {
+        "name": "Sam Roberts"
+    },
+    "license": "MIT",
+    "repository": "https://github.com/SamMRoberts/spec-rail",
+    "keywords": [
+        "copilot",
+        "mcp",
+        "workflow",
+        "tdd",
+        "specrail"
+    ],
+    "skills": "skills/",
+    "mcpServers": ".mcp.json"
+}

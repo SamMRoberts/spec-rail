@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "specrail": {
+            "type": "stdio",
+            "command": "specrail",
+            "args": [
+                "mcp-server"
+            ]
+        }
+    }
+}
