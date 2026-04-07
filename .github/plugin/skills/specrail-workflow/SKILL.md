@@ -7,7 +7,18 @@ When a repository uses specrail, prefer the `specrail_*` MCP tools for reading a
 
 If `specrail_status` shows that the project is not initialized yet, start with the `specrail-init` skill or call `specrail_init` before gathering features and outcomes.
 
-Use this sequence by default:
+## Use the navigator UI
+
+Call `specrail_feature_navigate` (without arguments) whenever the user wants to see all features or needs to pick one. This tool returns an interactive panel that shows:
+- Feature cards with progress bars (verified outcomes / total)
+- Status badges: ⚡ Active, ✅ Verified, ❌ Failed, ○ Pending
+- Per-outcome test counts and test-readiness warnings
+
+When a feature is selected (by passing `feature_id`), the navigator shows outcomes with:
+- Test counts (total / passing / planned)
+- Outcome status and activation controls
+
+## Default sequence
 
 1. Call `specrail_status` to confirm whether the project is initialized and which feature or outcome is active.
 2. Use the read tools (`specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, `specrail_trace`) before proposing changes.
@@ -19,7 +30,7 @@ Use this sequence by default:
 8. After defining the features and outcomes, hand off to the `specrail-testing` skill to register the required tests for each outcome before implementation begins.
 9. Once tests are ready, hand off to the `specrail-activation` skill to drive the `implement`, `verify`, and `advance` loop.
 
-Discovery behavior:
+## Discovery behavior
 
 - Do not assume the full workflow structure from a brief request.
 - Ask targeted follow-up questions when features, outcomes, or scope boundaries are unclear.
@@ -31,14 +42,29 @@ Discovery behavior:
 - If the user gives a broad outcome, ask how to split it into narrower sibling outcomes under the same feature.
 - Before creating anything, restate the current feature and outcome list in a compact structure for confirmation.
 
-Model workflow scope narrowly:
+## Workflow scope rules
 
 - Each feature should describe one clear product capability.
 - Each outcome should describe one clear behavior or slice of that feature.
 - Do not bundle multiple distinct behaviors into a single outcome.
 - If a feature has several behaviors, create multiple sibling outcomes under the same parent feature.
 
-Example:
+## Response formatting
+
+When presenting features and outcomes to confirm, use a compact structured list:
+
+```
+Features to create:
+  • calculator — Basic arithmetic operations
+    Outcomes:
+      1. addition — Verify 2 + 2 = 4
+      2. subtraction — Verify 2 - 1 = 1
+      3. multiplication — Verify 3 × 4 = 12
+```
+
+After each creation, confirm with: "✓ Created feature **calculator** with 3 outcomes."
+
+## Example
 
 - For a calculator feature, create separate outcomes for addition, subtraction, multiplication, and division.
 - Do not create one broad outcome like "calculator operations" that mixes all operations together.

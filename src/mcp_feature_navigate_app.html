@@ -1,987 +1,617 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Specrail Feature Picker</title>
+    <title>Specrail</title>
     <style>
         :root {
             color-scheme: light dark;
-            --color-background-primary: light-dark(#fcfbf7, #14161a);
-            --color-background-secondary: light-dark(#f0eadf, #1b1f25);
-            --color-background-tertiary: light-dark(#e6dccd, #222831);
-            --color-text-primary: light-dark(#1b1b18, #f3efe7);
-            --color-text-secondary: light-dark(#5b564c, #b7b0a2);
-            --color-border-primary: light-dark(#d0c2ad, #363d48);
-            --color-ring-primary: light-dark(#8b5e34, #d39a5e);
-            --color-accent-soft: light-dark(#fff8ee, #201b13);
-            --color-accent-strong: light-dark(#8b5e34, #d39a5e);
-            --font-sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
-            --font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
-            --border-radius-md: 14px;
-            --border-radius-lg: 20px;
-            --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --bg: light-dark(#f5f5f5, #1e1e1e);
+            --bg-card: light-dark(#ffffff, #252526);
+            --bg-card-hover: light-dark(#f9f9f9, #2d2d2d);
+            --bg-section: light-dark(#fafafa, #1e1e1e);
+            --fg: light-dark(#1e1e1e, #cccccc);
+            --fg-muted: light-dark(#6e6e6e, #858585);
+            --fg-dim: light-dark(#999, #555);
+            --border: light-dark(#e0e0e0, #3c3c3c);
+            --border-focus: light-dark(#0078d4, #3794ff);
+            --accent: light-dark(#0078d4, #3794ff);
+            --active-bg: light-dark(#fff8e7, #2b2000);
+            --active-border: light-dark(#f0a500, #f0a500);
+            --active-fg: light-dark(#7a5200, #f0c050);
+            --verified-bg: light-dark(#e8f5e9, #1a3320);
+            --verified-border: light-dark(#4caf50, #4caf50);
+            --verified-fg: light-dark(#2e7d32, #81c784);
+            --failed-bg: light-dark(#ffebee, #3b0000);
+            --failed-border: light-dark(#f44336, #f44336);
+            --failed-fg: light-dark(#c62828, #ef9a9a);
+            --pending-bg: light-dark(#f5f5f5, #252526);
+            --pending-border: light-dark(#bdbdbd, #555);
+            --pending-fg: light-dark(#555, #888);
+            --skipped-fg: light-dark(#aaa, #555);
+            --progress-track: light-dark(#e0e0e0, #3c3c3c);
+            --progress-fill: light-dark(#4caf50, #4caf50);
+            --radius: 6px;
+            --radius-lg: 10px;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background:
-                radial-gradient(circle at top right, rgba(211, 154, 94, 0.22), transparent 32%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 55%),
-                var(--color-background-primary);
-            color: var(--color-text-primary);
-            font-family: var(--font-sans);
-        }
-
-        .shell {
-            padding: 18px;
-        }
-
-        .panel {
-            border: 1px solid var(--color-border-primary);
-            border-radius: var(--border-radius-lg);
-            background: color-mix(in srgb, var(--color-background-primary) 84%, var(--color-background-secondary));
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-        }
-
-        .hero {
-            padding: 18px 18px 10px;
-            background:
-                linear-gradient(135deg, color-mix(in srgb, var(--color-background-secondary) 82%, transparent), transparent),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
-        }
-
-        .eyebrow {
-            margin: 0 0 8px;
-            color: var(--color-text-secondary);
-            font-size: 12px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 24px;
-            line-height: 1.1;
-        }
-
-        .summary {
-            margin: 10px 0 0;
-            color: var(--color-text-secondary);
-            font-size: 14px;
-            line-height: 1.45;
-        }
-
-        .actions,
-        .card-actions,
-        .form-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .actions {
-            padding: 0 18px 18px;
-        }
-
-        .button {
-            appearance: none;
-            border: 1px solid var(--color-border-primary);
-            border-radius: 999px;
-            background: color-mix(in srgb, var(--color-background-primary) 72%, var(--color-background-tertiary));
-            color: var(--color-text-primary);
-            cursor: pointer;
-            font: inherit;
-            transition: transform 140ms ease, border-color 140ms ease;
-            padding: 8px 14px;
-            font-size: 14px;
-        }
-
-        .button:hover {
-            transform: translateY(-1px);
-            border-color: var(--color-ring-primary);
-        }
-
-        .button[data-kind="primary"] {
-            background: color-mix(in srgb, var(--color-accent-strong) 18%, var(--color-background-primary));
-        }
-
-        .button[data-kind="ghost"] {
-            background: transparent;
-        }
-
-        .button:disabled {
-            cursor: progress;
-            opacity: 0.72;
-            transform: none;
-        }
-
-        .list,
-        .outcome-list {
-            display: grid;
-            gap: 12px;
-            padding: 0 18px 18px;
-        }
-
-        .outcome-list {
-            list-style: none;
-            margin: 0;
-        }
-
-        .card,
-        .outcome-item,
-        .editor {
-            border: 1px solid var(--color-border-primary);
-            border-radius: var(--border-radius-md);
-            background: color-mix(in srgb, var(--color-background-primary) 76%, var(--color-background-tertiary));
-            padding: 16px;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .card-id,
-        .outcome-order,
-        .label-caption {
-            margin: 0 0 6px;
-            color: var(--color-text-secondary);
-            font-family: var(--font-mono);
-            font-size: 12px;
-        }
-
-        .card-title,
-        .outcome-title {
-            margin: 0;
-            font-size: 18px;
-        }
-
-        .card-meta,
-        .outcome-meta,
-        .helper,
-        .empty,
-        .status {
-            color: var(--color-text-secondary);
-            font-size: 13px;
-            line-height: 1.45;
-        }
-
-        .card-meta,
-        .outcome-meta {
-            margin: 10px 0 0;
-        }
-
-        .badge,
-        .active-chip {
-            display: inline-flex;
-            border-radius: 999px;
-            font-size: 12px;
-            padding: 5px 10px;
-            border: 1px solid var(--color-border-primary);
-        }
-
-        .badge {
-            background: var(--color-accent-soft);
-        }
-
-        .active-chip {
-            margin-top: 10px;
-            background: color-mix(in srgb, var(--color-ring-primary) 18%, transparent);
-        }
-
-        .empty,
-        .status {
-            padding: 18px;
-            margin: 0 18px 18px;
-            border-radius: var(--border-radius-md);
-            border: 1px dashed var(--color-border-primary);
-            background: color-mix(in srgb, var(--color-background-secondary) 66%, transparent);
-        }
-
-        .status[data-variant="error"] {
-            border-style: solid;
-        }
-
-        .editor {
-            margin-top: 12px;
-            background: color-mix(in srgb, var(--color-accent-soft) 40%, var(--color-background-primary));
-        }
-
-        .editor h2 {
-            margin: 0 0 14px;
-            font-size: 17px;
-        }
-
-        .field-grid {
-            display: grid;
-            gap: 12px;
-        }
-
-        .field-grid[data-columns="2"] {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        label {
-            display: grid;
-            gap: 6px;
-            font-size: 13px;
-        }
-
-        input,
-        textarea {
-            width: 100%;
-            border-radius: 12px;
-            border: 1px solid var(--color-border-primary);
-            background: color-mix(in srgb, var(--color-background-primary) 88%, transparent);
-            color: var(--color-text-primary);
-            padding: 10px 12px;
-            font: inherit;
-        }
-
-        textarea {
-            min-height: 88px;
-            resize: vertical;
-        }
-
-        input:focus,
-        textarea:focus {
-            outline: 2px solid color-mix(in srgb, var(--color-ring-primary) 35%, transparent);
-            outline-offset: 1px;
-        }
-
-        .helper {
-            margin: 0;
-        }
-
-        .selected-feature {
-            margin: 0 18px 12px;
-        }
-
-        @media (max-width: 600px) {
-            .shell {
-                padding: 10px;
-            }
-
-            h1 {
-                font-size: 20px;
-            }
-
-            .card-header,
-            .field-grid[data-columns="2"] {
-                grid-template-columns: 1fr;
-                display: grid;
-            }
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-ui); font-size: 13px; background: var(--bg); color: var(--fg); line-height: 1.5; }
+        .app { max-width: 680px; margin: 0 auto; padding: 12px 14px 24px; }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+        .header-logo { font-size: 18px; }
+        .header-title { font-size: 15px; font-weight: 600; }
+        .header-actions { margin-left: auto; display: flex; gap: 6px; }
+        .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-muted); margin-bottom: 12px; }
+        .breadcrumb-item.clickable { color: var(--accent); cursor: pointer; }
+        .breadcrumb-item.clickable:hover { text-decoration: underline; }
+        .breadcrumb-sep { color: var(--fg-dim); }
+        .dashboard { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .stat-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+        .stat-chip strong { color: var(--fg); font-weight: 600; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); }
+        .btn { appearance: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--fg); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; transition: background 120ms, border-color 120ms; white-space: nowrap; }
+        .btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); }
+        .btn:disabled { opacity: 0.55; cursor: default; pointer-events: none; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-primary:hover { filter: brightness(0.88); }
+        .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); }
+        .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border); color: var(--fg); }
+        .btn-sm { padding: 3px 8px; font-size: 11px; }
+        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .feature-grid { display: grid; gap: 8px; margin-bottom: 10px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; transition: border-color 120ms; }
+        .card:hover { border-color: var(--accent); }
+        .card.active-card { border-color: var(--active-border); background: var(--active-bg); }
+        .card-row { display: flex; align-items: flex-start; gap: 10px; }
+        .card-body { flex: 1; min-width: 0; }
+        .card-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 2px; }
+        .card-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-meta { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
+        .card-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
+        .progress-wrap { margin-top: 8px; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-muted); margin-bottom: 3px; }
+        .progress-bar { height: 5px; background: var(--progress-track); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--progress-fill); border-radius: 3px; transition: width 300ms; }
+        .badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
+        .badge-active { background: var(--active-bg); border-color: var(--active-border); color: var(--active-fg); }
+        .badge-verified { background: var(--verified-bg); border-color: var(--verified-border); color: var(--verified-fg); }
+        .badge-failed { background: var(--failed-bg); border-color: var(--failed-border); color: var(--failed-fg); }
+        .badge-pending { background: var(--pending-bg); border-color: var(--pending-border); color: var(--pending-fg); }
+        .badge-skipped { background: var(--pending-bg); border-color: var(--pending-border); color: var(--skipped-fg); }
+        .test-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+        .test-chip { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-section); color: var(--fg-muted); }
+        .test-chip.passing { color: var(--verified-fg); border-color: var(--verified-border); background: var(--verified-bg); }
+        .test-chip.warning { color: var(--active-fg); border-color: var(--active-border); background: var(--active-bg); }
+        .outcome-list { list-style: none; display: grid; gap: 7px; margin-bottom: 10px; }
+        .outcome-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; transition: border-color 120ms; }
+        .outcome-item:hover { border-color: var(--accent); }
+        .outcome-item.active-outcome { border-color: var(--active-border); background: var(--active-bg); }
+        .outcome-item.verified-outcome { border-left: 3px solid var(--verified-border); }
+        .outcome-item.failed-outcome { border-left: 3px solid var(--failed-border); }
+        .outcome-num { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); margin-bottom: 2px; }
+        .outcome-title { font-size: 13px; font-weight: 600; }
+        .outcome-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+        .outcome-row { display: flex; align-items: flex-start; gap: 8px; }
+        .outcome-body { flex: 1; min-width: 0; }
+        .editor { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+        .editor-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+        .field-grid { display: grid; gap: 9px; }
+        label { display: grid; gap: 4px; font-size: 12px; }
+        label span { font-weight: 600; }
+        input[type="text"], input[type="number"], textarea { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-section); color: var(--fg); padding: 6px 8px; font: inherit; font-size: 12px; transition: border-color 120ms; }
+        input:focus, textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent); }
+        textarea { min-height: 70px; resize: vertical; }
+        .field-hint { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
+        .status-bar { border-radius: var(--radius); padding: 8px 10px; font-size: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--fg-muted); }
+        .status-bar.error { border-color: var(--failed-border); background: var(--failed-bg); color: var(--failed-fg); }
+        .status-bar.success { border-color: var(--verified-border); background: var(--verified-bg); color: var(--verified-fg); }
+        .empty { text-align: center; padding: 28px 16px; color: var(--fg-muted); border: 1px dashed var(--border); border-radius: var(--radius-lg); font-size: 13px; line-height: 1.6; }
+        .empty-icon { font-size: 28px; margin-bottom: 8px; }
+        .empty-title { font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+        @media (max-width: 520px) { .app { padding: 8px 10px 20px; } .dashboard { gap: 5px; } .card-row { flex-direction: column; } }
     </style>
 </head>
-
 <body>
-    <div class="shell">
-        <section class="panel">
-            <div class="hero">
-                <p class="eyebrow" id="eyebrow">Specrail workflow</p>
-                <h1 id="title">Loading feature picker</h1>
-                <p class="summary" id="summary">Waiting for tool results from the host.</p>
-            </div>
-            <div class="actions" id="actions"></div>
-            <div id="status" class="status" hidden></div>
-            <div id="content"></div>
-        </section>
+    <div class="app">
+        <div class="header">
+            <span class="header-logo">&#x1F682;</span>
+            <span class="header-title">Specrail</span>
+            <div class="header-actions" id="headerActions"></div>
+        </div>
+        <div id="statusBar"></div>
+        <div id="root"></div>
     </div>
-
     <script>
         (() => {
             const state = {
-                hostContext: {},
-                toolArguments: {},
-                toolResult: null,
-                pendingFeatureId: null,
-                editingFeatureId: null,
-                editingOutcomeId: null,
-                featureDraft: null,
-                outcomeDraft: null,
-                isSaving: false,
+                hostContext: {}, toolArguments: {}, toolResult: null,
+                pendingFeatureId: null, editingFeatureId: null, editingOutcomeId: null,
+                creatingFeature: false, creatingOutcome: false,
+                featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
+                isSaving: false, isActivating: null,
             };
-
-            const elements = {
-                eyebrow: document.getElementById("eyebrow"),
-                title: document.getElementById("title"),
-                summary: document.getElementById("summary"),
-                actions: document.getElementById("actions"),
-                status: document.getElementById("status"),
-                content: document.getElementById("content"),
-            };
-
             let nextId = 1;
             const pending = new Map();
 
-            function merge(target, source) {
-                if (!source || typeof source !== "object") {
-                    return target;
-                }
-
-                for (const [key, value] of Object.entries(source)) {
-                    if (value && typeof value === "object" && !Array.isArray(value)) {
-                        target[key] = merge(target[key] && typeof target[key] === "object" ? target[key] : {}, value);
-                    } else {
-                        target[key] = value;
-                    }
-                }
-
-                return target;
-            }
-
-            function sendRequest(method, params) {
+            function sendRequest(m, p) {
                 const id = nextId++;
-                window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
-                return new Promise((resolve, reject) => {
-                    pending.set(id, { resolve, reject });
-                });
+                window.parent.postMessage({ jsonrpc: "2.0", id, method: m, params: p }, "*");
+                return new Promise((res, rej) => pending.set(id, { resolve: res, reject: rej }));
+            }
+            function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
+            function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id, result: r }, "*"); }
+            async function callTool(name, args) { return sendRequest("tools/call", { name, arguments: args }); }
+
+            function esc(v) {
+                return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                    .replaceAll('"','&quot;').replaceAll("'","&#39;");
+            }
+            function toolText(r) { return r?.content?.find?.(b => b?.type === "text")?.text ?? ""; }
+            function merge(t, s) {
+                if (!s || typeof s !== "object") return t;
+                for (const [k, v] of Object.entries(s))
+                    t[k] = (v && typeof v === "object" && !Array.isArray(v)) ? merge(t[k] && typeof t[k] === "object" ? t[k] : {}, v) : v;
+                return t;
+            }
+            function linesToArray(v) { return String(v ?? "").split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
+            function arrayToLines(v) { return Array.isArray(v) ? v.join("\n") : ""; }
+
+            function badge(status) {
+                const map = {
+                    active: ["badge-active", "\u26A1 Active"], verified: ["badge-verified", "\u2705 Verified"],
+                    failed: ["badge-failed", "\u274C Failed"], pending: ["badge-pending", "\u25CB Pending"],
+                    skipped: ["badge-skipped", "\u2013 Skipped"], planned: ["badge-pending", "\u25CB Planned"],
+                };
+                const [cls, label] = map[status] ?? ["badge-pending", status];
+                const el = document.createElement("span");
+                el.className = "badge " + cls; el.textContent = label; return el;
             }
 
-            function sendNotification(method, params) {
-                window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
-            }
-
-            function sendResponse(id, result) {
-                window.parent.postMessage({ jsonrpc: "2.0", id, result }, "*");
-            }
-
-            function escapeHtml(value) {
-                return String(value)
-                    .replaceAll("&", "&amp;")
-                    .replaceAll("<", "&lt;")
-                    .replaceAll(">", "&gt;")
-                    .replaceAll('"', "&quot;")
-                    .replaceAll("'", "&#39;");
-            }
-
-            function toolText(result) {
-                if (!result || !Array.isArray(result.content)) {
-                    return "";
-                }
-                const textBlock = result.content.find((item) => item && item.type === "text");
-                return textBlock && typeof textBlock.text === "string" ? textBlock.text : "";
-            }
-
-            function showStatus(message, variant) {
-                if (!message) {
-                    elements.status.hidden = true;
-                    elements.status.textContent = "";
-                    elements.status.removeAttribute("data-variant");
-                    return;
-                }
-                elements.status.hidden = false;
-                elements.status.textContent = message;
-                if (variant) {
-                    elements.status.setAttribute("data-variant", variant);
-                } else {
-                    elements.status.removeAttribute("data-variant");
-                }
+            function showStatus(msg, variant) {
+                const el = document.getElementById("statusBar");
+                if (!msg) { el.innerHTML = ""; return; }
+                el.innerHTML = `<div class="status-bar${variant ? " " + variant : ""}">${esc(msg)}</div>`;
             }
 
             function applyHostStyles() {
                 const root = document.documentElement;
-                const variables = state.hostContext.styles && state.hostContext.styles.variables;
-                if (variables && typeof variables === "object") {
-                    for (const [name, value] of Object.entries(variables)) {
-                        if (typeof value === "string") {
-                            root.style.setProperty(name, value);
-                        }
-                    }
-                }
-                if (state.hostContext.theme === "dark" || state.hostContext.theme === "light") {
-                    root.style.colorScheme = state.hostContext.theme;
-                }
-            }
-
-            function linesToArray(value) {
-                return String(value || "")
-                    .split(/\r?\n/)
-                    .map((item) => item.trim())
-                    .filter(Boolean);
-            }
-
-            function arrayToLines(value) {
-                return Array.isArray(value) ? value.join("\n") : "";
-            }
-
-            async function callServerTool(name, args) {
-                return sendRequest("tools/call", { name, arguments: args });
-            }
-
-            async function refreshCurrentView() {
-                const current = state.toolResult && state.toolResult.structuredContent;
-                if (current && current.mode === "outcome_selection" && current.selectedFeatureId) {
-                    const result = await callServerTool("specrail_feature_navigate", {
-                        ...state.toolArguments,
-                        feature_id: current.selectedFeatureId,
-                    });
-                    state.toolResult = result;
-                    return;
-                }
-
-                const result = await callServerTool("specrail_feature_navigate", { ...state.toolArguments });
-                state.toolResult = result;
+                const vars = state.hostContext?.styles?.variables;
+                if (vars && typeof vars === "object")
+                    for (const [k, v] of Object.entries(vars)) if (typeof v === "string") root.style.setProperty(k, v);
+                const theme = state.hostContext?.theme;
+                if (theme === "dark" || theme === "light") root.style.colorScheme = theme;
             }
 
             async function selectFeature(featureId) {
-                state.pendingFeatureId = featureId;
-                showStatus(`Loading outcomes for ${featureId}...`);
-                render();
+                state.pendingFeatureId = featureId; render();
                 try {
-                    const result = await callServerTool("specrail_feature_navigate", {
-                        ...state.toolArguments,
-                        feature_id: featureId,
-                    });
-                    state.toolResult = result;
-                    state.pendingFeatureId = null;
-                    state.editingFeatureId = null;
-                    state.featureDraft = null;
-                    showStatus("");
-                    render();
-                } catch (error) {
-                    state.pendingFeatureId = null;
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                    render();
-                }
+                    state.toolResult = await callTool("specrail_feature_navigate", { ...state.toolArguments, feature_id: featureId });
+                    state.pendingFeatureId = null; state.editingFeatureId = null; state.featureDraft = null;
+                    state.creatingOutcome = false; state.newOutcomeDraft = null; showStatus(""); render();
+                } catch (e) { state.pendingFeatureId = null; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
             async function returnToFeatures() {
-                showStatus("Loading features...");
-                try {
-                    state.editingFeatureId = null;
-                    state.editingOutcomeId = null;
-                    state.featureDraft = null;
-                    state.outcomeDraft = null;
-                    await refreshCurrentView();
-                    showStatus("");
-                    render();
-                } catch (error) {
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                    render();
-                }
+                state.editingFeatureId = null; state.editingOutcomeId = null; state.featureDraft = null;
+                state.outcomeDraft = null; state.creatingFeature = false; state.newFeatureDraft = null;
+                showStatus("Loading\u2026");
+                try { state.toolResult = await callTool("specrail_feature_navigate", { ...state.toolArguments }); showStatus(""); render(); }
+                catch (e) { showStatus(e?.message ?? String(e), "error"); render(); }
+            }
+
+            async function refreshView() {
+                const sc = state.toolResult?.structuredContent;
+                state.toolResult = (sc?.mode === "outcome_selection" && sc?.selectedFeatureId)
+                    ? await callTool("specrail_feature_navigate", { ...state.toolArguments, feature_id: sc.selectedFeatureId })
+                    : await callTool("specrail_feature_navigate", { ...state.toolArguments });
+            }
+
+            async function activateFeature(id) {
+                state.isActivating = id; render();
+                try { await callTool("specrail_feature_activate", { ...state.toolArguments, id }); await refreshView(); state.isActivating = null; showStatus("Feature activated: " + id, "success"); render(); }
+                catch (e) { state.isActivating = null; showStatus(e?.message ?? String(e), "error"); render(); }
+            }
+
+            async function activateOutcome(featureId, outcomeId) {
+                state.isActivating = outcomeId; render();
+                try { await callTool("specrail_outcome_activate", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId }); await refreshView(); state.isActivating = null; showStatus("Outcome activated: " + outcomeId, "success"); render(); }
+                catch (e) { state.isActivating = null; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
             async function startFeatureEdit(featureId) {
-                showStatus(`Loading feature ${featureId}...`);
+                showStatus("Loading\u2026");
                 try {
-                    const result = await callServerTool("specrail_feature_show", {
-                        ...state.toolArguments,
-                        id: featureId,
-                    });
-                    const feature = result.structuredContent && result.structuredContent.feature;
+                    const res = await callTool("specrail_feature_show", { ...state.toolArguments, id: featureId });
+                    const f = res?.structuredContent?.feature ?? {};
                     state.editingFeatureId = featureId;
-                    state.featureDraft = {
-                        id: feature.id,
-                        title: feature.title || "",
-                        purpose: feature.purpose || "",
-                        outcomes: arrayToLines(feature.outcomes),
-                        constraints: arrayToLines(feature.constraints),
-                        non_goals: arrayToLines(feature.non_goals),
-                        dependencies: arrayToLines(feature.dependencies),
-                    };
-                    showStatus("");
-                    render();
-                } catch (error) {
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                }
+                    state.featureDraft = { id: f.id ?? featureId, title: f.title ?? "", purpose: f.purpose ?? "",
+                        outcomes: arrayToLines(f.outcomes), constraints: arrayToLines(f.constraints),
+                        non_goals: arrayToLines(f.non_goals), dependencies: arrayToLines(f.dependencies) };
+                    showStatus(""); render();
+                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
+            }
+            function cancelFeatureEdit() { state.editingFeatureId = null; state.featureDraft = null; render(); }
+
+            async function saveFeatureEdit(e) {
+                e.preventDefault(); if (!state.featureDraft) return;
+                state.isSaving = true; render();
+                try {
+                    await callTool("specrail_feature_edit", { ...state.toolArguments, id: state.featureDraft.id,
+                        title: state.featureDraft.title, purpose: state.featureDraft.purpose,
+                        outcomes: linesToArray(state.featureDraft.outcomes), constraints: linesToArray(state.featureDraft.constraints),
+                        non_goals: linesToArray(state.featureDraft.non_goals), dependencies: linesToArray(state.featureDraft.dependencies) });
+                    state.editingFeatureId = null; state.featureDraft = null;
+                    await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
+                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
             async function startOutcomeEdit(featureId, outcomeId) {
-                showStatus(`Loading outcome ${outcomeId}...`);
+                showStatus("Loading\u2026");
                 try {
-                    const result = await callServerTool("specrail_outcome_show", {
-                        ...state.toolArguments,
-                        feature_id: featureId,
-                        outcome_id: outcomeId,
-                    });
-                    const outcome = result.structuredContent && result.structuredContent.outcome;
+                    const res = await callTool("specrail_outcome_show", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId });
+                    const o = res?.structuredContent?.outcome ?? {};
                     state.editingOutcomeId = outcomeId;
-                    state.outcomeDraft = {
-                        feature_id: featureId,
-                        outcome_id: outcome.id,
-                        title: outcome.title || "",
-                        goal: outcome.goal || "",
-                        order: String(outcome.order || 1),
-                        prerequisites: arrayToLines(outcome.prerequisites),
-                        allowed_paths: arrayToLines(outcome.allowed_paths),
-                        forbidden_paths: arrayToLines(outcome.forbidden_paths),
-                        required_tests: arrayToLines(outcome.required_tests),
-                    };
-                    showStatus("");
-                    render();
-                } catch (error) {
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                }
+                    state.outcomeDraft = { feature_id: featureId, outcome_id: o.id ?? outcomeId, title: o.title ?? "",
+                        goal: o.goal ?? "", order: String(o.order ?? 1),
+                        prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
+                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests) };
+                    showStatus(""); render();
+                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
             }
+            function cancelOutcomeEdit() { state.editingOutcomeId = null; state.outcomeDraft = null; render(); }
 
-            function cancelFeatureEdit() {
-                state.editingFeatureId = null;
-                state.featureDraft = null;
-                render();
-            }
-
-            function cancelOutcomeEdit() {
-                state.editingOutcomeId = null;
-                state.outcomeDraft = null;
-                render();
-            }
-
-            async function saveFeatureEdit(event) {
-                event.preventDefault();
-                if (!state.featureDraft) {
-                    return;
-                }
-
-                state.isSaving = true;
-                showStatus(`Saving feature ${state.featureDraft.id}...`);
-                render();
-
+            async function saveOutcomeEdit(e) {
+                e.preventDefault(); if (!state.outcomeDraft) return;
+                state.isSaving = true; render();
                 try {
-                    await callServerTool("specrail_feature_edit", {
-                        ...state.toolArguments,
-                        id: state.featureDraft.id,
-                        title: state.featureDraft.title,
-                        purpose: state.featureDraft.purpose,
-                        outcomes: linesToArray(state.featureDraft.outcomes),
-                        constraints: linesToArray(state.featureDraft.constraints),
-                        non_goals: linesToArray(state.featureDraft.non_goals),
-                        dependencies: linesToArray(state.featureDraft.dependencies),
-                    });
-
-                    state.editingFeatureId = null;
-                    state.featureDraft = null;
-                    await refreshCurrentView();
-                    state.isSaving = false;
-                    showStatus("Feature updated.");
-                    render();
-                } catch (error) {
-                    state.isSaving = false;
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                    render();
-                }
-            }
-
-            async function saveOutcomeEdit(event) {
-                event.preventDefault();
-                if (!state.outcomeDraft) {
-                    return;
-                }
-
-                state.isSaving = true;
-                showStatus(`Saving outcome ${state.outcomeDraft.outcome_id}...`);
-                render();
-
-                try {
-                    await callServerTool("specrail_outcome_edit", {
-                        ...state.toolArguments,
-                        feature_id: state.outcomeDraft.feature_id,
-                        outcome_id: state.outcomeDraft.outcome_id,
-                        title: state.outcomeDraft.title,
-                        goal: state.outcomeDraft.goal,
-                        order: Number(state.outcomeDraft.order || 1),
+                    await callTool("specrail_outcome_edit", { ...state.toolArguments,
+                        feature_id: state.outcomeDraft.feature_id, outcome_id: state.outcomeDraft.outcome_id,
+                        title: state.outcomeDraft.title, goal: state.outcomeDraft.goal, order: Number(state.outcomeDraft.order ?? 1),
                         prerequisites: linesToArray(state.outcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.outcomeDraft.required_tests),
-                    });
-
-                    state.editingOutcomeId = null;
-                    state.outcomeDraft = null;
-                    await refreshCurrentView();
-                    state.isSaving = false;
-                    showStatus("Outcome updated.");
-                    render();
-                } catch (error) {
-                    state.isSaving = false;
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                    render();
-                }
+                        required_tests: linesToArray(state.outcomeDraft.required_tests) });
+                    state.editingOutcomeId = null; state.outcomeDraft = null;
+                    await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
+                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
-            function updateDraft(target, key, value) {
-                if (target === "feature" && state.featureDraft) {
-                    state.featureDraft[key] = value;
-                }
-                if (target === "outcome" && state.outcomeDraft) {
-                    state.outcomeDraft[key] = value;
-                }
+            function startNewFeature() { state.creatingFeature = true; state.newFeatureDraft = { id: "", title: "", purpose: "", outcomes: "", constraints: "", non_goals: "", dependencies: "" }; render(); }
+            function cancelNewFeature() { state.creatingFeature = false; state.newFeatureDraft = null; render(); }
+
+            async function saveNewFeature(e) {
+                e.preventDefault(); if (!state.newFeatureDraft) return;
+                state.isSaving = true; render();
+                try {
+                    await callTool("specrail_feature_new", { ...state.toolArguments, id: state.newFeatureDraft.id, title: state.newFeatureDraft.title, purpose: state.newFeatureDraft.purpose, outcomes: linesToArray(state.newFeatureDraft.outcomes), constraints: linesToArray(state.newFeatureDraft.constraints), non_goals: linesToArray(state.newFeatureDraft.non_goals), dependencies: linesToArray(state.newFeatureDraft.dependencies) });
+                    state.creatingFeature = false; state.newFeatureDraft = null;
+                    await refreshView(); state.isSaving = false; showStatus("Feature created.", "success"); render();
+                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
-            function renderField(label, key, value, target, multiline, helper) {
-                const wrapper = document.createElement("label");
-                wrapper.innerHTML = `<span>${escapeHtml(label)}</span>`;
-                const input = document.createElement(multiline ? "textarea" : "input");
-                if (!multiline) {
-                    input.type = key === "order" ? "number" : "text";
-                    if (key === "order") {
-                        input.min = "1";
-                    }
-                }
-                input.value = value || "";
-                input.addEventListener("input", (event) => updateDraft(target, key, event.target.value));
-                wrapper.appendChild(input);
-                if (helper) {
-                    const text = document.createElement("p");
-                    text.className = "helper";
-                    text.textContent = helper;
-                    wrapper.appendChild(text);
-                }
-                return wrapper;
+            function startNewOutcome(featureId, suggestedOrder) { state.creatingOutcome = true; state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder ?? 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "" }; render(); }
+            function cancelNewOutcome() { state.creatingOutcome = false; state.newOutcomeDraft = null; render(); }
+
+            async function saveNewOutcome(e) {
+                e.preventDefault(); if (!state.newOutcomeDraft) return;
+                state.isSaving = true; render();
+                try {
+                    await callTool("specrail_outcome_new", { ...state.toolArguments, feature_id: state.newOutcomeDraft.feature_id, outcome_id: state.newOutcomeDraft.outcome_id, title: state.newOutcomeDraft.title, goal: state.newOutcomeDraft.goal, order: Number(state.newOutcomeDraft.order ?? 1), prerequisites: linesToArray(state.newOutcomeDraft.prerequisites), allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths), forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths), required_tests: linesToArray(state.newOutcomeDraft.required_tests) });
+                    state.creatingOutcome = false; state.newOutcomeDraft = null;
+                    await refreshView(); state.isSaving = false; showStatus("Outcome created.", "success"); render();
+                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
             }
 
-            function renderFeatureEditor(featureId) {
-                if (!state.featureDraft || state.editingFeatureId !== featureId) {
-                    return null;
-                }
-
-                const form = document.createElement("form");
-                form.className = "editor";
-                form.addEventListener("submit", saveFeatureEdit);
-                form.innerHTML = `<h2>Edit feature ${escapeHtml(featureId)}</h2>`;
-
-                const grid = document.createElement("div");
-                grid.className = "field-grid";
-                grid.appendChild(renderField("Title", "title", state.featureDraft.title, "feature", false));
-                grid.appendChild(renderField("Purpose", "purpose", state.featureDraft.purpose, "feature", true));
-                grid.appendChild(renderField("Outcomes", "outcomes", state.featureDraft.outcomes, "feature", true, "One item per line."));
-                grid.appendChild(renderField("Constraints", "constraints", state.featureDraft.constraints, "feature", true, "One item per line."));
-                grid.appendChild(renderField("Non-goals", "non_goals", state.featureDraft.non_goals, "feature", true, "One item per line."));
-                grid.appendChild(renderField("Dependencies", "dependencies", state.featureDraft.dependencies, "feature", true, "One item per line."));
-                form.appendChild(grid);
-
-                const actions = document.createElement("div");
-                actions.className = "form-actions";
-
-                const saveButton = document.createElement("button");
-                saveButton.className = "button";
-                saveButton.dataset.kind = "primary";
-                saveButton.type = "submit";
-                saveButton.disabled = state.isSaving;
-                saveButton.textContent = state.isSaving ? "Saving..." : "Save feature";
-                actions.appendChild(saveButton);
-
-                const cancelButton = document.createElement("button");
-                cancelButton.className = "button";
-                cancelButton.dataset.kind = "ghost";
-                cancelButton.type = "button";
-                cancelButton.disabled = state.isSaving;
-                cancelButton.textContent = "Cancel";
-                cancelButton.addEventListener("click", cancelFeatureEdit);
-                actions.appendChild(cancelButton);
-
-                form.appendChild(actions);
-                return form;
+            function mkField(label, key, value, target, multiline, hint) {
+                const lbl = document.createElement("label");
+                lbl.innerHTML = `<span>${esc(label)}</span>`;
+                const inp = document.createElement(multiline ? "textarea" : "input");
+                if (!multiline) inp.type = key === "order" ? "number" : "text";
+                if (key === "order") inp.min = "1";
+                inp.value = value ?? "";
+                inp.addEventListener("input", ev => {
+                    const v = ev.target.value;
+                    if (target === "feature" && state.featureDraft) state.featureDraft[key] = v;
+                    if (target === "outcome" && state.outcomeDraft) state.outcomeDraft[key] = v;
+                    if (target === "newFeature" && state.newFeatureDraft) state.newFeatureDraft[key] = v;
+                    if (target === "newOutcome" && state.newOutcomeDraft) state.newOutcomeDraft[key] = v;
+                });
+                lbl.appendChild(inp);
+                if (hint) { const p = document.createElement("p"); p.className = "field-hint"; p.textContent = hint; lbl.appendChild(p); }
+                return lbl;
             }
 
-            function renderOutcomeEditor(outcome) {
-                if (!state.outcomeDraft || state.editingOutcomeId !== outcome.id) {
-                    return null;
-                }
-
-                const form = document.createElement("form");
-                form.className = "editor";
-                form.addEventListener("submit", saveOutcomeEdit);
-                form.innerHTML = `<h2>Edit outcome ${escapeHtml(outcome.id)}</h2>`;
-
-                const grid = document.createElement("div");
-                grid.className = "field-grid";
-                grid.appendChild(renderField("Title", "title", state.outcomeDraft.title, "outcome", false));
-                grid.appendChild(renderField("Goal", "goal", state.outcomeDraft.goal, "outcome", true));
-
-                const twoCol = document.createElement("div");
-                twoCol.className = "field-grid";
-                twoCol.dataset.columns = "2";
-                twoCol.appendChild(renderField("Order", "order", state.outcomeDraft.order, "outcome", false));
-                twoCol.appendChild(renderField("Prerequisites", "prerequisites", state.outcomeDraft.prerequisites, "outcome", true, "One outcome id per line."));
-                grid.appendChild(twoCol);
-
-                grid.appendChild(renderField("Allowed paths", "allowed_paths", state.outcomeDraft.allowed_paths, "outcome", true, "One glob per line."));
-                grid.appendChild(renderField("Forbidden paths", "forbidden_paths", state.outcomeDraft.forbidden_paths, "outcome", true, "One glob per line."));
-                grid.appendChild(renderField("Required tests", "required_tests", state.outcomeDraft.required_tests, "outcome", true, "One path or id per line."));
-                form.appendChild(grid);
-
-                const actions = document.createElement("div");
-                actions.className = "form-actions";
-
-                const saveButton = document.createElement("button");
-                saveButton.className = "button";
-                saveButton.dataset.kind = "primary";
-                saveButton.type = "submit";
-                saveButton.disabled = state.isSaving;
-                saveButton.textContent = state.isSaving ? "Saving..." : "Save outcome";
-                actions.appendChild(saveButton);
-
-                const cancelButton = document.createElement("button");
-                cancelButton.className = "button";
-                cancelButton.dataset.kind = "ghost";
-                cancelButton.type = "button";
-                cancelButton.disabled = state.isSaving;
-                cancelButton.textContent = "Cancel";
-                cancelButton.addEventListener("click", cancelOutcomeEdit);
-                actions.appendChild(cancelButton);
-
-                form.appendChild(actions);
-                return form;
+            function renderEditor(title, fields, onSubmit, onCancel) {
+                const wrap = document.createElement("div"); wrap.className = "editor";
+                const h = document.createElement("div"); h.className = "editor-title"; h.textContent = title; wrap.appendChild(h);
+                const form = document.createElement("form"); form.addEventListener("submit", onSubmit);
+                const grid = document.createElement("div"); grid.className = "field-grid";
+                fields.forEach(f => grid.appendChild(f)); form.appendChild(grid);
+                const actions = document.createElement("div"); actions.className = "btn-group"; actions.style.marginTop = "10px";
+                const save = document.createElement("button"); save.className = "btn btn-primary btn-sm"; save.type = "submit";
+                save.disabled = state.isSaving; save.textContent = state.isSaving ? "Saving\u2026" : "Save";
+                const cancel = document.createElement("button"); cancel.className = "btn btn-ghost btn-sm"; cancel.type = "button";
+                cancel.disabled = state.isSaving; cancel.textContent = "Cancel"; cancel.addEventListener("click", onCancel);
+                actions.appendChild(save); actions.appendChild(cancel); form.appendChild(actions); wrap.appendChild(form); return wrap;
             }
 
             function renderFeatureSelection(data) {
                 const features = Array.isArray(data.features) ? data.features : [];
-                elements.content.innerHTML = "";
+                const root = document.getElementById("root"); root.innerHTML = "";
+                const ha = document.getElementById("headerActions"); ha.innerHTML = "";
 
-                if (!features.length) {
-                    elements.content.innerHTML = '<div class="empty">No features are registered yet. Create one with <code>specrail_feature_new</code> to start planning work.</div>';
+                if (!state.creatingFeature) {
+                    const btn = document.createElement("button"); btn.className = "btn btn-primary btn-sm";
+                    btn.textContent = "+ New Feature"; btn.disabled = state.isSaving;
+                    btn.addEventListener("click", startNewFeature); ha.appendChild(btn);
+                }
+
+                if (features.length > 0) {
+                    const dash = document.createElement("div"); dash.className = "dashboard";
+                    const total = features.length;
+                    const verified = features.reduce((n, f) => n + Number(f.verifiedOutcomeCount ?? 0), 0);
+                    const totalOutcomes = features.reduce((n, f) => n + Number(f.outcomeCount ?? 0), 0);
+                    dash.innerHTML = `<span class="stat-chip"><strong>${total}</strong> feature${total !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${totalOutcomes}</strong> outcome${totalOutcomes !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${verified}</strong> verified</span>`;
+                    root.appendChild(dash);
+                }
+
+                if (state.creatingFeature && state.newFeatureDraft) {
+                    const d = state.newFeatureDraft;
+                    root.appendChild(renderEditor("New Feature", [
+                        mkField("ID (slug)", "id", d.id, "newFeature"),
+                        mkField("Title", "title", d.title, "newFeature"),
+                        mkField("Purpose", "purpose", d.purpose, "newFeature", true),
+                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "newFeature", true, "Optional"),
+                        mkField("Constraints (one per line)", "constraints", d.constraints, "newFeature", true),
+                        mkField("Non-goals (one per line)", "non_goals", d.non_goals, "newFeature", true),
+                    ], saveNewFeature, cancelNewFeature));
                     return;
                 }
 
-                const list = document.createElement("div");
-                list.className = "list";
-
-                for (const feature of features) {
-                    const card = document.createElement("section");
-                    card.className = "card";
-                    const verifiedCount = Number(feature.verifiedOutcomeCount || 0);
-                    const outcomeCount = Number(feature.outcomeCount || 0);
-                    const activeChip = feature.isActive ? '<span class="active-chip">Active feature</span>' : "";
-
-                    card.innerHTML = `
-                            <div class="card-header">
-                                <div>
-                                    <p class="card-id">${escapeHtml(feature.id)}</p>
-                                    <p class="card-title">${escapeHtml(feature.title || feature.id)}</p>
-                                    <p class="card-meta">${escapeHtml(feature.status || "planned")} · ${outcomeCount} outcome(s) · ${verifiedCount} verified</p>
-                                    ${activeChip}
-                                </div>
-                                <span class="badge">Feature</span>
-                            </div>
-                        `;
-
-                    const actions = document.createElement("div");
-                    actions.className = "card-actions";
-
-                    const selectButton = document.createElement("button");
-                    selectButton.className = "button";
-                    selectButton.dataset.kind = "primary";
-                    selectButton.type = "button";
-                    selectButton.disabled = state.pendingFeatureId === feature.id || state.isSaving;
-                    selectButton.textContent = state.pendingFeatureId === feature.id ? "Loading..." : "Select";
-                    selectButton.addEventListener("click", () => selectFeature(feature.id));
-                    actions.appendChild(selectButton);
-
-                    const editButton = document.createElement("button");
-                    editButton.className = "button";
-                    editButton.type = "button";
-                    editButton.disabled = state.isSaving;
-                    editButton.textContent = state.editingFeatureId === feature.id ? "Editing" : "Edit";
-                    editButton.addEventListener("click", () => startFeatureEdit(feature.id));
-                    actions.appendChild(editButton);
-
-                    card.appendChild(actions);
-
-                    const editor = renderFeatureEditor(feature.id);
-                    if (editor) {
-                        card.appendChild(editor);
-                    }
-
-                    list.appendChild(card);
+                if (!features.length) {
+                    const empty = document.createElement("div"); empty.className = "empty";
+                    empty.innerHTML = `<div class="empty-icon">&#x1F3D7;&#xFE0F;</div><div class="empty-title">No features yet</div><div>Click &ldquo;+ New Feature&rdquo; to get started.</div>`;
+                    root.appendChild(empty); return;
                 }
 
-                elements.content.appendChild(list);
+                const sec = document.createElement("div"); sec.className = "section-header";
+                sec.innerHTML = `<span class="section-label">Features</span>`; root.appendChild(sec);
+
+                const grid = document.createElement("div"); grid.className = "feature-grid";
+                for (const feature of features) {
+                    const isActive = !!feature.isActive;
+                    const outcomeCount = Number(feature.outcomeCount ?? 0);
+                    const verifiedCount = Number(feature.verifiedOutcomeCount ?? 0);
+                    const pct = outcomeCount > 0 ? Math.round((verifiedCount / outcomeCount) * 100) : 0;
+
+                    const card = document.createElement("div"); card.className = "card" + (isActive ? " active-card" : "");
+                    const row = document.createElement("div"); row.className = "card-row";
+                    const body = document.createElement("div"); body.className = "card-body";
+                    body.innerHTML = `<div class="card-id">${esc(feature.id)}</div><div class="card-title">${esc(feature.title || feature.id)}</div>`;
+                    row.appendChild(body); row.appendChild(badge(isActive ? "active" : String(feature.status ?? "pending")));
+                    card.appendChild(row);
+
+                    if (outcomeCount > 0) {
+                        const prog = document.createElement("div"); prog.className = "progress-wrap";
+                        prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+                        card.appendChild(prog);
+                    } else {
+                        const meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; card.appendChild(meta);
+                    }
+
+                    const actions = document.createElement("div"); actions.className = "card-actions";
+                    const openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
+                    openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
+                    openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open";
+                    openBtn.addEventListener("click", () => selectFeature(feature.id)); actions.appendChild(openBtn);
+
+                    if (!isActive) {
+                        const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                        actBtn.disabled = state.isActivating === feature.id || state.isSaving;
+                        actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Set Active";
+                        actBtn.addEventListener("click", () => activateFeature(feature.id)); actions.appendChild(actBtn);
+                    }
+                    const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                    editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
+                    editBtn.addEventListener("click", () => startFeatureEdit(feature.id)); actions.appendChild(editBtn);
+                    card.appendChild(actions);
+
+                    if (state.editingFeatureId === feature.id && state.featureDraft) {
+                        const d = state.featureDraft;
+                        card.appendChild(renderEditor(`Edit: ${feature.id}`, [
+                            mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
+                            mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                            mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                            mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                            mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                        ], saveFeatureEdit, cancelFeatureEdit));
+                    }
+                    grid.appendChild(card);
+                }
+                root.appendChild(grid);
             }
 
             function renderOutcomeSelection(data) {
-                const selectedFeature = data.selectedFeature || {};
+                const selectedFeature = data.selectedFeature ?? {};
                 const outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
-                elements.content.innerHTML = "";
+                const featureId = data.selectedFeatureId ?? selectedFeature.id ?? "";
+                const suggestedOrder = Number(data.suggestedNewOutcomeOrder ?? outcomes.length + 1);
+                const root = document.getElementById("root"); root.innerHTML = "";
 
-                const featureCard = document.createElement("section");
-                featureCard.className = "card selected-feature";
-                featureCard.innerHTML = `
-                        <div class="card-header">
-                            <div>
-                                <p class="card-id">${escapeHtml(selectedFeature.id || data.selectedFeatureId || "")}</p>
-                                <p class="card-title">${escapeHtml(selectedFeature.title || selectedFeature.id || "Selected feature")}</p>
-                                <p class="card-meta">${escapeHtml(selectedFeature.status || "draft")}</p>
-                            </div>
-                            <span class="badge">Selected</span>
-                        </div>
-                    `;
+                const bc = document.createElement("div"); bc.className = "breadcrumb";
+                const backLink = document.createElement("span"); backLink.className = "breadcrumb-item clickable";
+                backLink.textContent = "Features"; backLink.addEventListener("click", returnToFeatures);
+                bc.appendChild(backLink);
+                bc.innerHTML += `<span class="breadcrumb-sep">\u203A</span><span class="breadcrumb-item">${esc(selectedFeature.title || featureId)}</span>`;
+                root.appendChild(bc);
 
-                const featureActions = document.createElement("div");
-                featureActions.className = "card-actions";
-                const featureEditButton = document.createElement("button");
-                featureEditButton.className = "button";
-                featureEditButton.type = "button";
-                featureEditButton.disabled = state.isSaving;
-                featureEditButton.textContent = state.editingFeatureId === selectedFeature.id ? "Editing feature" : "Edit feature";
-                featureEditButton.addEventListener("click", () => startFeatureEdit(selectedFeature.id));
-                featureActions.appendChild(featureEditButton);
-                featureCard.appendChild(featureActions);
-
-                const featureEditor = renderFeatureEditor(selectedFeature.id);
-                if (featureEditor) {
-                    featureCard.appendChild(featureEditor);
+                const ha = document.getElementById("headerActions"); ha.innerHTML = "";
+                const backBtn = document.createElement("button"); backBtn.className = "btn btn-ghost btn-sm";
+                backBtn.textContent = "\u2190 Back"; backBtn.addEventListener("click", returnToFeatures); ha.appendChild(backBtn);
+                if (!state.creatingOutcome) {
+                    const newBtn = document.createElement("button"); newBtn.className = "btn btn-primary btn-sm";
+                    newBtn.textContent = "+ New Outcome"; newBtn.disabled = state.isSaving;
+                    newBtn.addEventListener("click", () => startNewOutcome(featureId, suggestedOrder)); ha.appendChild(newBtn);
                 }
 
-                elements.content.appendChild(featureCard);
+                const isActive = data.activeFeatureId === featureId;
+                const fCard = document.createElement("div"); fCard.className = "card" + (isActive ? " active-card" : ""); fCard.style.marginBottom = "14px";
+                const fRow = document.createElement("div"); fRow.className = "card-row";
+                const fBody = document.createElement("div"); fBody.className = "card-body";
+                fBody.innerHTML = `<div class="card-id">${esc(featureId)}</div><div class="card-title">${esc(selectedFeature.title || featureId)}</div>`;
+                fRow.appendChild(fBody); fRow.appendChild(badge(isActive ? "active" : String(selectedFeature.status ?? "pending")));
+                fCard.appendChild(fRow);
+                const fActions = document.createElement("div"); fActions.className = "card-actions";
+                if (!isActive) {
+                    const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                    actBtn.disabled = state.isActivating === featureId || state.isSaving;
+                    actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Set Active";
+                    actBtn.addEventListener("click", () => activateFeature(featureId)); fActions.appendChild(actBtn);
+                }
+                const feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
+                feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
+                feEditBtn.addEventListener("click", () => startFeatureEdit(featureId)); fActions.appendChild(feEditBtn);
+                fCard.appendChild(fActions);
+                if (state.editingFeatureId === featureId && state.featureDraft) {
+                    const d = state.featureDraft;
+                    fCard.appendChild(renderEditor(`Edit: ${featureId}`, [
+                        mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
+                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                        mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                        mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                        mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                    ], saveFeatureEdit, cancelFeatureEdit));
+                }
+                root.appendChild(fCard);
 
-                if (!outcomes.length) {
-                    const empty = document.createElement("div");
-                    empty.className = "empty";
-                    empty.textContent = `No outcomes exist for ${selectedFeature.id || data.selectedFeatureId}. Create one with specrail_outcome_new.`;
-                    elements.content.appendChild(empty);
-                    return;
+                if (state.creatingOutcome && state.newOutcomeDraft) {
+                    const d = state.newOutcomeDraft;
+                    root.appendChild(renderEditor("New Outcome", [
+                        mkField("ID (slug)", "outcome_id", d.outcome_id, "newOutcome"),
+                        mkField("Title", "title", d.title, "newOutcome"),
+                        mkField("Goal", "goal", d.goal, "newOutcome", true, "What does this outcome prove when verified?"),
+                        mkField("Order", "order", d.order, "newOutcome"),
+                        mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "newOutcome", true),
+                        mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "newOutcome", true),
+                    ], saveNewOutcome, cancelNewOutcome));
                 }
 
-                const list = document.createElement("ul");
-                list.className = "outcome-list";
+                if (!outcomes.length && !state.creatingOutcome) {
+                    const empty = document.createElement("div"); empty.className = "empty";
+                    empty.innerHTML = `<div class="empty-icon">&#x1F4CB;</div><div class="empty-title">No outcomes yet</div><div>Click &ldquo;+ New Outcome&rdquo; to add the first milestone.</div>`;
+                    root.appendChild(empty); return;
+                }
 
-                for (const outcome of outcomes) {
-                    const item = document.createElement("li");
-                    item.className = "outcome-item";
-                    item.innerHTML = `
-                            <div class="card-header">
-                                <div>
-                                    <p class="outcome-order">Outcome ${escapeHtml(outcome.order || "?")}</p>
-                                    <p class="outcome-title">${escapeHtml(outcome.title || outcome.id)}</p>
-                                    <p class="outcome-meta">${escapeHtml(outcome.id)} · ${escapeHtml(outcome.status || "pending")}${outcome.isActive ? " · active" : ""}</p>
-                                </div>
-                                <span class="badge">Outcome</span>
-                            </div>
-                        `;
+                if (outcomes.length > 0) {
+                    const verifiedCount = outcomes.filter(o => o.status === "verified").length;
+                    const sec = document.createElement("div"); sec.className = "section-header";
+                    sec.innerHTML = `<span class="section-label">Outcomes</span><span class="stat-chip"><strong>${verifiedCount}/${outcomes.length}</strong> verified</span>`;
+                    root.appendChild(sec);
 
-                    const actions = document.createElement("div");
-                    actions.className = "card-actions";
+                    const list = document.createElement("ul"); list.className = "outcome-list";
+                    for (const outcome of outcomes) {
+                        const isActiveOutcome = !!outcome.isActive;
+                        const item = document.createElement("li");
+                        let cls = "outcome-item";
+                        if (isActiveOutcome) cls += " active-outcome";
+                        if (outcome.status === "verified") cls += " verified-outcome";
+                        if (outcome.status === "failed") cls += " failed-outcome";
+                        item.className = cls;
 
-                    const editButton = document.createElement("button");
-                    editButton.className = "button";
-                    editButton.type = "button";
-                    editButton.disabled = state.isSaving;
-                    editButton.textContent = state.editingOutcomeId === outcome.id ? "Editing" : "Edit";
-                    editButton.addEventListener("click", () => startOutcomeEdit(selectedFeature.id, outcome.id));
-                    actions.appendChild(editButton);
+                        const row = document.createElement("div"); row.className = "outcome-row";
+                        const body = document.createElement("div"); body.className = "outcome-body";
+                        body.innerHTML = `<div class="outcome-num">Outcome ${esc(outcome.order ?? "?")}</div><div class="outcome-title">${esc(outcome.title || outcome.id)}</div><div class="outcome-id">${esc(outcome.id)}</div>`;
 
-                    item.appendChild(actions);
+                        const testCount = Number(outcome.testCount ?? 0);
+                        const passingCount = Number(outcome.passingTestCount ?? 0);
+                        const plannedCount = Number(outcome.plannedTestCount ?? 0);
+                        const chips = document.createElement("div"); chips.className = "test-chips";
+                        if (testCount > 0) {
+                            const all = document.createElement("span"); all.className = "test-chip"; all.textContent = `${testCount} test${testCount !== 1 ? "s" : ""}`;
+                            chips.appendChild(all);
+                            if (passingCount > 0) { const p = document.createElement("span"); p.className = "test-chip passing"; p.textContent = `${passingCount} passing`; chips.appendChild(p); }
+                            if (plannedCount > 0) { const p = document.createElement("span"); p.className = "test-chip warning"; p.textContent = `${plannedCount} planned`; chips.appendChild(p); }
+                        } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                            const noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
+                        }
+                        if (chips.childNodes.length > 0) body.appendChild(chips);
 
-                    const editor = renderOutcomeEditor(outcome);
-                    if (editor) {
-                        item.appendChild(editor);
+                        row.appendChild(body); row.appendChild(badge(String(outcome.status ?? "pending"))); item.appendChild(row);
+
+                        const actions = document.createElement("div"); actions.className = "card-actions";
+                        if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
+                            const actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
+                            actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
+                            actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate";
+                            actBtn.addEventListener("click", () => activateOutcome(featureId, outcome.id)); actions.appendChild(actBtn);
+                        }
+                        const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                        editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
+                        editBtn.addEventListener("click", () => startOutcomeEdit(featureId, outcome.id)); actions.appendChild(editBtn);
+                        item.appendChild(actions);
+
+                        if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
+                            const d = state.outcomeDraft;
+                            item.appendChild(renderEditor(`Edit: ${outcome.id}`, [
+                                mkField("Title", "title", d.title, "outcome"), mkField("Goal", "goal", d.goal, "outcome", true),
+                                mkField("Order", "order", d.order, "outcome"),
+                                mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
+                                mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
+                                mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
+                                mkField("Required tests (one path/ID per line)", "required_tests", d.required_tests, "outcome", true),
+                            ], saveOutcomeEdit, cancelOutcomeEdit));
+                        }
+                        list.appendChild(item);
                     }
-
-                    list.appendChild(item);
-                }
-
-                elements.content.appendChild(list);
-            }
-
-            function renderActions(data) {
-                elements.actions.innerHTML = "";
-                if (data.mode === "outcome_selection") {
-                    const backButton = document.createElement("button");
-                    backButton.className = "button";
-                    backButton.type = "button";
-                    backButton.textContent = "Back to features";
-                    backButton.addEventListener("click", returnToFeatures);
-                    elements.actions.appendChild(backButton);
+                    root.appendChild(list);
                 }
             }
 
             function render() {
-                const result = state.toolResult;
-                const data = result && result.structuredContent && typeof result.structuredContent === "object"
-                    ? result.structuredContent
-                    : {};
-
                 applyHostStyles();
-                renderActions(data);
-
-                if (result && result.isError) {
-                    elements.eyebrow.textContent = "Specrail workflow";
-                    elements.title.textContent = "Feature navigation failed";
-                    elements.summary.textContent = toolText(result) || "The MCP tool returned an error.";
-                    elements.content.innerHTML = "";
-                    showStatus(toolText(result), "error");
-                    return;
+                const result = state.toolResult;
+                const data = (result?.structuredContent && typeof result.structuredContent === "object") ? result.structuredContent : {};
+                if (!result) {
+                    document.getElementById("root").innerHTML = `<div class="empty"><div class="empty-icon">&#x1F682;</div><div class="empty-title">Specrail</div><div>Waiting for data\u2026</div></div>`;
+                    document.getElementById("headerActions").innerHTML = ""; return;
                 }
-
-                if (data.mode === "outcome_selection") {
-                    const selectedFeature = data.selectedFeature || {};
-                    elements.eyebrow.textContent = "Specrail outcome picker";
-                    elements.title.textContent = selectedFeature.title || selectedFeature.id || "Selected feature";
-                    elements.summary.textContent = toolText(result) || "Inspect outcomes or edit the existing records inline.";
-                    renderOutcomeSelection(data);
-                    return;
+                if (result.isError) {
+                    document.getElementById("root").innerHTML = `<div class="empty"><div class="empty-icon">\u26A0\uFE0F</div><div class="empty-title">Tool error</div><div>${esc(toolText(result) || "The MCP tool returned an error.")}</div></div>`;
+                    document.getElementById("headerActions").innerHTML = "";
+                    showStatus(toolText(result), "error"); return;
                 }
-
-                elements.eyebrow.textContent = "Specrail feature picker";
-                elements.title.textContent = "Select or edit a feature";
-                elements.summary.textContent = toolText(result) || "Choose a feature to inspect its outcomes, or edit an existing one inline.";
-                renderFeatureSelection(data);
+                if (data.mode === "outcome_selection") renderOutcomeSelection(data);
+                else renderFeatureSelection(data);
+                reportSize();
             }
 
             function reportSize() {
-                const width = Math.ceil(document.documentElement.scrollWidth || document.body.scrollWidth || 0);
-                const height = Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 0);
-                sendNotification("ui/notifications/size-changed", { width, height });
+                sendNotification("ui/notifications/size-changed", {
+                    width: Math.ceil(document.documentElement.scrollWidth || document.body.scrollWidth || 0),
+                    height: Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 0),
+                });
             }
 
-            window.addEventListener("message", (event) => {
-                const message = event.data;
-                if (!message || message.jsonrpc !== "2.0") {
+            window.addEventListener("message", event => {
+                const msg = event.data;
+                if (!msg || msg.jsonrpc !== "2.0") return;
+                if (typeof msg.id !== "undefined" && pending.has(msg.id)) {
+                    const req = pending.get(msg.id); pending.delete(msg.id);
+                    if (Object.prototype.hasOwnProperty.call(msg, "result")) req.resolve(msg.result);
+                    else req.reject(new Error(msg?.error?.message ?? "Unknown error"));
                     return;
                 }
-
-                if (typeof message.id !== "undefined" && pending.has(message.id)) {
-                    const request = pending.get(message.id);
-                    pending.delete(message.id);
-
-                    if (Object.prototype.hasOwnProperty.call(message, "result")) {
-                        request.resolve(message.result);
-                    } else {
-                        const error = message.error && message.error.message ? message.error.message : "Unknown host error";
-                        request.reject(new Error(error));
-                    }
-                    return;
+                if (msg.method === "ui/resource-teardown" && typeof msg.id !== "undefined") { sendResponse(msg.id, {}); return; }
+                if (msg.method === "ui/notifications/tool-input") {
+                    state.toolArguments = (msg.params?.arguments && typeof msg.params.arguments === "object") ? msg.params.arguments : {}; return;
                 }
-
-                if (message.method === "ui/resource-teardown" && typeof message.id !== "undefined") {
-                    sendResponse(message.id, {});
-                    return;
-                }
-
-                if (message.method === "ui/notifications/tool-input") {
-                    state.toolArguments = message.params && message.params.arguments && typeof message.params.arguments === "object"
-                        ? message.params.arguments
-                        : {};
-                    return;
-                }
-
-                if (message.method === "ui/notifications/tool-result") {
-                    state.toolResult = message.params;
-                    render();
-                    reportSize();
-                    return;
-                }
-
-                if (message.method === "ui/notifications/tool-cancelled") {
-                    showStatus(message.params && message.params.reason ? message.params.reason : "Tool execution was cancelled.", "error");
-                    return;
-                }
-
-                if (message.method === "ui/notifications/host-context-changed") {
-                    state.hostContext = merge(state.hostContext, message.params || {});
-                    render();
-                }
+                if (msg.method === "ui/notifications/tool-result") { state.toolResult = msg.params; render(); reportSize(); return; }
+                if (msg.method === "ui/notifications/tool-cancelled") { showStatus(msg.params?.reason ?? "Cancelled.", "error"); return; }
+                if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params ?? {}); render(); }
             });
 
             new ResizeObserver(() => reportSize()).observe(document.body);
@@ -990,27 +620,14 @@
                 try {
                     const init = await sendRequest("ui/initialize", {
                         protocolVersion: "2026-01-26",
-                        clientInfo: {
-                            name: "specrail-feature-picker",
-                            version: "1.1.0",
-                        },
-                        capabilities: {},
-                        appCapabilities: {
-                            availableDisplayModes: ["inline", "fullscreen"],
-                        },
+                        clientInfo: { name: "specrail-navigator", version: "2.0.0" },
+                        capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] },
                     });
-
-                    state.hostContext = init && init.hostContext && typeof init.hostContext === "object" ? init.hostContext : {};
-                    applyHostStyles();
-                    sendNotification("ui/notifications/initialized", {});
-                    render();
-                    reportSize();
-                } catch (error) {
-                    showStatus(error instanceof Error ? error.message : String(error), "error");
-                }
+                    state.hostContext = (init?.hostContext && typeof init.hostContext === "object") ? init.hostContext : {};
+                    applyHostStyles(); sendNotification("ui/notifications/initialized", {}); render(); reportSize();
+                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
             })();
         })();
     </script>
 </body>
-
 </html>
