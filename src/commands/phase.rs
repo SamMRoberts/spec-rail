@@ -20,7 +20,7 @@ pub struct NewArgs {
     pub required_tests: Vec<String>,
 }
 
-pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<PhaseSpec> {
     // Ensure the feature exists
     repo.load_feature(&args.feature_id)?;
 
@@ -52,6 +52,13 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
         .with_feature(&args.feature_id)
         .with_phase(&args.phase_id);
     Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(phase)
+}
+
+pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+    let phase = create(repo, args)?;
+    let path = repo.phase_path(&phase.feature_id, &phase.id);
 
     println!(
         "✓ Phase '{}' created for feature '{}'",
@@ -121,7 +128,7 @@ pub fn show(repo: &Repository, feature_id: &str, phase_id: &str) -> Result<()> {
 
 // ── phase activate ────────────────────────────────────────────────────────────
 
-pub fn activate(repo: &Repository, feature_id: &str, phase_id: &str) -> Result<()> {
+pub(crate) fn activate_phase(repo: &Repository, feature_id: &str, phase_id: &str) -> Result<()> {
     let mut phase = repo.load_phase(feature_id, phase_id)?;
     let mut state = repo.load_state()?;
 
@@ -143,6 +150,12 @@ pub fn activate(repo: &Repository, feature_id: &str, phase_id: &str) -> Result<(
         .with_feature(feature_id)
         .with_phase(phase_id);
     Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(())
+}
+
+pub fn activate(repo: &Repository, feature_id: &str, phase_id: &str) -> Result<()> {
+    activate_phase(repo, feature_id, phase_id)?;
 
     println!("✓ Phase '{phase_id}' is now active for feature '{feature_id}'.");
     Ok(())

@@ -8,7 +8,7 @@ fn setup(dir: &TempDir) {
     Command::cargo_bin(bin)
         .unwrap()
         .current_dir(dir.path())
-        .arg("init")
+        .args(["init", "--no-wizard"])
         .assert()
         .success();
 

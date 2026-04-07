@@ -7,3 +7,4 @@ pub mod status;
 pub mod test;
 pub mod trace;
 pub mod verify;
+pub mod wizard;

@@ -30,7 +30,8 @@ The tool is designed to help you:
 
 Key rules:
 
-- `specrail init` creates the project structure.
+- `specrail init` creates the project structure and immediately walks through feature and phase setup.
+- `specrail init --no-wizard` creates only the project structure.
 - All other commands require an existing `.specrail/` directory and will discover it by walking upward from the current directory.
 - `implement` requires an active feature, an active phase, at least one registered test for that phase, and no phase tests left in `planned`.
 - `verify` runs the `test_command` from `.specrail/project.yaml`.
@@ -51,6 +52,12 @@ Initialize a project:
 
 ```bash
 specrail init
+```
+
+If you want only the project files without the walkthrough:
+
+```bash
+specrail init --no-wizard
 ```
 
 Create a feature:
@@ -122,6 +129,7 @@ specrail trace --limit 20
 ### Project
 
 - `specrail init`
+- `specrail init --no-wizard`
 
 ### Features
 

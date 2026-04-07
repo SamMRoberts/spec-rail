@@ -19,7 +19,11 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Initialize a new specrail project in the current directory
-    Init,
+    Init {
+        /// Skip the interactive onboarding walkthrough after init
+        #[arg(long)]
+        no_wizard: bool,
+    },
 
     /// Manage features
     #[command(subcommand)]

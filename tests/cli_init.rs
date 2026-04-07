@@ -13,7 +13,7 @@ fn init_creates_directory_structure() {
     let dir = TempDir::new().unwrap();
 
     specrail(&dir)
-        .arg("init")
+        .args(["init", "--no-wizard"])
         .assert()
         .success();
 
@@ -34,13 +34,13 @@ fn init_creates_directory_structure() {
 fn init_is_idempotent() {
     let dir = TempDir::new().unwrap();
 
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     // Write a canary file to verify it is not overwritten
     let canary = dir.path().join(".specrail/project.yaml");
     let original = fs::read_to_string(&canary).unwrap();
 
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let after = fs::read_to_string(&canary).unwrap();
     assert_eq!(original, after, "project.yaml was overwritten on second init");
@@ -49,7 +49,7 @@ fn init_is_idempotent() {
 #[test]
 fn init_creates_valid_project_yaml() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let content = fs::read_to_string(dir.path().join(".specrail/project.yaml")).unwrap();
     assert!(content.contains("version:"), "version field missing");
@@ -60,7 +60,7 @@ fn init_creates_valid_project_yaml() {
 #[test]
 fn init_creates_valid_manifest_yaml() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let content =
         fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
@@ -70,7 +70,7 @@ fn init_creates_valid_manifest_yaml() {
 #[test]
 fn init_ledger_gets_project_initialized_event() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     let ledger =
         fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();

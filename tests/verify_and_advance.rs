@@ -11,7 +11,7 @@ fn specrail(dir: &TempDir) -> Command {
 
 /// Set up a project with one feature, two phases, and one test in the manifest.
 fn full_setup(dir: &TempDir) {
-    specrail(dir).arg("init").assert().success();
+    specrail(dir).args(["init", "--no-wizard"]).assert().success();
 
     specrail(dir)
         .args([
@@ -70,7 +70,7 @@ fn full_setup(dir: &TempDir) {
 #[test]
 fn implement_fails_when_no_active_feature() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     specrail(&dir).arg("implement").assert().failure();
 }
@@ -78,7 +78,7 @@ fn implement_fails_when_no_active_feature() {
 #[test]
 fn implement_fails_when_no_tests_in_manifest() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     specrail(&dir)
         .args([
@@ -113,7 +113,7 @@ fn implement_fails_when_no_tests_in_manifest() {
 #[test]
 fn implement_fails_when_tests_still_planned() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
     specrail(&dir)
         .args([
@@ -159,7 +159,7 @@ fn implement_fails_when_tests_still_planned() {
 #[test]
 fn verify_fails_when_no_active_phase() {
     let dir = TempDir::new().unwrap();
-    specrail(&dir).arg("init").assert().success();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
     specrail(&dir).arg("verify").assert().failure();
 }
 

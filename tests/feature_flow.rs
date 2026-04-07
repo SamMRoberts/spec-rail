@@ -7,7 +7,7 @@ fn init(dir: &TempDir) {
     Command::cargo_bin("specrail")
         .unwrap()
         .current_dir(dir.path())
-        .arg("init")
+        .args(["init", "--no-wizard"])
         .assert()
         .success();
 }

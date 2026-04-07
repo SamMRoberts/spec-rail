@@ -18,7 +18,7 @@ pub struct NewArgs {
     pub dependencies: Vec<String>,
 }
 
-pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
     let path = repo.feature_path(&args.id);
     if path.exists() {
         bail!("feature '{}' already exists at {}", args.id, path.display());
@@ -42,6 +42,13 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
         .with_feature(&args.id)
         .with_message(format!("feature '{}' created", args.id));
     Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(feature)
+}
+
+pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
+    let feature = create(repo, args)?;
+    let path = repo.feature_path(&feature.id);
 
     println!("✓ Feature '{}' created: {}", feature.id, feature.title);
     println!("  Path: {}", path.display());
@@ -100,7 +107,7 @@ pub fn show(repo: &Repository, id: &str) -> Result<()> {
 
 // ── feature activate ──────────────────────────────────────────────────────────
 
-pub fn activate(repo: &Repository, id: &str) -> Result<()> {
+pub(crate) fn activate_feature(repo: &Repository, id: &str) -> Result<()> {
     let mut feature = repo.load_feature(id)?;
     let mut state = repo.load_state()?;
 
@@ -112,6 +119,12 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
 
     let event = LedgerEvent::new(LedgerEventType::FeatureActivated).with_feature(id);
     Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(())
+}
+
+pub fn activate(repo: &Repository, id: &str) -> Result<()> {
+    activate_feature(repo, id)?;
 
     println!("✓ Feature '{id}' is now active.");
     Ok(())

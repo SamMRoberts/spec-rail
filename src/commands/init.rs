@@ -10,10 +10,15 @@ use crate::{
     runtime::filesystem::{ensure_dir, write_if_missing},
 };
 
-pub fn run(repo: &Repository) -> Result<()> {
-    let specrail = repo.specrail_dir();
+pub struct InitOutcome {
+    pub should_start_wizard: bool,
+}
 
-    if specrail.is_dir() {
+pub fn run(repo: &Repository) -> Result<InitOutcome> {
+    let specrail = repo.specrail_dir();
+    let already_initialized = specrail.is_dir();
+
+    if already_initialized {
         println!("✓ .specrail/ already exists — refreshing missing files");
     } else {
         println!("Initializing specrail project…");
@@ -69,8 +74,17 @@ pub fn run(repo: &Repository) -> Result<()> {
         .with_message("specrail project initialized");
     Ledger::append(&ledger_path, &event)?;
 
+    let should_start_wizard = repo.list_features()?.is_empty();
+
     println!("\n✓ specrail project ready.");
-    println!("  Next steps:");
-    println!("    specrail feature new <id> --title <title> --purpose <purpose>");
-    Ok(())
+    if should_start_wizard {
+        println!("  Starting setup walkthrough...");
+    } else {
+        println!("  Next steps:");
+        println!("    specrail feature new <id> --title <title> --purpose <purpose>");
+    }
+
+    Ok(InitOutcome {
+        should_start_wizard,
+    })
 }

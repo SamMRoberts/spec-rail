@@ -39,10 +39,14 @@ fn main() -> Result<()> {
 
 fn run(cli: Cli) -> Result<()> {
     // `init` is special — it does not need an existing project
-    if let Commands::Init = &cli.command {
+    if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;
         let repo = Repository::new(&cwd);
-        return commands::init::run(&repo);
+        let outcome = commands::init::run(&repo)?;
+        if !*no_wizard && outcome.should_start_wizard {
+            commands::wizard::run(&repo)?;
+        }
+        return Ok(());
     }
 
     // All other commands need an existing project
@@ -51,7 +55,7 @@ fn run(cli: Cli) -> Result<()> {
         .context("could not find a specrail project — run `specrail init` first")?;
 
     match cli.command {
-        Commands::Init => unreachable!(),
+        Commands::Init { .. } => unreachable!(),
 
         Commands::Feature(sub) => match sub {
             FeatureCommands::New {
