@@ -2,7 +2,7 @@
     "mcpServers": {
         "specrail": {
             "type": "stdio",
-            "command": "specrail",
+            "command": "/Users/samroberts/.cargo/bin/specrail",
             "args": [
                 "mcp-server"
             ]

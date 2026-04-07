@@ -20,6 +20,10 @@ use core::repository::Repository;
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    if let Commands::McpServer = cli.command {
+        return mcp::run();
+    }
+
     // Initialise tracing based on verbosity flag
     let filter = match cli.verbose {
         0 => "warn",
@@ -33,16 +37,13 @@ fn main() -> Result<()> {
         )
         .with_target(false)
         .compact()
+        .with_writer(std::io::stderr)
         .init();
 
     run(cli)
 }
 
 fn run(cli: Cli) -> Result<()> {
-    if let Commands::McpServer = cli.command {
-        return mcp::run();
-    }
-
     // `init` is special — it does not need an existing project
     if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;

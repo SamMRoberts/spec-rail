@@ -1,4 +1,5 @@
 use std::{
+    fs::OpenOptions,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -10,7 +11,70 @@ use serde_json::{json, Map, Value};
 
 use crate::core::{ledger::Ledger, models::TestStatus, repository::Repository};
 
-const DEFAULT_PROTOCOL_VERSION: &str = "2025-03-26";
+const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
+const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
+    DEFAULT_PROTOCOL_VERSION,
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+];
+
+fn negotiate_protocol_version(requested: Option<&str>) -> &'static str {
+    SUPPORTED_PROTOCOL_VERSIONS
+        .iter()
+        .copied()
+        .find(|version| Some(*version) == requested)
+        .unwrap_or(DEFAULT_PROTOCOL_VERSION)
+}
+
+fn server_capabilities() -> Value {
+    json!({
+        "tools": {
+            "listChanged": false
+        }
+    })
+}
+
+fn mcp_debug_log(message: impl AsRef<str>) {
+    let message = message.as_ref();
+
+    let log_to_stderr = std::env::var_os("SPECRAIL_MCP_DEBUG_STDERR").is_some();
+    let log_path = std::env::var_os("SPECRAIL_MCP_DEBUG_LOG");
+
+    if !log_to_stderr && log_path.is_none() {
+        return;
+    }
+
+    if log_to_stderr {
+        let mut stderr = std::io::stderr().lock();
+        let _ = writeln!(stderr, "[specrail-mcp] {message}");
+    }
+
+    let Some(path) = log_path else {
+        return;
+    };
+
+    let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) else {
+        return;
+    };
+
+    let _ = writeln!(file, "{message}");
+}
+
+fn summarize_for_log(text: &str) -> String {
+    const LIMIT: usize = 400;
+    if text.len() <= LIMIT {
+        text.to_string()
+    } else {
+        format!("{}…", &text[..LIMIT])
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MessageTransport {
+    ContentLength,
+    RawJsonLine,
+}
 
 pub fn run() -> Result<()> {
     let stdin = std::io::stdin();
@@ -19,9 +83,19 @@ pub fn run() -> Result<()> {
     let mut writer = stdout.lock();
     let mut server = McpServer::default();
 
-    while let Some(message) = read_message(&mut reader)? {
+    mcp_debug_log(format!(
+        "server start pid={} cwd={}",
+        std::process::id(),
+        std::env::current_dir()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|_| "<unknown>".to_string())
+    ));
+
+    while let Some((message, transport)) = read_message(&mut reader)? {
+        mcp_debug_log(format!("received message: {}", summarize_for_log(&message.to_string())));
         if let Some(response) = server.handle_message(message) {
-            write_message(&mut writer, &response)?;
+            mcp_debug_log(format!("sending response: {}", summarize_for_log(&response.to_string())));
+            write_message(&mut writer, &response, transport)?;
             writer.flush()?;
         }
 
@@ -50,34 +124,69 @@ impl McpServer {
             }
         };
 
+        mcp_debug_log(format!("handle_message method={method}"));
+
         let response = match method {
             "initialize" => {
                 let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
-                let protocol_version = params
+                let requested_protocol = params
                     .get("protocolVersion")
                     .and_then(Value::as_str)
-                    .unwrap_or(DEFAULT_PROTOCOL_VERSION)
-                    .to_string();
+                    .unwrap_or("<missing>");
+                let client_name = params
+                    .get("clientInfo")
+                    .and_then(|client| client.get("name"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("<missing>");
+                let client_version = params
+                    .get("clientInfo")
+                    .and_then(|client| client.get("version"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("<missing>");
+                mcp_debug_log(format!(
+                    "initialize start id={} requested_protocol={} client={}/{} params={}",
+                    id.as_ref()
+                        .map(Value::to_string)
+                        .unwrap_or_else(|| "<notification>".to_string()),
+                    requested_protocol,
+                    client_name,
+                    client_version,
+                    summarize_for_log(&params.to_string())
+                ));
+                let protocol_version = negotiate_protocol_version(
+                    params.get("protocolVersion").and_then(Value::as_str),
+                )
+                .to_string();
                 self.protocol_version = protocol_version.clone();
+                mcp_debug_log(format!(
+                    "initialize negotiated protocol_version={} supported={:?}",
+                    protocol_version,
+                    SUPPORTED_PROTOCOL_VERSIONS
+                ));
 
                 id.map(|id| {
-                    jsonrpc_result(
+                    let response = jsonrpc_result(
                         id,
                         json!({
                             "protocolVersion": protocol_version,
-                            "capabilities": {
-                                "tools": {}
-                            },
+                            "capabilities": server_capabilities(),
                             "serverInfo": {
                                 "name": "specrail",
                                 "version": env!("CARGO_PKG_VERSION")
                             }
                         }),
-                    )
+                    );
+                    mcp_debug_log(format!(
+                        "initialize response ready id={} body={}",
+                        response["id"],
+                        summarize_for_log(&response.to_string())
+                    ));
+                    response
                 })
             }
             "notifications/initialized" => {
                 self.initialized = true;
+                mcp_debug_log("notifications/initialized received; session marked initialized");
                 None
             }
             "ping" => id.map(|id| jsonrpc_result(id, json!({}))),
@@ -863,41 +972,70 @@ fn tool_definitions() -> Vec<Value> {
     ]
 }
 
-fn read_message(reader: &mut impl BufRead) -> Result<Option<Value>> {
+fn read_message(reader: &mut impl BufRead) -> Result<Option<(Value, MessageTransport)>> {
     let mut content_length = None;
+    mcp_debug_log("read_message: waiting for headers");
 
     loop {
         let mut line = String::new();
         let read = reader.read_line(&mut line)?;
         if read == 0 {
+            mcp_debug_log("read_message: EOF");
             return Ok(None);
         }
 
         let line = line.trim_end_matches(['\r', '\n']);
+        mcp_debug_log(format!("read_message header: {line:?}"));
+
+        if content_length.is_none() && line.starts_with('{') {
+            mcp_debug_log("read_message: treating first line as raw JSON payload");
+            let message = serde_json::from_str(line).context("parsing raw JSON-RPC payload")?;
+            return Ok(Some((message, MessageTransport::RawJsonLine)));
+        }
+
         if line.is_empty() {
             break;
         }
 
-        if let Some(value) = line.strip_prefix("Content-Length:") {
-            let length = value
-                .trim()
-                .parse::<usize>()
-                .context("parsing Content-Length header")?;
-            content_length = Some(length);
+        if let Some((name, value)) = line.split_once(':') {
+            if name.eq_ignore_ascii_case("Content-Length") {
+                let length = value
+                    .trim()
+                    .parse::<usize>()
+                    .context("parsing Content-Length header")?;
+                content_length = Some(length);
+            }
         }
     }
 
     let content_length = content_length.context("missing Content-Length header")?;
+    mcp_debug_log(format!("read_message: content_length={content_length}"));
     let mut payload = vec![0; content_length];
     reader.read_exact(&mut payload)?;
+    mcp_debug_log(format!(
+        "read_message payload: {}",
+        summarize_for_log(&String::from_utf8_lossy(&payload))
+    ));
     let message = serde_json::from_slice(&payload).context("parsing JSON-RPC payload")?;
-    Ok(Some(message))
+    Ok(Some((message, MessageTransport::ContentLength)))
 }
 
-fn write_message(writer: &mut impl Write, message: &Value) -> Result<()> {
+fn write_message(
+    writer: &mut impl Write,
+    message: &Value,
+    transport: MessageTransport,
+) -> Result<()> {
     let payload = serde_json::to_vec(message)?;
-    write!(writer, "Content-Length: {}\r\n\r\n", payload.len())?;
-    writer.write_all(&payload)?;
+    match transport {
+        MessageTransport::ContentLength => {
+            write!(writer, "Content-Length: {}\r\n\r\n", payload.len())?;
+            writer.write_all(&payload)?;
+        }
+        MessageTransport::RawJsonLine => {
+            writer.write_all(&payload)?;
+            writer.write_all(b"\n")?;
+        }
+    }
     Ok(())
 }
 
@@ -918,4 +1056,167 @@ fn jsonrpc_error(id: Value, code: i64, message: impl Into<String>) -> Value {
             "message": message.into()
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn initialize_returns_tools_capability_details() {
+        let mut server = McpServer::default();
+        let response = server
+            .handle_message(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": DEFAULT_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "specrail-test-client",
+                        "version": "0.1.0"
+                    }
+                }
+            }))
+            .expect("initialize should return a response");
+
+        assert_eq!(response["result"]["protocolVersion"], DEFAULT_PROTOCOL_VERSION);
+        assert_eq!(response["result"]["capabilities"]["tools"]["listChanged"], false);
+        assert_eq!(response["result"]["serverInfo"]["name"], "specrail");
+        assert_eq!(server.protocol_version, DEFAULT_PROTOCOL_VERSION);
+    }
+
+    #[test]
+    fn initialize_negotiates_back_to_supported_protocol_version() {
+        let mut server = McpServer::default();
+        let response = server
+            .handle_message(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2026-01-01",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "specrail-test-client",
+                        "version": "0.1.0"
+                    }
+                }
+            }))
+            .expect("initialize should return a response");
+
+        assert_eq!(response["result"]["protocolVersion"], DEFAULT_PROTOCOL_VERSION);
+        assert_eq!(server.protocol_version, DEFAULT_PROTOCOL_VERSION);
+    }
+
+    #[test]
+    fn initialize_accepts_latest_supported_protocol_version() {
+        let mut server = McpServer::default();
+        let response = server
+            .handle_message(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": DEFAULT_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "github-copilot-developer",
+                        "version": "1.0.0"
+                    }
+                }
+            }))
+            .expect("initialize should return a response");
+
+        assert_eq!(response["result"]["protocolVersion"], DEFAULT_PROTOCOL_VERSION);
+        assert_eq!(server.protocol_version, DEFAULT_PROTOCOL_VERSION);
+    }
+
+    #[test]
+    fn initialize_accepts_2025_06_18_protocol_version() {
+        let mut server = McpServer::default();
+        let response = server
+            .handle_message(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "specrail-test-client",
+                        "version": "0.1.0"
+                    }
+                }
+            }))
+            .expect("initialize should return a response");
+
+        assert_eq!(response["result"]["protocolVersion"], "2025-06-18");
+        assert_eq!(server.protocol_version, "2025-06-18");
+    }
+
+    #[test]
+    fn initialize_accepts_2024_11_05_protocol_version() {
+        let mut server = McpServer::default();
+        let response = server
+            .handle_message(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "specrail-test-client",
+                        "version": "0.1.0"
+                    }
+                }
+            }))
+            .expect("initialize should return a response");
+
+        assert_eq!(response["result"]["protocolVersion"], "2024-11-05");
+        assert_eq!(server.protocol_version, "2024-11-05");
+    }
+
+    #[test]
+    fn read_message_accepts_case_insensitive_content_length_header() {
+        let payload = r#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#;
+        let input = format!(
+            "content-length: {}\r\ncontent-type: application/json\r\n\r\n{}",
+            payload.len(),
+            payload
+        );
+
+        let (message, transport) = read_message(&mut Cursor::new(input.into_bytes()))
+            .expect("message should parse")
+            .expect("message should be present");
+
+        assert_eq!(transport, MessageTransport::ContentLength);
+        assert_eq!(message["method"], "ping");
+    }
+
+    #[test]
+    fn read_message_accepts_raw_json_line_payload() {
+        let input = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n";
+
+        let (message, transport) = read_message(&mut Cursor::new(input.as_slice()))
+            .expect("message should parse")
+            .expect("message should be present");
+
+        assert_eq!(transport, MessageTransport::RawJsonLine);
+        assert_eq!(message["method"], "initialize");
+    }
+
+    #[test]
+    fn write_message_uses_raw_json_line_transport() {
+        let mut output = Vec::new();
+        let message = json!({"jsonrpc":"2.0","id":1,"result":{}});
+
+        write_message(&mut output, &message, MessageTransport::RawJsonLine)
+            .expect("message should write");
+
+        assert_eq!(String::from_utf8(output).unwrap(), "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}\n");
+    }
 }

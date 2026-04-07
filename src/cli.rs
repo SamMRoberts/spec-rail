@@ -61,7 +61,7 @@ pub enum Commands {
     },
 
     /// Run the specrail MCP server over stdio
-    #[command(hide = true)]
+    #[command(visible_alias = "mcpserver")]
     McpServer,
 }
 

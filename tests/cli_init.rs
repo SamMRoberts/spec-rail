@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
@@ -78,4 +79,26 @@ fn init_ledger_gets_project_initialized_event() {
         ledger.contains("project_initialized"),
         "ledger should contain project_initialized event"
     );
+}
+
+#[test]
+fn help_lists_mcp_server_command() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir)
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mcp-server"));
+}
+
+#[test]
+fn mcpserver_alias_resolves_to_mcp_server_command() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir)
+        .args(["mcpserver", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Run the specrail MCP server over stdio"));
 }
