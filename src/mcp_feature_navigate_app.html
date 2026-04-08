@@ -2480,6 +2480,9 @@
                                 if (review && review.missing_required_tests && review.missing_required_tests.length > 0) {
                                     var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " missing"; chips.appendChild(missing);
                                 }
+                                if (review && review.undeclared_tests && review.undeclared_tests.length > 0) {
+                                    var undeclared = document.createElement("span"); undeclared.className = "test-chip warning"; undeclared.textContent = review.undeclared_tests.length + " undeclared"; chips.appendChild(undeclared);
+                                }
                                 if (chips.childNodes.length > 0) body.appendChild(chips);
                                 row.appendChild(body);
                                 row.appendChild(badge(String(outcome.status || "pending")));
