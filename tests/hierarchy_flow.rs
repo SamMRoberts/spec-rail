@@ -23,18 +23,21 @@ fn init_bootstraps_default_solution_project_and_component() {
     let dir = TempDir::new().unwrap();
     init(&dir);
 
-    assert!(dir
-        .path()
-        .join(".specrail/solutions/default-solution.yaml")
-        .exists());
-    assert!(dir
-        .path()
-        .join(".specrail/projects/default-project.yaml")
-        .exists());
-    assert!(dir
-        .path()
-        .join(".specrail/components/default-component.yaml")
-        .exists());
+    specrail(&dir)
+        .args(["solution", "show", "default-solution"])
+        .assert()
+        .success()
+        .stdout(contains("Default Solution"));
+    specrail(&dir)
+        .args(["project", "show", "default-project"])
+        .assert()
+        .success()
+        .stdout(contains("Default Project"));
+    specrail(&dir)
+        .args(["component", "show", "default-component"])
+        .assert()
+        .success()
+        .stdout(contains("Default Component"));
 
     let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("active_solution: default-solution"));
@@ -104,10 +107,11 @@ fn feature_can_be_scoped_to_an_explicit_component_hierarchy() {
         .success()
         .stdout(contains("platform/api/billing"));
 
-    let feature = fs::read_to_string(dir.path().join(".specrail/features/invoice-sync.yaml")).unwrap();
-    assert!(feature.contains("solution_id: platform"));
-    assert!(feature.contains("project_id: api"));
-    assert!(feature.contains("component_id: billing"));
+    specrail(&dir)
+        .args(["feature", "show", "invoice-sync"])
+        .assert()
+        .success()
+        .stdout(contains("Hierarchy: platform/api/billing"));
 
     specrail(&dir)
         .args(["feature", "activate", "invoice-sync"])

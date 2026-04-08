@@ -39,6 +39,12 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
         ensure_dir(dir)?;
     }
 
+    let db_exists = repo.db_path().exists();
+    repo.initialize_database()?;
+    if !db_exists {
+        println!("  created  .specrail/specrail.db");
+    }
+
     // project.yaml
     let config_path = repo.project_config_path();
     if write_if_missing(

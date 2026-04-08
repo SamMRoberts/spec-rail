@@ -204,6 +204,9 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         .success()
         .stdout(contains("required_tests updated"));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-1.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/validate.rs"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-1"])
+        .assert()
+        .success()
+        .stdout(contains("tests/auth/validate.rs"));
 }

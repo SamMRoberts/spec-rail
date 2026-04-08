@@ -30,9 +30,8 @@ pub struct EditArgs {
 }
 
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
-    let path = repo.feature_path(&args.id);
-    if path.exists() {
-        bail!("feature '{}' already exists at {}", args.id, path.display());
+    if repo.feature_exists(&args.id)? {
+        bail!("feature '{}' already exists", args.id);
     }
 
     let component_id = resolve_component_id(repo, args.component_id.as_deref())?;
@@ -65,10 +64,9 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
 
 pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let feature = create(repo, args)?;
-    let path = repo.feature_path(&feature.id);
 
     println!("✓ Feature '{}' created: {}", feature.id, feature.title);
-    println!("  Path: {}", path.display());
+    println!("  Stored in .specrail/specrail.db");
     println!(
         "  Hierarchy: {}/{}/{}",
         feature.solution_id, feature.project_id, feature.component_id

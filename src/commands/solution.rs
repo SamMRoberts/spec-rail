@@ -19,9 +19,8 @@ pub struct EditArgs {
 }
 
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<SolutionSpec> {
-    let path = repo.solution_path(&args.id);
-    if path.exists() {
-        bail!("solution '{}' already exists at {}", args.id, path.display());
+    if repo.solution_exists(&args.id)? {
+        bail!("solution '{}' already exists", args.id);
     }
 
     let solution = SolutionSpec {
@@ -41,6 +40,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<SolutionSpec> {
 pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let solution = create(repo, args)?;
     println!("✓ Solution '{}' created: {}", solution.id, solution.title);
+    println!("  Stored in .specrail/specrail.db");
     println!("  Next: specrail project new {} <project-id>", solution.id);
     Ok(())
 }

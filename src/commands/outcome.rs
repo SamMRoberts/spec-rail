@@ -36,8 +36,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
     // Ensure the feature exists
     repo.load_feature(&args.feature_id)?;
 
-    let path = repo.outcome_path(&args.feature_id, &args.outcome_id);
-    if path.exists() {
+    if repo.outcome_exists(&args.feature_id, &args.outcome_id)? {
         bail!(
             "outcome '{}' already exists for feature '{}'",
             args.outcome_id,
@@ -70,13 +69,12 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
 
 pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let outcome = create(repo, args)?;
-    let path = repo.outcome_path(&outcome.feature_id, &outcome.id);
 
     println!(
         "✓ Outcome '{}' created for feature '{}'",
         outcome.id, outcome.feature_id
     );
-    println!("  Path: {}", path.display());
+    println!("  Stored in .specrail/specrail.db");
     println!();
     println!("  What each field does:");
     println!("    title  — human-readable label shown in `outcome list` and status");

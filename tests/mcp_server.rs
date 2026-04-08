@@ -5,6 +5,8 @@ use std::{
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
 };
 
+mod support;
+
 use assert_cmd::cargo::cargo_bin;
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -962,8 +964,8 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     assert!(manifest.contains("tests/auth/login.rs"));
     assert!(manifest.contains("status: written"));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"tests/auth/login.rs".to_string()));
 
     client.shutdown();
 }
@@ -1050,9 +1052,8 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     assert_eq!(generation["result"]["isError"], json!(false));
     assert!(dir.path().join("tests/auth/login.rs").exists());
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("required_tests:"));
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"tests/auth/login.rs".to_string()));
 
     let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
     assert!(manifest.contains("tests/auth/login.rs"));
@@ -1116,11 +1117,7 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
 
-    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
-    let reverted = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("- tests/auth/login.rs\n", "");
-    fs::write(&outcome_path, reverted).unwrap();
+    support::remove_required_test(&dir, "auth", "login", "tests/auth/login.rs");
 
     let review_before = client.request(
         "tools/call",
@@ -1151,8 +1148,8 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
     assert_eq!(add_required["result"]["isError"], json!(false));
     assert_eq!(add_required["result"]["structuredContent"]["added"], json!(true));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"tests/auth/login.rs".to_string()));
 
     let review_after = client.request(
         "tools/call",
@@ -1214,13 +1211,7 @@ fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
         }),
     );
 
-    let outcome_path = dir
-        .path()
-        .join(".specrail/outcomes/auth/login.yaml");
-    let updated = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("status: pending", "status: completed");
-    fs::write(&outcome_path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth", "login", "completed");
 
     let edit = client.request(
         "tools/call",
@@ -1301,11 +1292,7 @@ fn mcp_outcome_unverify_resets_verified_outcome_to_pending() {
         }),
     );
 
-    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
-    let updated = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("status: pending", "status: verified");
-    fs::write(&outcome_path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth", "login", "verified");
 
     let reset = client.request(
         "tools/call",

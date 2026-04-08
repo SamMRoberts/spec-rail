@@ -20,13 +20,15 @@ The tool is designed to help you:
 ```text
 .specrail/
 ├── project.yaml
-├── features/
-├── phases/
+├── specrail.db
 ├── tests/manifest.yaml
 └── state/
     ├── current.yaml
     └── ledger.jsonl
 ```
+
+The local database stores solutions, projects, components, features, and outcomes.
+`project.yaml`, `tests/manifest.yaml`, and the files under `state/` remain text-based.
 
 Key rules:
 

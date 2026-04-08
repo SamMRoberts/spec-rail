@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -31,7 +33,7 @@ fn specrail(dir: &TempDir) -> Command {
 }
 
 #[test]
-fn outcome_new_creates_file() {
+fn outcome_new_persists_record() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
@@ -45,10 +47,12 @@ fn outcome_new_creates_file() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    assert!(path.exists(), "outcome file not created");
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Domain Validation"))
+        .stdout(contains("Establish domain invariants."));
 }
 
 #[test]
@@ -234,7 +238,7 @@ fn outcome_show_displays_details() {
 }
 
 #[test]
-fn outcome_edit_updates_existing_file() {
+fn outcome_edit_updates_existing_record() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
@@ -263,15 +267,15 @@ fn outcome_edit_updates_existing_file() {
         .success()
         .stdout(contains("updated"));
 
-    let outcome = fs::read_to_string(
-        dir.path().join(".specrail/outcomes/auth-login/outcome-1-domain.yaml"),
-    )
-    .unwrap();
-    assert!(outcome.contains("Credential Validation"));
-    assert!(outcome.contains("Updated goal."));
-    assert!(outcome.contains("order: 2"));
-    assert!(outcome.contains("src/auth/**"));
-    assert!(outcome.contains("tests/auth_login.rs"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Credential Validation"))
+        .stdout(contains("Updated goal."))
+        .stdout(contains("Outcome: outcome-1-domain (order 2)"))
+        .stdout(contains("src/auth/**"))
+        .stdout(contains("tests/auth_login.rs"));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("outcome_edited"));
@@ -292,13 +296,7 @@ fn outcome_edit_resets_verified_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: verified");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "verified");
 
     specrail(&dir)
         .args([
@@ -310,8 +308,11 @@ fn outcome_edit_resets_verified_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }
 
 #[test]
@@ -329,13 +330,7 @@ fn outcome_edit_resets_legacy_complete_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: complete");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "complete");
 
     specrail(&dir)
         .args([
@@ -347,8 +342,11 @@ fn outcome_edit_resets_legacy_complete_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }
 
 #[test]
@@ -366,13 +364,7 @@ fn outcome_edit_resets_legacy_completed_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: completed");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "completed");
 
     specrail(&dir)
         .args([
@@ -384,6 +376,9 @@ fn outcome_edit_resets_legacy_completed_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }

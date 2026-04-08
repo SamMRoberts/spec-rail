@@ -310,11 +310,10 @@ fn verify_marks_outcome_failed_on_test_failure() {
     // Verify exits with success (CLI completes) but records failure
     specrail(&dir).arg("verify").assert().success();
 
-    let outcome = fs::read_to_string(
-        dir.path()
-            .join(".specrail/outcomes/auth/outcome-1.yaml"),
-    )
-    .unwrap();
-    assert!(outcome.contains("failed"), "outcome should be marked failed");
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-1"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Failed"));
 }
 

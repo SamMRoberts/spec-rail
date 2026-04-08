@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::str::contains;
 use std::fs;
 use tempfile::TempDir;
 
@@ -57,20 +58,27 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
         .assert()
         .success();
 
-    let feature = fs::read_to_string(dir.path().join(".specrail/features/auth.yaml")).unwrap();
-    assert!(feature.contains("Authentication"));
-    assert!(feature.contains("Users can sign in"));
-    assert!(feature.contains("outcome-2"), "feature should point to the active outcome");
+    specrail(&dir)
+        .args(["feature", "show", "auth"])
+        .assert()
+        .success()
+        .stdout(contains("Authentication"))
+        .stdout(contains("Users can sign in"))
+        .stdout(contains("Current outcome: outcome-2"));
 
-    let outcome_one = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-1.yaml"))
-        .unwrap();
-    assert!(outcome_one.contains("src/auth/**"));
-    assert!(outcome_one.contains("tests/auth/validate.rs"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-1"])
+        .assert()
+        .success()
+        .stdout(contains("src/auth/**"))
+        .stdout(contains("tests/auth/validate.rs"));
 
-    let outcome_two = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-2.yaml"))
-        .unwrap();
-    assert!(outcome_two.contains("outcome-1"));
-    assert!(outcome_two.contains("src/auth/persistence/**"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-2"])
+        .assert()
+        .success()
+        .stdout(contains("outcome-1"))
+        .stdout(contains("src/auth/persistence/**"));
 
     let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("auth"));
@@ -129,14 +137,12 @@ fn init_walkthrough_can_repeat_features() {
         .assert()
         .success();
 
-    assert!(
-        dir.path().join(".specrail/features/auth.yaml").exists(),
-        "first feature should exist"
-    );
-    assert!(
-        dir.path().join(".specrail/features/billing.yaml").exists(),
-        "second feature should exist"
-    );
+    specrail(&dir)
+        .args(["feature", "list"])
+        .assert()
+        .success()
+        .stdout(contains("auth"))
+        .stdout(contains("billing"));
 
     let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
     assert!(state.contains("billing"), "last feature should be active");
