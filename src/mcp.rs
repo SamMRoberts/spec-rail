@@ -65,7 +65,7 @@ fn mcp_debug_log(message: impl AsRef<str>) {
 
     if log_to_stderr {
         let mut stderr = std::io::stderr().lock();
-        let _ = writeln!(stderr, "[specrail-mcp] {message}");
+        let _ = writeln!(stderr, "[SpecRail MCP] {message}");
     }
 
     let Some(path) = log_path else {

@@ -316,6 +316,8 @@ The plugin manifest points Copilot CLI at this MCP server command:
 specrail mcp-server
 ```
 
+For troubleshooting in VS Code, the workspace MCP config enables stderr logging for the server. Open `MCP: List Servers`, select `SpecRail MCP`, then choose `Show Output` to inspect the live MCP log stream.
+
 After installing, verify that the plugin and MCP server are loaded:
 
 ```bash

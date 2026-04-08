@@ -28,6 +28,10 @@ fn plugin_mcp_config_runs_specrail_mcp_server() {
     assert_eq!(config["mcpServers"]["specrail"]["type"], "stdio");
     assert_eq!(config["mcpServers"]["specrail"]["command"], "specrail");
     assert_eq!(config["mcpServers"]["specrail"]["args"], serde_json::json!(["mcp-server"]));
+    assert_eq!(
+        config["mcpServers"]["specrail"]["env"]["SPECRAIL_MCP_DEBUG_STDERR"],
+        "1"
+    );
 }
 
 #[test]
