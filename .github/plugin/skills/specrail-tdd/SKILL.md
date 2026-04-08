@@ -66,6 +66,8 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 
 - Prefer the MCP tools over editing `.specrail/*` files directly.
 - Keep the user in a test-first flow: define outcomes, define tests, move tests to `written`, then implement.
+- Only create or generate tests that belong to the current outcome's required scope; do not pad the suite with speculative tests for future outcomes.
+- Once tests are defined, only implement the minimum code needed for those current tests to pass.
 - Treat `workflow.blockers` as reasons to stop and resolve the blocking stage before running implementation.
 - If the repository was opened outside the project root, pass the workspace path through `cwd`.
 - When the user only asks for one stage, hand off to the more specific stage skill after the first `specrail_status` check.

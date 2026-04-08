@@ -72,6 +72,7 @@ fn plugin_tdd_skill_exists() {
     assert!(skill.contains("name: specrail-tdd"));
     assert!(skill.contains("workflow.recommended_skill"));
     assert!(skill.contains("specrail_status"));
+    assert!(skill.contains("Only create or generate tests"));
 }
 
 #[test]
@@ -86,4 +87,6 @@ fn workspace_specrail_agent_exists_and_references_workflow_guidance() {
     assert!(agent.contains("description:"));
     assert!(agent.contains("specrail_status"));
     assert!(agent.contains("workflow.recommended_skill"));
+    assert!(agent.contains("Do not create tests that are not specified"));
+    assert!(agent.contains("Do not write more production code"));
 }

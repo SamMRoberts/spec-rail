@@ -51,8 +51,8 @@ Use when outcomes need tests before implementation can proceed.
 Responsibilities:
 - Inspect the current test manifest.
 - Ask for missing test scenarios.
-- Register tests with `specrail_test_add`.
-- Generate tests when requested.
+- Register only the tests required by the current outcome with `specrail_test_add`.
+- Generate only the tests required by the current outcome when requested.
 - Move tests from `planned` to `written` when ready.
 
 ### `specrail-run-workflow`
@@ -62,7 +62,7 @@ Responsibilities:
 - Choose feature order using dependencies.
 - Choose outcome order using `order` and `prerequisites`.
 - Activate the correct feature and outcome.
-- Run `specrail_implement`, `specrail_verify`, and `specrail_advance` in sequence.
+- Run `specrail_implement`, `specrail_verify`, and `specrail_advance` in sequence while keeping implementation limited to the code required by the active outcome's tests.
 - Repeat until all outcomes and features are complete.
 
 ## Recommended Flow
@@ -74,3 +74,5 @@ Responsibilities:
 5. Use `specrail-run-workflow` to execute the workflow.
 
 If the repository is already in progress, `specrail-tdd` should use `specrail_status` to route into `specrail-resume` or whichever stage matches the current state. Skills guide the workflow; `specrail_*` MCP tools execute the actual actions.
+
+Core rule across all skills: define only the tests required for the current outcome first, then implement only the smallest amount of code needed to make those tests pass.

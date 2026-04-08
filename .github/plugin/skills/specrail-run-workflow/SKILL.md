@@ -44,6 +44,9 @@ If the active or planned outcomes do not yet have registered, non-`planned` test
 - Treat outcome success as `Verified`, not merely `Active`.
 - Do not advance to the next outcome after activation alone.
 - Follow the canonical execution loop: `specrail_implement`, then `specrail_verify`, then `specrail_advance`.
+- Before `specrail_implement`, constrain the scope to the active outcome's declared tests only.
+- During implementation, write only the smallest amount of code needed to satisfy the active outcome's tests.
+- Do not implement future outcomes, speculative abstractions, or extra behavior that is not required by the current tests.
 - Do not bypass `specrail_advance` by directly activating the next outcome unless the user explicitly wants a manual override.
 - After each activation or advancement step, call `specrail_status` again to confirm the new state.
 - After each implementation or verification step, inspect the result before moving on.
@@ -85,6 +88,7 @@ When a feature is completed:
 
 - If the best implementation order is unclear, explain the tradeoffs and ask targeted follow-up questions.
 - Summarize the proposed feature order and per-feature outcome order before making changes.
+- Before implementation, remind the user which tests define the current scope and that no extra code should be added beyond what those tests require.
 - Tell the user which feature and outcome are active after each successful transition.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
 - This skill guides execution order and orchestration; the `specrail_*activate`, `specrail_implement`, `specrail_verify`, and `specrail_advance` tools perform the direct actions.

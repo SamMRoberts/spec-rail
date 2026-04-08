@@ -15,8 +15,8 @@ Default sequence:
 2. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the current feature, outcome, and test state.
 3. Ask follow-up questions to determine which tests are required for each outcome if the user has not already provided them clearly.
 4. Work outcome-by-outcome and gather the expected unit, integration, or e2e tests for that outcome.
-5. For each missing test, register it with `specrail_test_add`.
-6. If the user wants help creating the test files, use `specrail_test_generate`.
+5. For each missing outcome-required test, register it with `specrail_test_add`.
+6. If the user wants help creating the test files, use `specrail_test_generate` only for the tests required by that outcome.
 7. Once a test exists and is ready to be executed, update it from `planned` to `written` with `specrail_test_set_status`.
 8. After verification runs, update test statuses to reflect the latest known state when needed.
 9. Re-check `specrail_test_list` and `specrail_status` to confirm that the outcome is no longer blocked by missing or `planned` tests.
@@ -26,6 +26,8 @@ Test planning rules:
 - Do not assume tests can be skipped just because the outcome sounds simple.
 - At least one registered test should exist for each outcome before implementation.
 - Gather tests narrowly so each test clearly supports the current outcome.
+- Only register or generate tests that are explicitly required by the outcome or approved by the user for that same outcome.
+- Do not add speculative tests for future outcomes, refactors, or unrelated edge cases.
 - Prefer asking for concrete examples, edge cases, and failure cases.
 - If the user gives broad test ideas, split them into distinct test cases.
 - Keep test IDs and paths stable and specific to the feature and outcome they support.
@@ -53,6 +55,7 @@ User interaction guidance:
 - Ask follow-up questions until the test set for the current outcome is complete.
 - Summarize the planned tests for each outcome before registering them.
 - Tell the user when an outcome still has `planned` tests that block implementation.
+- Make it explicit that test generation is limited to the outcome's approved test list and that implementation must wait until those tests are defined first.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
 - This skill guides test preparation; the `specrail_test_*` MCP tools perform the direct test registration and status updates.
 

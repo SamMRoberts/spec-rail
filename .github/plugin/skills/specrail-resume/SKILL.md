@@ -45,6 +45,8 @@ Next step  : specrail-prepare-tests (no written tests yet)
 - If the active outcome is `active`, recommend resuming that same outcome.
 - If the active outcome is `pending` but its tests are still missing or `planned`, recommend resuming with `specrail-prepare-tests` for that outcome.
 - If the active outcome is ready for implementation, recommend resuming with `specrail-run-workflow` at that outcome.
+- When recommending test preparation, keep the scope limited to the tests required by that outcome.
+- When recommending implementation, keep the scope limited to the smallest code change needed for that outcome's declared tests.
 - If there is no active outcome but there is an incomplete active feature, identify the next eligible outcome in that feature using outcome `order` and current status.
 - If there is no active feature, choose the next incomplete feature and then the next incomplete outcome within it.
 - Prefer the lowest ordered outcome whose status is not `verified` or `skipped`.
