@@ -770,7 +770,7 @@ fn outcome_has_successful_implement(
 fn feature_implement_status_payload(
     outcomes: &[OutcomeSpec],
     manifest: &TestManifest,
-    implementation_results: &HashMap<(String, String), bool>,
+    _implementation_results: &HashMap<(String, String), bool>,
 ) -> Value {
     if outcomes.is_empty() {
         return status_indicator_payload(
@@ -779,31 +779,6 @@ fn feature_implement_status_payload(
             "Add an outcome before implementation can run for this feature.",
         );
     }
-
-    let failed_count = outcomes
-        .iter()
-        .filter(|outcome| outcome.status == OutcomeStatus::Failed)
-        .count();
-    if failed_count > 0 {
-        return status_indicator_payload(
-            "danger",
-            "Retry",
-            format!(
-                "{} outcome{} failed verification and likely need another implement pass.",
-                failed_count,
-                if failed_count == 1 { "" } else { "s" }
-            ),
-        );
-    }
-
-    let outstanding_count = outcomes
-        .iter()
-        .filter(|outcome| match outcome.status {
-            OutcomeStatus::Verified | OutcomeStatus::Skipped => false,
-            OutcomeStatus::Active => !outcome_has_successful_implement(outcome, implementation_results),
-            OutcomeStatus::Pending | OutcomeStatus::Failed => true,
-        })
-        .count();
 
     let outcomes_without_required_tests = outcomes
         .iter()
@@ -814,57 +789,45 @@ fn feature_implement_status_payload(
         .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_tests.is_empty())
         .count();
 
-    if outstanding_count == 0 {
-        if outcomes_without_required_tests > 0 || outcomes_missing_required_test_links > 0 {
-            let mut blockers: Vec<String> = Vec::new();
-            if outcomes_without_required_tests > 0 {
-                blockers.push(format!(
-                    "{} outcome{} missing required test path references",
-                    outcomes_without_required_tests,
-                    if outcomes_without_required_tests == 1 {
-                        " is"
-                    } else {
-                        "s are"
-                    }
-                ));
-            }
-            if outcomes_missing_required_test_links > 0 {
-                blockers.push(format!(
-                    "{} outcome{} missing registered test entries for one or more required test paths",
-                    outcomes_missing_required_test_links,
-                    if outcomes_missing_required_test_links == 1 {
-                        " is"
-                    } else {
-                        "s are"
-                    }
-                ));
-            }
-
-            return status_indicator_payload(
-                "warning",
-                "Needed",
-                format!(
-                    "Implement cannot be marked complete yet: {}.",
-                    blockers.join("; ")
-                ),
-            );
+    if outcomes_without_required_tests > 0 || outcomes_missing_required_test_links > 0 {
+        let mut blockers: Vec<String> = Vec::new();
+        if outcomes_without_required_tests > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing required test path references",
+                outcomes_without_required_tests,
+                if outcomes_without_required_tests == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+        if outcomes_missing_required_test_links > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing registered test entries for one or more required test paths",
+                outcomes_missing_required_test_links,
+                if outcomes_missing_required_test_links == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
         }
 
         return status_indicator_payload(
-            "success",
-            "Done",
-            "Implement has completed successfully for every outcome in this feature.",
+            "warning",
+            "Needed",
+            format!(
+                "Implement is not fully ready yet: {}.",
+                blockers.join("; ")
+            ),
         );
     }
 
     status_indicator_payload(
-        "warning",
-        "Needed",
-        format!(
-            "Implement still needs to run for {} outcome{} in this feature.",
-            outstanding_count,
-            if outstanding_count == 1 { "" } else { "s" }
-        ),
+        "success",
+        "Ready",
+        "Every outcome has required test paths linked to registered manifest tests.",
     )
 }
 
@@ -3140,7 +3103,7 @@ mod tests {
             allowed_paths: vec![],
             forbidden_paths: vec![],
             required_tests: vec!["tests/feature_a/outcome_1.rs".to_string()],
-            status: OutcomeStatus::Verified,
+            status: OutcomeStatus::Pending,
         }];
 
         let manifest = TestManifest {
@@ -3158,6 +3121,6 @@ mod tests {
         let status = feature_implement_status_payload(&outcomes, &manifest, &HashMap::new());
 
         assert_eq!(status["tone"], "success");
-        assert_eq!(status["label"], "Done");
+        assert_eq!(status["label"], "Ready");
     }
 }
