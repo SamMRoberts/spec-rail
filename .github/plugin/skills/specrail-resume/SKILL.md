@@ -10,7 +10,7 @@ When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect cu
 ## Default sequence
 
 1. Call `specrail_status` to determine whether the project is initialized and to inspect the active feature, active outcome, feature summaries, and test counts.
-2. If the project is not initialized, tell the user there is no workflow to resume yet and hand off to `specrail-init`.
+2. If the project is not initialized, tell the user there is no workflow to resume yet and hand off to `specrail-setup`.
 3. Call `specrail_feature_navigate` (no arguments) to see a visual overview of all features with progress bars. Then call with `feature_id` to inspect the active feature's outcomes and test status.
 4. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, and `specrail_trace` to gather the detailed state of features, outcomes, tests, and recent workflow history.
 5. Determine the most likely resume point from the current active state first, then from incomplete work if no active state exists.
@@ -35,7 +35,7 @@ Features:
   ○  payment    — 0/2 outcomes verified  (not started)
 
 Recommended: Resume auth → login
-Next step  : specrail-testing (no written tests yet)
+Next step  : specrail-prepare-tests (no written tests yet)
 ```
 
 ## Resume decision rules
@@ -43,8 +43,8 @@ Next step  : specrail-testing (no written tests yet)
 - If there is an active feature and active outcome, prefer resuming there.
 - If the active outcome is `failed`, recommend resuming that same outcome and fixing it before moving on.
 - If the active outcome is `active`, recommend resuming that same outcome.
-- If the active outcome is `pending` but its tests are still missing or `planned`, recommend resuming with `specrail-testing` for that outcome.
-- If the active outcome is ready for implementation, recommend resuming with `specrail-activation` at that outcome.
+- If the active outcome is `pending` but its tests are still missing or `planned`, recommend resuming with `specrail-prepare-tests` for that outcome.
+- If the active outcome is ready for implementation, recommend resuming with `specrail-run-workflow` at that outcome.
 - If there is no active outcome but there is an incomplete active feature, identify the next eligible outcome in that feature using outcome `order` and current status.
 - If there is no active feature, choose the next incomplete feature and then the next incomplete outcome within it.
 - Prefer the lowest ordered outcome whose status is not `verified` or `skipped`.
@@ -67,7 +67,7 @@ Next step  : specrail-testing (no written tests yet)
 ## Example
 
 - If `specrail_status` shows active feature `calculator` and active outcome `addition`, resume there first.
-- If `addition` has tests still marked `planned`, recommend resuming with `specrail-testing`.
-- If `addition` already has ready tests, recommend resuming with `specrail-activation`.
+- If `addition` has tests still marked `planned`, recommend resuming with `specrail-prepare-tests`.
+- If `addition` already has ready tests, recommend resuming with `specrail-run-workflow`.
 - If `addition` is verified and the next outcome by order is `subtraction`, recommend resuming from `subtraction`.
 

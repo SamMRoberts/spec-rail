@@ -1,11 +1,11 @@
 ---
-name: specrail-workflow
-description: Use specrail MCP tools to manage the workflow state instead of editing .specrail files directly.
+name: specrail-plan-features
+description: Plan and create specrail features and outcomes using MCP tools instead of editing .specrail files directly.
 ---
 
 When a repository uses specrail, prefer the `specrail_*` MCP tools for reading and changing workflow state.
 
-If `specrail_status` shows that the project is not initialized yet, start with the `specrail-init` skill or call `specrail_init` before gathering features and outcomes.
+If `specrail_status` shows that the project is not initialized yet, start with the `specrail-setup` skill or call `specrail_init` before gathering features and outcomes.
 
 ## Use the navigator UI
 
@@ -27,8 +27,8 @@ When a feature is selected (by passing `feature_id`), the navigator shows outcom
 5. Summarize the collected features and outcomes back to the user so they can confirm the structure before creation.
 6. Use the mutating tools to create or activate features, outcomes, and tests instead of writing `.specrail/*` files by hand.
 7. After any mutating tool call, check `specrail_status` again to verify the new state.
-8. After defining the features and outcomes, hand off to the `specrail-testing` skill to register the required tests for each outcome before implementation begins.
-9. Once tests are ready, hand off to the `specrail-activation` skill to drive the `implement`, `verify`, and `advance` loop.
+8. After defining the features and outcomes, hand off to the `specrail-prepare-tests` skill to register the required tests for each outcome before implementation begins.
+9. Once tests are ready, hand off to the `specrail-run-workflow` skill to drive the `implement`, `verify`, and `advance` loop.
 
 ## Discovery behavior
 
@@ -72,3 +72,5 @@ After each creation, confirm with: "✓ Created feature **calculator** with 3 ou
 - For the subtraction outcome, keep the scope focused on subtraction-specific behavior such as `2 - 2 = 0`, `2 - 0 = 2`, and `0 - 2 = -2`.
 
 If the MCP server was not launched from the project root, pass the workspace path through the `cwd` argument.
+
+This skill is the planning conversation; the `specrail_*` tools perform the actual create and activate actions.

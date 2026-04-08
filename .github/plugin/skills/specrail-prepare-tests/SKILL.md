@@ -1,13 +1,13 @@
 ---
-name: specrail-testing
-description: Plan, register, generate, and update tests for specrail outcomes so implementation is not blocked by missing or planned tests.
+name: specrail-prepare-tests
+description: Prepare tests for specrail outcomes so implementation is not blocked by missing or planned tests.
 ---
 
 Use this skill when the user wants to define tests for features or outcomes, when an outcome has no registered tests, or when implementation is blocked because tests are still `planned`.
 
 When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect and update the test manifest.
 
-If the project is not initialized yet, use the `specrail-init` skill or call `specrail_init` before applying this workflow.
+If the project is not initialized yet, use the `specrail-setup` skill or call `specrail_init` before applying this workflow.
 
 Default sequence:
 
@@ -46,7 +46,7 @@ Recommended loop:
 5. Generate or write tests if requested.
 6. Move ready tests to `written`.
 7. Repeat for the next outcome.
-8. Hand off to `specrail-activation` once tests are ready.
+8. Hand off to `specrail-run-workflow` once tests are ready.
 
 User interaction guidance:
 
@@ -54,6 +54,7 @@ User interaction guidance:
 - Summarize the planned tests for each outcome before registering them.
 - Tell the user when an outcome still has `planned` tests that block implementation.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
+- This skill guides test preparation; the `specrail_test_*` MCP tools perform the direct test registration and status updates.
 
 Example:
 

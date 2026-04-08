@@ -511,7 +511,7 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                     "cwd": cwd.display().to_string(),
                     "workflow": WorkflowGuidance {
                         stage: "init".to_string(),
-                        recommended_skill: "specrail-init".to_string(),
+                        recommended_skill: "specrail-setup".to_string(),
                         summary: "Initialize specrail before planning features, tests, or implementation.".to_string(),
                         blockers: vec!["No .specrail project was found from this working directory.".to_string()],
                         next_tools: vec!["specrail_init".to_string()],
@@ -2005,7 +2005,7 @@ fn build_workflow_guidance(
     if features.is_empty() {
         return Ok(WorkflowGuidance {
             stage: "workflow".to_string(),
-            recommended_skill: "specrail-workflow".to_string(),
+            recommended_skill: "specrail-plan-features".to_string(),
             summary: "No features exist yet. Gather the first feature and break it into ordered outcomes before planning tests.".to_string(),
             blockers: vec!["The project has been initialized, but no features are registered yet.".to_string()],
             next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string()],
@@ -2027,7 +2027,7 @@ fn build_workflow_guidance(
     if !any_outcomes {
         return Ok(WorkflowGuidance {
             stage: "workflow".to_string(),
-            recommended_skill: "specrail-workflow".to_string(),
+            recommended_skill: "specrail-plan-features".to_string(),
             summary: "Features exist, but no outcomes are defined yet. Split the next feature into outcome-sized slices before planning tests.".to_string(),
             blockers: vec!["At least one feature is present, but there are no outcomes to drive the TDD loop yet.".to_string()],
             next_tools: vec!["specrail_outcome_new".to_string()],
@@ -2146,7 +2146,7 @@ fn workflow_guidance_for_snapshot(
     let Some(candidate) = candidate else {
         return Ok(WorkflowGuidance {
             stage: "done".to_string(),
-            recommended_skill: "specrail-activation".to_string(),
+            recommended_skill: "specrail-run-workflow".to_string(),
             summary: "All known outcomes are already verified or skipped. The TDD workflow is complete.".to_string(),
             blockers: Vec::new(),
             next_tools: vec!["specrail_status".to_string(), "specrail_trace".to_string()],
@@ -2173,7 +2173,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_test_set_status".to_string(),
             ],
             "testing".to_string(),
-            "specrail-testing".to_string(),
+            "specrail-prepare-tests".to_string(),
         )
     } else if !candidate.planned_test_ids.is_empty() {
         (
@@ -2192,7 +2192,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_test_set_status".to_string(),
             ],
             "testing".to_string(),
-            "specrail-testing".to_string(),
+            "specrail-prepare-tests".to_string(),
         )
     } else {
         (
@@ -2209,7 +2209,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_advance".to_string(),
             ],
             "activation".to_string(),
-            "specrail-activation".to_string(),
+            "specrail-run-workflow".to_string(),
         )
     };
 
@@ -2241,11 +2241,11 @@ fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
     if snapshot.outcome.status == OutcomeStatus::Verified
         || snapshot.outcome.status == OutcomeStatus::Failed
     {
-        "specrail-activation"
+        "specrail-run-workflow"
     } else if snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty() {
-        "specrail-testing"
+        "specrail-prepare-tests"
     } else {
-        "specrail-activation"
+        "specrail-run-workflow"
     }
 }
 

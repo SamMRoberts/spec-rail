@@ -27,14 +27,14 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 1. Call `specrail_status` first. Display the project dashboard.
 2. Read `structuredContent.workflow` from the response.
 3. Use `workflow.recommended_skill`, `workflow.summary`, `workflow.blockers`, and `workflow.next_tools` to choose the next stage.
-4. If the recommended skill is `specrail-init`, initialize the repository and then call `specrail_status` again.
-5. If the recommended skill is `specrail-workflow`, begin an explicit feature and outcome interview before creating anything.
+4. If the recommended skill is `specrail-setup`, initialize the repository and then call `specrail_status` again.
+5. If the recommended skill is `specrail-plan-features`, begin an explicit feature and outcome interview before creating anything.
 6. Ask the user for the first feature if none exists yet, or ask whether to keep or refine the existing feature list if features already exist.
 7. For each feature, ask for the outcomes under that feature and keep asking until the user says that feature is complete.
 8. Expand broad feature and outcome ideas into narrower, clearer slices, then confirm the expanded structure with the user before creating it.
 9. Keep looping on features and outcomes until the user explicitly says they are done.
-10. If the recommended skill is `specrail-testing`, prepare the tests for the current or next outcome until implementation is no longer blocked by missing or `planned` tests.
-11. If the recommended skill is `specrail-activation`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, `specrail_verify`, then `specrail_advance`.
+10. If the recommended skill is `specrail-prepare-tests`, prepare the tests for the current or next outcome until implementation is no longer blocked by missing or `planned` tests.
+11. If the recommended skill is `specrail-run-workflow`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, `specrail_verify`, then `specrail_advance`.
 12. After every mutating step, call `specrail_status` again and keep following the updated guidance until the workflow is complete or the user asks to stop.
 
 ## Feature and outcome interview rules
@@ -69,6 +69,7 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 - Treat `workflow.blockers` as reasons to stop and resolve the blocking stage before running implementation.
 - If the repository was opened outside the project root, pass the workspace path through `cwd`.
 - When the user only asks for one stage, hand off to the more specific stage skill after the first `specrail_status` check.
+- This skill is the umbrella guide; it should route the user into the more specific skills while relying on MCP tools for the actual state changes.
 
 ## Example
 

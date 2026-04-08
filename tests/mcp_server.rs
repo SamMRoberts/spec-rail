@@ -1405,7 +1405,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_before_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-init"
+        "specrail-setup"
     );
 
     let _ = client.request(
@@ -1427,7 +1427,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_after_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-workflow"
+        "specrail-plan-features"
     );
 
     let _ = client.request(
@@ -1464,7 +1464,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_needs_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-testing"
+        "specrail-prepare-tests"
     );
 
     let _ = client.request(
@@ -1489,7 +1489,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_planned_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-testing"
+        "specrail-prepare-tests"
     );
     assert!(status_planned_tests["result"]["structuredContent"]["workflow"]["blockers"][0]
         .as_str()
@@ -1516,7 +1516,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-activation"
+        "specrail-run-workflow"
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["candidate_feature_id"],

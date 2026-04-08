@@ -16,7 +16,7 @@ Responsibilities:
 - Re-check status after each workflow mutation.
 - Keep the user on the test-first path until the workflow is complete.
 
-### `specrail-init`
+### `specrail-setup`
 Use when the repository does not yet have a `.specrail/` project.
 
 Responsibilities:
@@ -35,7 +35,7 @@ Responsibilities:
 - Ask the user to confirm where to resume before making changes.
 - Hand off to testing or activation based on the recommended next step.
 
-### `specrail-workflow`
+### `specrail-plan-features`
 Use when features and outcomes need to be discovered, clarified, and created.
 
 Responsibilities:
@@ -45,7 +45,7 @@ Responsibilities:
 - Confirm the structure before creating it.
 - Hand off to testing and activation.
 
-### `specrail-testing`
+### `specrail-prepare-tests`
 Use when outcomes need tests before implementation can proceed.
 
 Responsibilities:
@@ -55,7 +55,7 @@ Responsibilities:
 - Generate tests when requested.
 - Move tests from `planned` to `written` when ready.
 
-### `specrail-activation`
+### `specrail-run-workflow`
 Use when the user wants to execute outcomes in the correct order.
 
 Responsibilities:
@@ -68,9 +68,9 @@ Responsibilities:
 ## Recommended Flow
 
 1. Start with `specrail-tdd` for the normal end-to-end experience.
-2. Let `specrail-tdd` route into `specrail-init` if the project is not initialized.
-3. Use `specrail-workflow` to gather and create features and outcomes.
-4. Use `specrail-testing` to register and prepare tests.
-5. Use `specrail-activation` to execute the workflow.
+2. Let `specrail-tdd` route into `specrail-setup` if the project is not initialized.
+3. Use `specrail-plan-features` to gather and create features and outcomes.
+4. Use `specrail-prepare-tests` to register and prepare tests.
+5. Use `specrail-run-workflow` to execute the workflow.
 
-If the repository is already in progress, `specrail-tdd` should use `specrail_status` to route into `specrail-resume` or whichever stage matches the current state.
+If the repository is already in progress, `specrail-tdd` should use `specrail_status` to route into `specrail-resume` or whichever stage matches the current state. Skills guide the workflow; `specrail_*` MCP tools execute the actual actions.

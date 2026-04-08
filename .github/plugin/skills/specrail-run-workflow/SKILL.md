@@ -1,15 +1,15 @@
 ---
-name: specrail-activation
-description: Determine the best implementation order for specrail features and outcomes, then activate and advance through them in sequence until all are verified.
+name: specrail-run-workflow
+description: Run the specrail workflow in the right order until outcomes are verified.
 ---
 
 Use this skill when the user wants help deciding implementation order or wants to drive the workflow feature-by-feature and outcome-by-outcome.
 
 When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect state and move the workflow forward.
 
-If the project is not initialized yet, use the `specrail-init` skill or call `specrail_init` before applying this workflow.
+If the project is not initialized yet, use the `specrail-setup` skill or call `specrail_init` before applying this workflow.
 
-If the active or planned outcomes do not yet have registered, non-`planned` tests, use the `specrail-testing` skill before running implementation.
+If the active or planned outcomes do not yet have registered, non-`planned` tests, use the `specrail-prepare-tests` skill before running implementation.
 
 ## Default sequence
 
@@ -19,7 +19,7 @@ If the active or planned outcomes do not yet have registered, non-`planned` test
 4. Determine the best feature order using explicit dependencies first.
 5. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
 6. Before activating or implementing an outcome, confirm that it has registered tests and that none of its required tests are still `planned`.
-7. If tests are missing or still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-testing` skill, before continuing.
+7. If tests are missing or still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
 8. Activate the first eligible feature with `specrail_feature_activate`.
 9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
 10. Run `specrail_implement` for the active outcome.
@@ -87,6 +87,7 @@ When a feature is completed:
 - Summarize the proposed feature order and per-feature outcome order before making changes.
 - Tell the user which feature and outcome are active after each successful transition.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
+- This skill guides execution order and orchestration; the `specrail_*activate`, `specrail_implement`, `specrail_verify`, and `specrail_advance` tools perform the direct actions.
 
 ## Example
 
