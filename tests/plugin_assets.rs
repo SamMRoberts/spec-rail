@@ -59,6 +59,8 @@ fn plugin_workflow_stage_skill_exists() {
 
     assert!(skill.contains("name: specrail-plan-features"));
     assert!(skill.contains("specrail_status"));
+    assert!(skill.contains("platform, language, stack/framework, interface type, and deployment/runtime target"));
+    assert!(skill.contains("ask whether to create it or correct the reference"));
 }
 
 #[test]
@@ -73,6 +75,8 @@ fn plugin_tdd_skill_exists() {
     assert!(skill.contains("workflow.recommended_skill"));
     assert!(skill.contains("specrail_status"));
     assert!(skill.contains("Only create or generate tests"));
+    assert!(skill.contains("ask targeted follow-up questions instead of guessing"));
+    assert!(skill.contains("warn the user and ask whether to refine"));
 }
 
 #[test]
@@ -89,4 +93,9 @@ fn workspace_specrail_agent_exists_and_references_workflow_guidance() {
     assert!(agent.contains("workflow.recommended_skill"));
     assert!(agent.contains("Do not create tests that are not specified"));
     assert!(agent.contains("Do not write more production code"));
+    assert!(agent.contains("determine whether they are starting a new project from scratch"));
+    assert!(agent.contains("ask for the missing information before proceeding"));
+    assert!(agent.contains("ask for clarification instead of guessing"));
+    assert!(agent.contains("ask the user whether they want to create it or correct the reference"));
+    assert!(agent.contains("warn the user and ask whether they want to continue as-is or refine it"));
 }

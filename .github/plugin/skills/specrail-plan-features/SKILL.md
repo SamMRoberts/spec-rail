@@ -42,6 +42,14 @@ When a feature is selected (by passing `feature_id`), the navigator shows outcom
 - If the user gives a broad outcome, ask how to split it into narrower sibling outcomes under the same feature.
 - Before creating anything, restate the current feature and outcome list in a compact structure for confirmation.
 
+## Validation and ambiguity resolution
+
+- If the user is starting from scratch, gather missing project context before locking in features and outcomes. Ask for platform, language, stack/framework, interface type, and deployment/runtime target when those details are missing.
+- If the request is ambiguous, ask clarifying questions before proposing a feature or outcome structure.
+- If the user references a feature, outcome, or test that does not exist yet, verify that with `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list`, then ask whether to create it or correct the reference.
+- If the request is too broad, say so explicitly and ask whether to continue as-is or refine it into narrower features or outcomes first.
+- Keep the conversation anchored in TDD: the feature and outcome structure should lead to clear required tests, and tests must be defined before implementation begins.
+
 ## Workflow scope rules
 
 - Each feature should describe one clear product capability.
