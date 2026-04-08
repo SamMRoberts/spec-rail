@@ -400,6 +400,37 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
             }
         }),
     );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_add",
+            "arguments": {
+                "id": "auth-login-smoke-rs",
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login_smoke.rs",
+                "kind": "unit",
+                "purpose_refs": []
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_edit",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1,
+                "prerequisites": [],
+                "allowed_paths": [],
+                "forbidden_paths": [],
+                "required_tests": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
+            }
+        }),
+    );
 
     let feature_picker = client.request(
         "tools/call",
@@ -422,6 +453,14 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(features.len(), 2);
     assert!(features.iter().any(|feature| feature["id"] == "auth"));
     assert!(features.iter().all(|feature| feature["pathLabel"] == "default-solution/default-project/default-component"));
+    let auth_feature = features
+        .iter()
+        .find(|feature| feature["id"] == "auth")
+        .unwrap();
+    assert_eq!(auth_feature["totalTestCount"], 2);
+    assert_eq!(auth_feature["plannedTestCount"], 2);
+    assert_eq!(auth_feature["undeclaredOutcomeCount"], 1);
+    assert_eq!(auth_feature["hasUndeclaredTests"], json!(true));
     assert_eq!(
         feature_picker["result"]["structuredContent"]["solutions"][0]["id"],
         "default-solution"
@@ -489,10 +528,17 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(outcomes[0]["requiredTestCount"], 2);
     assert_eq!(outcomes[0]["missingRequiredTestCount"], 1);
     assert_eq!(outcomes[0]["plannedTestCount"], 1);
+    assert_eq!(outcomes[0]["writtenTestCount"], 0);
+    assert_eq!(outcomes[0]["failingTestCount"], 0);
+    assert_eq!(outcomes[0]["undeclaredTestCount"], 1);
     assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
     assert_eq!(
         outcomes[0]["testReview"]["missing_required_tests"][0],
         "tests/auth/mfa.rs"
+    );
+    assert_eq!(
+        outcomes[0]["testReview"]["undeclared_tests"][0]["path"],
+        "tests/auth/login_smoke.rs"
     );
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],

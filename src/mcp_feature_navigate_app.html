@@ -981,6 +981,7 @@
             background: var(--progress-track);
             border-radius: 2px;
             overflow: hidden;
+            display: flex;
         }
 
         .progress-fill {
@@ -988,6 +989,22 @@
             background: var(--progress-fill);
             border-radius: 2px;
             transition: width 400ms ease;
+        }
+
+        .progress-fill.passing {
+            background: var(--verified-border);
+        }
+
+        .progress-fill.written {
+            background: var(--accent);
+        }
+
+        .progress-fill.planned {
+            background: var(--active-border);
+        }
+
+        .progress-fill.failing {
+            background: var(--failed-border);
         }
 
         /* Badges */
@@ -2836,6 +2853,64 @@
                 var meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; container.appendChild(meta);
             }
 
+            function appendFeatureTestProgress(container, feature) {
+                var totalTestCount = Number(feature.totalTestCount || 0);
+                var passingTestCount = Number(feature.passingTestCount || 0);
+                var writtenTestCount = Number(feature.writtenTestCount || 0);
+                var plannedTestCount = Number(feature.plannedTestCount || 0);
+                var failingTestCount = Number(feature.failingTestCount || 0);
+                var undeclaredOutcomeCount = Number(feature.undeclaredOutcomeCount || 0);
+
+                if (totalTestCount <= 0 && undeclaredOutcomeCount <= 0) {
+                    return;
+                }
+
+                var wrap = document.createElement("div");
+                wrap.className = "progress-wrap";
+
+                var label = document.createElement("div");
+                label.className = "progress-label";
+                if (totalTestCount > 0) {
+                    label.innerHTML = '<span>' + passingTestCount + '/' + totalTestCount + ' tests passing</span><span>' + Math.round((passingTestCount / totalTestCount) * 100) + '%</span>';
+                } else {
+                    label.innerHTML = '<span>No linked tests yet</span><span>0%</span>';
+                }
+                wrap.appendChild(label);
+
+                var bar = document.createElement("div");
+                bar.className = "progress-bar";
+
+                if (totalTestCount > 0) {
+                    [
+                        { count: passingTestCount, className: "passing" },
+                        { count: writtenTestCount, className: "written" },
+                        { count: plannedTestCount, className: "planned" },
+                        { count: failingTestCount, className: "failing" },
+                    ].forEach(function (segment) {
+                        if (segment.count <= 0) return;
+                        var fill = document.createElement("div");
+                        fill.className = "progress-fill " + segment.className;
+                        fill.style.width = ((segment.count / totalTestCount) * 100) + "%";
+                        bar.appendChild(fill);
+                    });
+                }
+
+                wrap.appendChild(bar);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                if (passingTestCount > 0) appendTestChip(chips, passingTestCount + " passing", "passing");
+                if (writtenTestCount > 0) appendTestChip(chips, writtenTestCount + " written", "");
+                if (plannedTestCount > 0) appendTestChip(chips, plannedTestCount + " planned", "warning");
+                if (failingTestCount > 0) appendTestChip(chips, failingTestCount + " failing", "danger");
+                if (undeclaredOutcomeCount > 0) appendTestChip(chips, undeclaredOutcomeCount + " outcome" + (undeclaredOutcomeCount !== 1 ? "s" : "") + " with undeclared tests", "warning");
+                if (chips.childNodes.length > 0) {
+                    wrap.appendChild(chips);
+                }
+
+                container.appendChild(wrap);
+            }
+
             function createHeroStat(value, label, tone) {
                 var stat = document.createElement("div");
                 stat.className = "hero-stat" + (tone ? " tone-" + tone : "");
@@ -2988,6 +3063,7 @@
                             row.appendChild(badge(isActive ? "active" : String(feature.status || "pending")));
                             summary.appendChild(row);
                             appendFeatureProgress(summary, outcomeCount, verifiedCount);
+                            appendFeatureTestProgress(summary, feature);
                         },
                         buildContent: function (content) {
                             var actions = document.createElement("div"); actions.className = "card-actions";
@@ -3081,6 +3157,16 @@
                 var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                 var plannedTests = outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0);
                 var selectedFeatureKey = cardStateKey("selected-feature", featureId);
+                var selectedFeatureSummary = {
+                    totalTestCount: outcomes.reduce(function (n, o) { return n + Number(o.testCount || 0); }, 0),
+                    passingTestCount: outcomes.reduce(function (n, o) { return n + Number(o.passingTestCount || 0); }, 0),
+                    writtenTestCount: outcomes.reduce(function (n, o) { return n + Number(o.writtenTestCount || 0); }, 0),
+                    plannedTestCount: outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0),
+                    failingTestCount: outcomes.reduce(function (n, o) { return n + Number(o.failingTestCount || 0); }, 0),
+                    undeclaredOutcomeCount: outcomes.reduce(function (n, o) {
+                        return n + (Number(o.undeclaredTestCount || 0) > 0 ? 1 : 0);
+                    }, 0),
+                };
 
                 root.appendChild(buildHeroPanel({
                     kicker: "Focused feature",
@@ -3122,6 +3208,7 @@
                         fRow.appendChild(badge(isActiveF ? "active" : String(selectedFeature.status || "pending")));
                         summary.appendChild(fRow);
                         appendFeatureProgress(summary, featureOutcomeCount, featureVerifiedCount);
+                        appendFeatureTestProgress(summary, selectedFeatureSummary);
                     },
                     buildContent: function (content) {
                         var fActions = document.createElement("div"); fActions.className = "card-actions";

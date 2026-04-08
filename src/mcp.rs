@@ -758,6 +758,30 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 .iter()
                 .filter(|outcome| outcome.status == OutcomeStatus::Verified)
                 .count();
+            let mut total_test_count = 0usize;
+            let mut passing_test_count = 0usize;
+            let mut written_test_count = 0usize;
+            let mut planned_test_count = 0usize;
+            let mut failing_test_count = 0usize;
+            let mut undeclared_outcome_count = 0usize;
+
+            for outcome in &outcomes {
+                let review = build_outcome_test_review(outcome, &manifest);
+                if !review.undeclared_tests.is_empty() {
+                    undeclared_outcome_count += 1;
+                }
+
+                for test in &review.related_tests {
+                    total_test_count += 1;
+                    match test.status {
+                        TestStatus::Passing => passing_test_count += 1,
+                        TestStatus::Written => written_test_count += 1,
+                        TestStatus::Planned => planned_test_count += 1,
+                        TestStatus::Failing => failing_test_count += 1,
+                    }
+                }
+            }
+
             let active_outcome_count = outcomes
                 .iter()
                 .filter(|outcome| outcome.status == crate::core::models::OutcomeStatus::Active)
@@ -773,6 +797,13 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "outcomeCount": outcomes.len(),
                 "verifiedOutcomeCount": verified_outcome_count,
                 "activeOutcomeCount": active_outcome_count,
+                "totalTestCount": total_test_count,
+                "passingTestCount": passing_test_count,
+                "writtenTestCount": written_test_count,
+                "plannedTestCount": planned_test_count,
+                "failingTestCount": failing_test_count,
+                "undeclaredOutcomeCount": undeclared_outcome_count,
+                "hasUndeclaredTests": undeclared_outcome_count > 0,
                 "isActive": state.active_feature.as_deref() == Some(feature.id.as_str())
             })
         })
@@ -839,6 +870,16 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     .iter()
                     .filter(|test| test.status == TestStatus::Passing)
                     .count();
+                let written_test_count = review
+                    .related_tests
+                    .iter()
+                    .filter(|test| test.status == TestStatus::Written)
+                    .count();
+                let failing_test_count = review
+                    .related_tests
+                    .iter()
+                    .filter(|test| test.status == TestStatus::Failing)
+                    .count();
                 json!({
                     "id": outcome.id,
                     "title": outcome.title,
@@ -849,6 +890,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "testCount": test_count,
                     "plannedTestCount": planned_test_count,
                     "passingTestCount": passing_test_count,
+                    "writtenTestCount": written_test_count,
+                    "failingTestCount": failing_test_count,
                     "requiredTestCount": review.required_test_count,
                     "missingRequiredTestCount": review.missing_required_tests.len(),
                     "undeclaredTestCount": review.undeclared_tests.len(),
