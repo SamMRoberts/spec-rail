@@ -562,24 +562,27 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(outcomes[0]["id"], "login");
     assert_eq!(outcomes[0]["goal"], "Let a user sign in with valid credentials.");
     assert_eq!(outcomes[0]["requiredTestCount"], 2);
-    assert_eq!(outcomes[0]["missingRequiredTestCount"], 1);
-    assert_eq!(outcomes[0]["plannedTestCount"], 1);
+    assert_eq!(outcomes[0]["missingRequiredTestCount"], 2);
+    assert_eq!(outcomes[0]["plannedTestCount"], 0);
     assert_eq!(outcomes[0]["writtenTestCount"], 0);
     assert_eq!(outcomes[0]["failingTestCount"], 0);
-    assert_eq!(outcomes[0]["undeclaredTestCount"], 1);
+    assert_eq!(outcomes[0]["undeclaredTestCount"], 2);
     assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
-    assert_eq!(
-        outcomes[0]["testReview"]["missing_required_tests"][0],
-        "auth-mfa-rs"
-    );
+    let missing_required = outcomes[0]["testReview"]["missing_required_tests"]
+        .as_array()
+        .unwrap();
+    assert!(missing_required.iter().any(|value| value == "auth-mfa-rs"));
+    assert!(missing_required.iter().any(|value| value == "auth-login-rs"));
     assert!(outcomes[0]["testReview"]["missing_required_test_files"]
         .as_array()
         .unwrap()
         .is_empty());
-    assert_eq!(
-        outcomes[0]["testReview"]["undeclared_tests"][0]["path"],
-        "tests/auth/login_smoke.rs"
-    );
+    let undeclared_tests = outcomes[0]["testReview"]["undeclared_tests"]
+        .as_array()
+        .unwrap();
+    assert!(undeclared_tests
+        .iter()
+        .any(|value| value["path"] == "tests/auth/login_smoke.rs"));
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],
         "specrail_outcome_activate"
@@ -639,10 +642,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         }),
     );
     assert_eq!(review["result"]["structuredContent"]["review"]["has_gaps"], json!(true));
-    assert_eq!(
-        review["result"]["structuredContent"]["review"]["planned_required_tests"][0],
-        "auth-login-rs"
-    );
+    assert!(review["result"]["structuredContent"]["review"]["planned_required_tests"]
+        .as_array()
+        .unwrap()
+        .is_empty());
     assert_eq!(
         review["result"]["structuredContent"]["review"]["planned_required_test_files"][0],
         "tests/auth/login.rs"
@@ -1204,7 +1207,7 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
     assert_eq!(add_required["result"]["isError"], json!(false));
-    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(false));
+    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(true));
     assert_eq!(add_required["result"]["structuredContent"]["added"]["test_file"], json!(false));
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")

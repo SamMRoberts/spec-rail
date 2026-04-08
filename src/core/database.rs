@@ -8,7 +8,7 @@ use super::models::{
     TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 5;
+const SCHEMA_VERSION: i64 = 6;
 
 pub struct Database {
     conn: Connection,
@@ -155,6 +155,17 @@ impl Database {
                 "
             )
             .context("removing outcomes.required_test_files column")?;
+        }
+
+        if version > 0 && version < 6 {
+            conn.execute_batch(
+                "
+                UPDATE tests
+                SET name = ''
+                WHERE trim(name) = trim(id);
+                "
+            )
+            .context("clearing tests.name values that mirror test ids")?;
         }
 
         if version < SCHEMA_VERSION {
