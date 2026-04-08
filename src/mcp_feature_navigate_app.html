@@ -1952,6 +1952,14 @@
                 }
             }
 
+            function buttonLogLabel(button) {
+                if (!button) return "unknown action";
+                var title = button.dataset.toolTitle || button.getAttribute("aria-label") || button.textContent || "unknown action";
+                var source = button.dataset.toolSource || "unknown-source";
+                var tool = button.dataset.toolName || "unknown-tool";
+                return title.trim() + " [" + tool + "] from " + source;
+            }
+
             function appendActionButton(container, config) {
                 var title = config.title, tool = config.tool, args = config.args || {},
                     kind = config.kind || "default", refresh = config.refresh || false,
@@ -1968,6 +1976,7 @@
                 button.dataset.toolTitle = title;
                 button.dataset.toolArgs = encodeButtonArgs(args);
                 button.dataset.toolRefresh = refresh ? "true" : "false";
+                button.dataset.toolSource = config.source || "action-button";
                 button.disabled = state.isSaving || isActionRunning(tool, args) || disabled;
                 if (config.tooltip || (status && status.detail)) {
                     button.title = config.tooltip || status.detail;
@@ -2619,7 +2628,8 @@
                             item.appendChild(actions);
                         }
 
-                        list.appendChild(item);
+                        source: "next-banner",
+                            list.appendChild(item);
                     });
                     section.appendChild(list);
                 }
@@ -3471,12 +3481,28 @@
                 if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
             });
 
+            document.addEventListener("pointerdown", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                appendLog("Pointer down on " + buttonLogLabel(button), "info");
+            }, true);
+
             document.addEventListener("click", function (event) {
                 var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
                 if (!button) return;
-                if (button.disabled) return;
+                appendLog("Click captured on " + buttonLogLabel(button), button.disabled ? "warn" : "info");
+            }, true);
+
+            document.addEventListener("click", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                if (button.disabled) {
+                    appendLog("Click ignored for disabled button: " + buttonLogLabel(button), "warn");
+                    return;
+                }
                 event.preventDefault();
                 event.stopPropagation();
+                appendLog("Dispatching tool action: " + buttonLogLabel(button), "action");
                 runToolAction(
                     button.dataset.toolTitle || "Run Action",
                     button.dataset.toolName || "",

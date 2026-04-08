@@ -223,6 +223,14 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .as_str()
         .unwrap()
         .contains("document.addEventListener(\"click\""));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Pointer down on "));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Dispatching tool action:"));
 
     let status_before = client.request(
         "tools/call",
