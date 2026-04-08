@@ -29,6 +29,18 @@ pub enum Commands {
     #[command(subcommand)]
     Feature(FeatureCommands),
 
+    /// Manage solutions
+    #[command(subcommand)]
+    Solution(SolutionCommands),
+
+    /// Manage projects
+    #[command(subcommand)]
+    Project(ProjectCommands),
+
+    /// Manage components
+    #[command(subcommand)]
+    Component(ComponentCommands),
+
     /// Manage outcomes
     #[command(subcommand)]
     Outcome(OutcomeCommands),
@@ -73,6 +85,9 @@ pub enum FeatureCommands {
     New {
         /// Unique feature identifier (e.g. auth-login)
         id: String,
+        /// Component ID this feature belongs to (defaults to the active/default component)
+        #[arg(long)]
+        component: Option<String>,
         /// Short human-readable title
         #[arg(long, short)]
         title: String,
@@ -129,6 +144,87 @@ pub enum FeatureCommands {
     /// Mark a feature as the active feature
     Activate {
         /// Feature ID
+        id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SolutionCommands {
+    New {
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    List,
+    Show {
+        id: String,
+    },
+    Edit {
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    Activate {
+        id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProjectCommands {
+    New {
+        solution_id: String,
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    List {
+        solution_id: String,
+    },
+    Show {
+        id: String,
+    },
+    Edit {
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    Activate {
+        id: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ComponentCommands {
+    New {
+        project_id: String,
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    List {
+        project_id: String,
+    },
+    Show {
+        id: String,
+    },
+    Edit {
+        id: String,
+        #[arg(long, short)]
+        title: String,
+        #[arg(long, short)]
+        purpose: String,
+    },
+    Activate {
         id: String,
     },
 }

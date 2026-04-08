@@ -251,6 +251,12 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
     match name {
         "specrail_status" => tool_status(arguments),
         "specrail_feature_navigate" => tool_feature_navigate(arguments),
+        "specrail_solution_list" => tool_solution_list(arguments),
+        "specrail_solution_show" => tool_solution_show(arguments),
+        "specrail_project_list" => tool_project_list(arguments),
+        "specrail_project_show" => tool_project_show(arguments),
+        "specrail_component_list" => tool_component_list(arguments),
+        "specrail_component_show" => tool_component_show(arguments),
         "specrail_feature_list" => tool_feature_list(arguments),
         "specrail_feature_show" => tool_feature_show(arguments),
         "specrail_outcome_list" => tool_outcome_list(arguments),
@@ -259,6 +265,15 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_test_list" => tool_test_list(arguments),
         "specrail_trace" => tool_trace(arguments),
         "specrail_init" => tool_init(arguments),
+        "specrail_solution_new" => tool_solution_new(arguments),
+        "specrail_solution_activate" => tool_solution_activate(arguments),
+        "specrail_solution_edit" => tool_solution_edit(arguments),
+        "specrail_project_new" => tool_project_new(arguments),
+        "specrail_project_activate" => tool_project_activate(arguments),
+        "specrail_project_edit" => tool_project_edit(arguments),
+        "specrail_component_new" => tool_component_new(arguments),
+        "specrail_component_activate" => tool_component_activate(arguments),
+        "specrail_component_edit" => tool_component_edit(arguments),
         "specrail_feature_new" => tool_feature_new(arguments),
         "specrail_feature_activate" => tool_feature_activate(arguments),
         "specrail_feature_edit" => tool_feature_edit(arguments),
@@ -411,9 +426,19 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
         }
     };
 
+    repo.ensure_hierarchy()?;
     let config = repo.load_config()?;
     let state = repo.load_state()?;
     let features = repo.list_features()?;
+    let solutions = repo.list_solutions()?;
+    let projects: Vec<_> = solutions
+        .iter()
+        .flat_map(|solution| repo.list_projects(&solution.id).unwrap_or_default())
+        .collect();
+    let components: Vec<_> = projects
+        .iter()
+        .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
+        .collect();
     let manifest = repo.load_manifest()?;
 
     let passing = manifest
@@ -450,6 +475,9 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
         })
         .collect();
 
+    let active_solution = state.active_solution.clone().unwrap_or_else(|| "(none)".to_string());
+    let active_project = state.active_project.clone().unwrap_or_else(|| "(none)".to_string());
+    let active_component = state.active_component.clone().unwrap_or_else(|| "(none)".to_string());
     let active_feature = state.active_feature.clone().unwrap_or_else(|| "(none)".to_string());
     let active_outcome = state.active_outcome.clone().unwrap_or_else(|| "(none)".to_string());
     let project_name = config.name.clone();
@@ -464,6 +492,9 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
             let mut lines = vec![
                 format!("🚂 **{project_name}** — specrail project"),
                 String::new(),
+                format!("Active solution: {active_solution}"),
+                format!("Active project : {active_project}"),
+                format!("Active component: {active_component}"),
                 format!("Active feature : {active_feat_icon} {active_feature}"),
                 format!("Active outcome : {active_out_icon} {active_outcome}"),
                 format!("Tests          : {test_count} total ({passing} passing, {written} written, {planned} planned)"),
@@ -483,6 +514,9 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
             "root": repo.root.display().to_string(),
             "config": config,
             "state": state,
+            "solutions": solutions,
+            "projects": projects,
+            "components": components,
             "features": feature_summaries,
             "manifest": manifest,
             "testCounts": {
@@ -512,10 +546,111 @@ fn tool_feature_list(arguments: &Map<String, Value>) -> Result<Value> {
     Ok(tool_success_payload(text, Some(json!({ "features": features }))))
 }
 
+fn tool_solution_list(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let solutions = repo.list_solutions()?;
+    let count = solutions.len();
+    let list = solutions
+        .iter()
+        .map(|solution| format!("  • {} — {}", solution.id, solution.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let text = if list.is_empty() {
+        "No solutions yet. Create one with specrail_solution_new.".to_string()
+    } else {
+        format!("Found {count} solution(s):\n{list}")
+    };
+    Ok(tool_success_payload(text, Some(json!({ "solutions": solutions }))))
+}
+
+fn tool_solution_show(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let solution = repo.load_solution(&id)?;
+    let projects = repo.list_projects(&id)?;
+    Ok(tool_success_payload(
+        format!("Loaded solution '{id}'."),
+        Some(json!({ "solution": solution, "projects": projects })),
+    ))
+}
+
+fn tool_project_list(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let solution_id = require_string(arguments, "solution_id")?;
+    let projects = repo.list_projects(&solution_id)?;
+    let count = projects.len();
+    let list = projects
+        .iter()
+        .map(|project| format!("  • {} — {}", project.id, project.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let text = if list.is_empty() {
+        format!("No projects found for solution '{solution_id}'.")
+    } else {
+        format!("Found {count} project(s) for '{solution_id}':\n{list}")
+    };
+    Ok(tool_success_payload(
+        text,
+        Some(json!({ "solution_id": solution_id, "projects": projects })),
+    ))
+}
+
+fn tool_project_show(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let project = repo.load_project(&id)?;
+    let components = repo.list_components(&id)?;
+    Ok(tool_success_payload(
+        format!("Loaded project '{id}'."),
+        Some(json!({ "project": project, "components": components })),
+    ))
+}
+
+fn tool_component_list(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let project_id = require_string(arguments, "project_id")?;
+    let components = repo.list_components(&project_id)?;
+    let count = components.len();
+    let list = components
+        .iter()
+        .map(|component| format!("  • {} — {}", component.id, component.title))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let text = if list.is_empty() {
+        format!("No components found for project '{project_id}'.")
+    } else {
+        format!("Found {count} component(s) for '{project_id}':\n{list}")
+    };
+    Ok(tool_success_payload(
+        text,
+        Some(json!({ "project_id": project_id, "components": components })),
+    ))
+}
+
+fn tool_component_show(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let component = repo.load_component(&id)?;
+    let features = repo.list_features_for_component(&id)?;
+    Ok(tool_success_payload(
+        format!("Loaded component '{id}'."),
+        Some(json!({ "component": component, "features": features })),
+    ))
+}
+
 fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     let state = repo.load_state()?;
     let features = repo.list_features()?;
+    let solutions = repo.list_solutions()?;
+    let projects: Vec<_> = solutions
+        .iter()
+        .flat_map(|solution| repo.list_projects(&solution.id).unwrap_or_default())
+        .collect();
+    let components: Vec<_> = projects
+        .iter()
+        .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
+        .collect();
     let manifest = repo.load_manifest()?;
     let feature_summaries: Vec<Value> = features
         .iter()
@@ -533,6 +668,10 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "id": feature.id,
                 "title": feature.title,
                 "status": feature.status,
+                "solutionId": feature.solution_id,
+                "projectId": feature.project_id,
+                "componentId": feature.component_id,
+                "pathLabel": format!("{}/{}/{}", feature.solution_id, feature.project_id, feature.component_id),
                 "outcomeCount": outcomes.len(),
                 "verifiedOutcomeCount": verified_outcome_count,
                 "activeOutcomeCount": active_outcome_count,
@@ -598,10 +737,16 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "activeOutcomeId": active_outcome_id,
                 "selectedFeatureId": feature_id,
                 "selectedFeature": feature,
+                "solutions": solutions,
+                "projects": projects,
+                "components": components,
                 "features": feature_summaries,
                 "outcomes": outcome_summaries,
                 "suggestedNewOutcomeOrder": next_order,
                 "nextActions": {
+                    "solutionListTool": "specrail_solution_list",
+                    "projectListTool": "specrail_project_list",
+                    "componentListTool": "specrail_component_list",
                     "selectOutcomeTool": "specrail_outcome_activate",
                     "createOutcomeTool": "specrail_outcome_new",
                     "editOutcomeTool": "specrail_outcome_edit",
@@ -627,11 +772,20 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         String::new(),
         Some(json!({
             "mode": "feature_selection",
+            "solutions": solutions,
+            "projects": projects,
+            "components": components,
             "activeFeatureId": active_feature_id,
             "activeOutcomeId": active_outcome_id,
             "selectedFeatureId": Value::Null,
             "features": feature_summaries,
             "nextActions": {
+                "solutionListTool": "specrail_solution_list",
+                "projectListTool": "specrail_project_list",
+                "componentListTool": "specrail_component_list",
+                "createSolutionTool": "specrail_solution_new",
+                "createProjectTool": "specrail_project_new",
+                "createComponentTool": "specrail_component_new",
                 "selectFeatureTool": "specrail_feature_navigate",
                 "createFeatureTool": "specrail_feature_new",
                 "editFeatureTool": "specrail_feature_edit",
@@ -834,9 +988,146 @@ fn tool_init(arguments: &Map<String, Value>) -> Result<Value> {
     run_cli_tool(&cwd, args)
 }
 
+fn tool_solution_new(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "solution".to_string(),
+            "new".to_string(),
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
+fn tool_solution_activate(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    run_cli_tool(&cwd, vec!["solution".to_string(), "activate".to_string(), id])
+}
+
+fn tool_solution_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "solution".to_string(),
+            "edit".to_string(),
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
+fn tool_project_new(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let solution_id = require_string(arguments, "solution_id")?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "project".to_string(),
+            "new".to_string(),
+            solution_id,
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
+fn tool_project_activate(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    run_cli_tool(&cwd, vec!["project".to_string(), "activate".to_string(), id])
+}
+
+fn tool_project_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "project".to_string(),
+            "edit".to_string(),
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
+fn tool_component_new(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let project_id = require_string(arguments, "project_id")?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "component".to_string(),
+            "new".to_string(),
+            project_id,
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
+fn tool_component_activate(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    run_cli_tool(&cwd, vec!["component".to_string(), "activate".to_string(), id])
+}
+
+fn tool_component_edit(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let id = require_string(arguments, "id")?;
+    let title = require_string(arguments, "title")?;
+    let purpose = require_string(arguments, "purpose")?;
+    run_cli_tool(
+        &cwd,
+        vec![
+            "component".to_string(),
+            "edit".to_string(),
+            id,
+            "--title".to_string(),
+            title,
+            "--purpose".to_string(),
+            purpose,
+        ],
+    )
+}
+
 fn tool_feature_new(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let id = require_string(arguments, "id")?;
+    let component_id = optional_string(arguments, "component_id");
     let title = require_string(arguments, "title")?;
     let purpose = require_string(arguments, "purpose")?;
     let outcomes = string_array(arguments, "outcomes")?;
@@ -848,11 +1139,17 @@ fn tool_feature_new(arguments: &Map<String, Value>) -> Result<Value> {
         "feature".to_string(),
         "new".to_string(),
         id,
-        "--title".to_string(),
-        title,
-        "--purpose".to_string(),
-        purpose,
     ];
+
+    if let Some(component_id) = component_id {
+        args.push("--component".to_string());
+        args.push(component_id);
+    }
+
+    args.push("--title".to_string());
+    args.push(title);
+    args.push("--purpose".to_string());
+    args.push(purpose);
 
     push_repeated_flag(&mut args, "--outcome", outcomes);
     push_repeated_flag(&mut args, "--constraint", constraints);
@@ -1485,7 +1782,9 @@ fn workflow_snapshot(
 
 fn discover_repo(arguments: &Map<String, Value>) -> Result<Repository> {
     let cwd = resolve_cwd(arguments)?;
-    Repository::discover(&cwd)
+    let repo = Repository::discover(&cwd)?;
+    repo.ensure_hierarchy()?;
+    Ok(repo)
 }
 
 fn resolve_cwd(arguments: &Map<String, Value>) -> Result<PathBuf> {
@@ -1629,8 +1928,8 @@ fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "specrail_feature_navigate",
-            "title": "Feature & Outcome Navigator",
-            "description": "Interactive feature and outcome browser. Without feature_id returns all features with progress summaries. With feature_id returns outcomes with test counts and status. Use this to browse and pick features/outcomes before activating them.",
+            "title": "Workflow Navigator",
+            "description": "Interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with their solution/project/component path. With feature_id returns the selected feature's outcomes with test counts and status.",
             "_meta": {
                 "ui": {
                     "resourceUri": FEATURE_NAVIGATE_APP_URI,
@@ -1646,9 +1945,85 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_solution_list",
+            "title": "List Solutions",
+            "description": "List all solutions registered in the current specrail project.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_solution_show",
+            "title": "Show Solution",
+            "description": "Show a solution and the projects it contains.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_project_list",
+            "title": "List Projects",
+            "description": "List all projects for a solution.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "solution_id": { "type": "string" }
+                },
+                "required": ["solution_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_project_show",
+            "title": "Show Project",
+            "description": "Show a project and the components it contains.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_component_list",
+            "title": "List Components",
+            "description": "List all components for a project.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "project_id": { "type": "string" }
+                },
+                "required": ["project_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_component_show",
+            "title": "Show Component",
+            "description": "Show a component and the features it contains.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
             "name": "specrail_feature_list",
             "title": "List Features",
-            "description": "List all features registered in the current specrail project with their status and identifier.",
+            "description": "List all features registered in the current specrail project with their status and hierarchy path.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1752,7 +2127,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_init",
             "title": "Initialize Project",
-            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure with project.yaml, test manifest, and state files. Safe to run on an existing project (only adds missing files).",
+            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure with project.yaml, default solution/project/component hierarchy, test manifest, and state files. Safe to run on an existing project (only adds missing files).",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1762,14 +2137,146 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_solution_new",
+            "title": "New Solution",
+            "description": "Create a new solution above projects, components, features, and outcomes.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_solution_activate",
+            "title": "Activate Solution",
+            "description": "Set a solution as the active top-level focus and clear deeper selections.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_solution_edit",
+            "title": "Edit Solution",
+            "description": "Update an existing solution's title and purpose.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_project_new",
+            "title": "New Project",
+            "description": "Create a new project inside a solution.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "solution_id": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["solution_id", "id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_project_activate",
+            "title": "Activate Project",
+            "description": "Set a project as the active focus and clear deeper selections.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_project_edit",
+            "title": "Edit Project",
+            "description": "Update an existing project's title and purpose.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_component_new",
+            "title": "New Component",
+            "description": "Create a new component inside a project.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "project_id": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["project_id", "id", "title", "purpose"]
+            }
+        }),
+        json!({
+            "name": "specrail_component_activate",
+            "title": "Activate Component",
+            "description": "Set a component as the active focus and clear deeper selections.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" }
+                },
+                "required": ["id"]
+            }
+        }),
+        json!({
+            "name": "specrail_component_edit",
+            "title": "Edit Component",
+            "description": "Update an existing component's title and purpose.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "purpose": { "type": "string" }
+                },
+                "required": ["id", "title", "purpose"]
+            }
+        }),
+        json!({
             "name": "specrail_feature_new",
             "title": "New Feature",
-            "description": "Create a new feature in the specrail project. A feature groups a set of ordered outcomes that together deliver a user-facing capability. After creating, call specrail_feature_activate to set it active.",
+            "description": "Create a new feature in the specrail project. A feature belongs to a component (which belongs to a project and solution) and groups ordered outcomes that together deliver a capability.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
                     "id": { "type": "string", "description": "Unique slug identifier (e.g. 'auth', 'checkout')." },
+                    "component_id": { "type": "string", "description": "Optional component identifier. Defaults to the active/default component." },
                     "title": { "type": "string", "description": "Human-readable feature title." },
                     "purpose": { "type": "string", "description": "One or two sentence description of why this feature is needed." },
                     "outcomes": { "type": "array", "items": { "type": "string" }, "description": "High-level outcome descriptions (optional, for documentation)." },

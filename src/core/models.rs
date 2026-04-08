@@ -57,6 +57,15 @@ pub enum VerificationStatus {
 #[serde(rename_all = "snake_case")]
 pub enum LedgerEventType {
     ProjectInitialized,
+    SolutionCreated,
+    SolutionEdited,
+    SolutionActivated,
+    ProjectCreated,
+    ProjectEdited,
+    ProjectActivated,
+    ComponentCreated,
+    ComponentEdited,
+    ComponentActivated,
     FeatureCreated,
     FeatureEdited,
     FeatureActivated,
@@ -75,8 +84,50 @@ pub enum LedgerEventType {
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SolutionSpec {
+    pub id: String,
+    pub title: String,
+    pub purpose: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectSpec {
+    pub id: String,
+    pub solution_id: String,
+    pub title: String,
+    pub purpose: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ComponentSpec {
+    pub id: String,
+    pub solution_id: String,
+    pub project_id: String,
+    pub title: String,
+    pub purpose: String,
+}
+
+fn default_solution_id() -> String {
+    "default-solution".to_string()
+}
+
+fn default_project_id() -> String {
+    "default-project".to_string()
+}
+
+fn default_component_id() -> String {
+    "default-component".to_string()
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FeatureSpec {
     pub id: String,
+    #[serde(default = "default_solution_id")]
+    pub solution_id: String,
+    #[serde(default = "default_project_id")]
+    pub project_id: String,
+    #[serde(default = "default_component_id")]
+    pub component_id: String,
     pub title: String,
     pub purpose: String,
     #[serde(default)]
@@ -223,6 +274,12 @@ impl LedgerEvent {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ProjectState {
+    #[serde(default)]
+    pub active_solution: Option<String>,
+    #[serde(default)]
+    pub active_project: Option<String>,
+    #[serde(default)]
+    pub active_component: Option<String>,
     pub active_feature: Option<String>,
     pub active_outcome: Option<String>,
 }

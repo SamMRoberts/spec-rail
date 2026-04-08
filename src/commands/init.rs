@@ -27,6 +27,9 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     // Create directory structure
     for dir in [
         &specrail,
+        &repo.solutions_dir(),
+        &repo.projects_dir(),
+        &repo.components_dir(),
         &repo.features_dir(),
         &repo.outcomes_dir(),
         &repo.tests_dir(),
@@ -68,6 +71,8 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     if write_if_missing(&ledger_path, "")? {
         println!("  created  .specrail/state/ledger.jsonl");
     }
+
+    repo.ensure_hierarchy()?;
 
     // Record the init event
     let event = LedgerEvent::new(LedgerEventType::ProjectInitialized)

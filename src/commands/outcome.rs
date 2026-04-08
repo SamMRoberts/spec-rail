@@ -124,9 +124,14 @@ pub fn list(repo: &Repository, feature_id: &str) -> Result<()> {
 
 pub fn show(repo: &Repository, feature_id: &str, outcome_id: &str) -> Result<()> {
     let o = repo.load_outcome(feature_id, outcome_id)?;
+    let feature = repo.load_feature(feature_id)?;
     println!("Outcome: {} (order {})", o.id, o.order);
     println!("  order controls the sequence used by `specrail advance`");
     println!("Feature: {}", o.feature_id);
+    println!(
+        "Hierarchy: {}/{}/{}",
+        feature.solution_id, feature.project_id, feature.component_id
+    );
     println!("Title:   {}", o.title);
     println!("Goal:    {}", o.goal);
     println!("  goal is the acceptance criterion — what 'done' looks like for this outcome");
@@ -260,6 +265,7 @@ pub(crate) fn activate_outcome(
     outcome_id: &str,
 ) -> Result<()> {
     let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
+    let feature = repo.load_feature(feature_id)?;
     let mut state = repo.load_state()?;
 
     if outcome.status == OutcomeStatus::Verified {
@@ -269,6 +275,9 @@ pub(crate) fn activate_outcome(
     outcome.status = OutcomeStatus::Active;
     repo.save_outcome(&outcome)?;
 
+    state.active_solution = Some(feature.solution_id);
+    state.active_project = Some(feature.project_id);
+    state.active_component = Some(feature.component_id);
     state.active_feature = Some(feature_id.to_string());
     state.active_outcome = Some(outcome_id.to_string());
     repo.save_state(&state)?;

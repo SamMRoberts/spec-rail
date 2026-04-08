@@ -130,6 +130,9 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .collect();
     assert!(tool_names.contains(&"specrail_status"));
     assert!(tool_names.contains(&"specrail_feature_navigate"));
+    assert!(tool_names.contains(&"specrail_solution_list"));
+    assert!(tool_names.contains(&"specrail_project_list"));
+    assert!(tool_names.contains(&"specrail_component_list"));
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
     assert!(tool_names.contains(&"specrail_outcome_unverify"));
@@ -189,6 +192,10 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
+        .contains("Solution / Project / Component overview"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
         .contains("Related tests"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
@@ -237,6 +244,18 @@ fn mcp_server_lists_tools_and_initializes_project() {
             .len(),
         0
     );
+    assert_eq!(
+        status_after["result"]["structuredContent"]["solutions"][0]["id"],
+        "default-solution"
+    );
+    assert_eq!(
+        status_after["result"]["structuredContent"]["projects"][0]["id"],
+        "default-project"
+    );
+    assert_eq!(
+        status_after["result"]["structuredContent"]["components"][0]["id"],
+        "default-component"
+    );
 
     client.shutdown();
 }
@@ -283,6 +302,9 @@ fn mcp_server_can_create_and_read_feature_state() {
         .unwrap();
     assert_eq!(features.len(), 1);
     assert_eq!(features[0]["id"], "auth");
+    assert_eq!(features[0]["solution_id"], "default-solution");
+    assert_eq!(features[0]["project_id"], "default-project");
+    assert_eq!(features[0]["component_id"], "default-component");
 
     let feature_show = client.request(
         "tools/call",
@@ -296,6 +318,17 @@ fn mcp_server_can_create_and_read_feature_state() {
     assert_eq!(
         feature_show["result"]["structuredContent"]["feature"]["title"],
         "Authentication"
+    );
+    let solutions = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_solution_list",
+            "arguments": {}
+        }),
+    );
+    assert_eq!(
+        solutions["result"]["structuredContent"]["solutions"][0]["id"],
+        "default-solution"
     );
 
     client.shutdown();
@@ -388,6 +421,11 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         .unwrap();
     assert_eq!(features.len(), 2);
     assert!(features.iter().any(|feature| feature["id"] == "auth"));
+    assert!(features.iter().all(|feature| feature["pathLabel"] == "default-solution/default-project/default-component"));
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["solutions"][0]["id"],
+        "default-solution"
+    );
     assert_eq!(
         feature_picker["result"]["structuredContent"]["nextActions"]["selectFeatureTool"],
         "specrail_feature_navigate"

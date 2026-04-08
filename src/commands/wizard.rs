@@ -113,6 +113,7 @@ fn prompt_feature<R: BufRead, W: Write>(
 
     Ok(Some(feature::NewArgs {
         id,
+        component_id: None,
         title,
         purpose,
         outcomes,

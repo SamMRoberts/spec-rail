@@ -13,7 +13,8 @@ use clap::Parser;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use cli::{
-    Cli, Commands, FeatureCommands, OutcomeCommands, TestCommands,
+    Cli, Commands, ComponentCommands, FeatureCommands, OutcomeCommands, ProjectCommands,
+    SolutionCommands, TestCommands,
 };
 use core::repository::Repository;
 
@@ -59,13 +60,78 @@ fn run(cli: Cli) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let repo = Repository::discover(&cwd)
         .context("could not find a specrail project — run `specrail init` first")?;
+    repo.ensure_hierarchy()?;
 
     match cli.command {
         Commands::Init { .. } => unreachable!(),
 
+        Commands::Solution(sub) => match sub {
+            SolutionCommands::New { id, title, purpose } => {
+                commands::solution::new(&repo, commands::solution::NewArgs { id, title, purpose })
+            }
+            SolutionCommands::List => commands::solution::list(&repo),
+            SolutionCommands::Show { id } => commands::solution::show(&repo, &id),
+            SolutionCommands::Edit { id, title, purpose } => commands::solution::edit(
+                &repo,
+                commands::solution::EditArgs { id, title, purpose },
+            ),
+            SolutionCommands::Activate { id } => commands::solution::activate(&repo, &id),
+        },
+
+        Commands::Project(sub) => match sub {
+            ProjectCommands::New {
+                solution_id,
+                id,
+                title,
+                purpose,
+            } => commands::project::new(
+                &repo,
+                commands::project::NewArgs {
+                    solution_id,
+                    id,
+                    title,
+                    purpose,
+                },
+            ),
+            ProjectCommands::List { solution_id } => commands::project::list(&repo, &solution_id),
+            ProjectCommands::Show { id } => commands::project::show(&repo, &id),
+            ProjectCommands::Edit { id, title, purpose } => commands::project::edit(
+                &repo,
+                commands::project::EditArgs { id, title, purpose },
+            ),
+            ProjectCommands::Activate { id } => commands::project::activate(&repo, &id),
+        },
+
+        Commands::Component(sub) => match sub {
+            ComponentCommands::New {
+                project_id,
+                id,
+                title,
+                purpose,
+            } => commands::component::new(
+                &repo,
+                commands::component::NewArgs {
+                    project_id,
+                    id,
+                    title,
+                    purpose,
+                },
+            ),
+            ComponentCommands::List { project_id } => {
+                commands::component::list(&repo, &project_id)
+            }
+            ComponentCommands::Show { id } => commands::component::show(&repo, &id),
+            ComponentCommands::Edit { id, title, purpose } => commands::component::edit(
+                &repo,
+                commands::component::EditArgs { id, title, purpose },
+            ),
+            ComponentCommands::Activate { id } => commands::component::activate(&repo, &id),
+        },
+
         Commands::Feature(sub) => match sub {
             FeatureCommands::New {
                 id,
+                component,
                 title,
                 purpose,
                 outcomes,
@@ -76,6 +142,7 @@ fn run(cli: Cli) -> Result<()> {
                 &repo,
                 commands::feature::NewArgs {
                     id,
+                    component_id: component,
                     title,
                     purpose,
                     outcomes,

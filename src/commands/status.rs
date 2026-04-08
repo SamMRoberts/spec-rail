@@ -13,14 +13,24 @@ pub fn run(repo: &Repository) -> Result<()> {
     println!("Default agent: {}", config.default_agent);
     println!();
 
-    // Active feature/outcome
+    let active_solution = state.active_solution.as_deref().unwrap_or("(none)");
+    let active_project = state.active_project.as_deref().unwrap_or("(none)");
+    let active_component = state.active_component.as_deref().unwrap_or("(none)");
+    println!("Active solution:  {active_solution}");
+    println!("Active project:   {active_project}");
+    println!("Active component: {active_component}");
+
     match &state.active_feature {
-        None => println!("Active feature: (none)"),
+        None => println!("Active feature:   (none)"),
         Some(fid) => {
-            println!("Active feature: {fid}");
+            println!("Active feature:   {fid}");
             if let Ok(feature) = repo.load_feature(fid) {
-                println!("  Title:  {}", feature.title);
-                println!("  Status: {:?}", feature.status);
+                println!("  Title:     {}", feature.title);
+                println!(
+                    "  Hierarchy: {}/{}/{}",
+                    feature.solution_id, feature.project_id, feature.component_id
+                );
+                println!("  Status:    {:?}", feature.status);
             }
         }
     }
@@ -40,6 +50,20 @@ pub fn run(repo: &Repository) -> Result<()> {
 
     println!();
 
+    let solutions = repo.list_solutions()?;
+    let projects: Vec<_> = solutions
+        .iter()
+        .flat_map(|solution| repo.list_projects(&solution.id).unwrap_or_default())
+        .collect();
+    let components: Vec<_> = projects
+        .iter()
+        .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
+        .collect();
+
+    println!("Solutions:  {}", solutions.len());
+    println!("Projects:   {}", projects.len());
+    println!("Components: {}", components.len());
+
     // Features summary
     let features = repo.list_features()?;
     println!("Features: {}", features.len());
@@ -51,7 +75,10 @@ pub fn run(repo: &Repository) -> Result<()> {
             .filter(|o| o.status == crate::core::models::OutcomeStatus::Verified)
             .count();
         println!(
-            "  [{status:<8}] {} — {}/{} outcomes verified",
+            "  [{status:<8}] {}/{}/{}:{} — {}/{} outcomes verified",
+            f.solution_id,
+            f.project_id,
+            f.component_id,
             f.id,
             verified,
             outcomes.len()
