@@ -769,6 +769,7 @@ fn outcome_has_successful_implement(
 
 fn feature_implement_status_payload(
     outcomes: &[OutcomeSpec],
+    manifest: &TestManifest,
     implementation_results: &HashMap<(String, String), bool>,
 ) -> Value {
     if outcomes.is_empty() {
@@ -804,7 +805,51 @@ fn feature_implement_status_payload(
         })
         .count();
 
+    let outcomes_without_required_tests = outcomes
+        .iter()
+        .filter(|outcome| build_outcome_test_review(outcome, manifest).required_test_count == 0)
+        .count();
+    let outcomes_missing_required_test_links = outcomes
+        .iter()
+        .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_tests.is_empty())
+        .count();
+
     if outstanding_count == 0 {
+        if outcomes_without_required_tests > 0 || outcomes_missing_required_test_links > 0 {
+            let mut blockers: Vec<String> = Vec::new();
+            if outcomes_without_required_tests > 0 {
+                blockers.push(format!(
+                    "{} outcome{} missing required test path references",
+                    outcomes_without_required_tests,
+                    if outcomes_without_required_tests == 1 {
+                        " is"
+                    } else {
+                        "s are"
+                    }
+                ));
+            }
+            if outcomes_missing_required_test_links > 0 {
+                blockers.push(format!(
+                    "{} outcome{} missing registered test entries for one or more required test paths",
+                    outcomes_missing_required_test_links,
+                    if outcomes_missing_required_test_links == 1 {
+                        " is"
+                    } else {
+                        "s are"
+                    }
+                ));
+            }
+
+            return status_indicator_payload(
+                "warning",
+                "Needed",
+                format!(
+                    "Implement cannot be marked complete yet: {}.",
+                    blockers.join("; ")
+                ),
+            );
+        }
+
         return status_indicator_payload(
             "success",
             "Done",
@@ -952,7 +997,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 .iter()
                 .filter(|outcome| outcome.status == crate::core::models::OutcomeStatus::Active)
                 .count();
-            let implement_status = feature_implement_status_payload(&outcomes, &implementation_results);
+            let implement_status = feature_implement_status_payload(&outcomes, &manifest, &implementation_results);
             let verify_status = feature_verify_status_payload(&outcomes, &implementation_results);
             json!({
                 "id": feature.id,
@@ -2898,6 +2943,7 @@ fn jsonrpc_error(id: Value, code: i64, message: impl Into<String>) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::models::{TestKind, TestStatus};
     use std::io::Cursor;
 
     #[test]
@@ -3055,5 +3101,63 @@ mod tests {
             .expect("message should write");
 
         assert_eq!(String::from_utf8(output).unwrap(), "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}\n");
+    }
+
+    #[test]
+    fn feature_implement_status_is_not_success_when_required_tests_missing() {
+        let outcomes = vec![OutcomeSpec {
+            id: "outcome-1".to_string(),
+            feature_id: "feature-a".to_string(),
+            title: "Outcome 1".to_string(),
+            goal: "Goal".to_string(),
+            order: 1,
+            prerequisites: vec![],
+            allowed_paths: vec![],
+            forbidden_paths: vec![],
+            required_tests: vec![],
+            status: OutcomeStatus::Verified,
+        }];
+
+        let status = feature_implement_status_payload(
+            &outcomes,
+            &TestManifest::default(),
+            &HashMap::new(),
+        );
+
+        assert_eq!(status["tone"], "warning");
+        assert_eq!(status["label"], "Needed");
+    }
+
+    #[test]
+    fn feature_implement_status_is_success_when_all_required_tests_are_linked() {
+        let outcomes = vec![OutcomeSpec {
+            id: "outcome-1".to_string(),
+            feature_id: "feature-a".to_string(),
+            title: "Outcome 1".to_string(),
+            goal: "Goal".to_string(),
+            order: 1,
+            prerequisites: vec![],
+            allowed_paths: vec![],
+            forbidden_paths: vec![],
+            required_tests: vec!["tests/feature_a/outcome_1.rs".to_string()],
+            status: OutcomeStatus::Verified,
+        }];
+
+        let manifest = TestManifest {
+            tests: vec![TestSpec {
+                id: "feature-a-outcome-1-has-required-test".to_string(),
+                feature_id: "feature-a".to_string(),
+                outcome_id: "outcome-1".to_string(),
+                path: "tests/feature_a/outcome_1.rs".to_string(),
+                purpose_refs: vec![],
+                kind: TestKind::Unit,
+                status: TestStatus::Written,
+            }],
+        };
+
+        let status = feature_implement_status_payload(&outcomes, &manifest, &HashMap::new());
+
+        assert_eq!(status["tone"], "success");
+        assert_eq!(status["label"], "Done");
     }
 }
