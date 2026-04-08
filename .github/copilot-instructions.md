@@ -17,40 +17,41 @@ For a first pass, read these files in order:
 ## Repository layout
 
 - `src/commands/`: command handlers
-- `src/core/`: config, repository access, state, ledger, models
+- `src/core/`: config, repository access, database (SQLite), ledger, models
 - `src/policy/`: outcome and manifest validation rules
 - `src/agents/`: adapter layer for `generic-shell`, `copilot`, and `codex`
 - `src/prompts/`: prompt construction for `implement`
 - `src/runtime/`: filesystem and process helpers
 - `src/mcp.rs`: stdio MCP server (`specrail mcp-server`)
 - `.github/plugin/`: installable Copilot CLI plugin (`.mcp.json` + skills)
+- `.github/agents/specrail.agent.md`: repo-aware VS Code workspace agent
 - `tests/`: integration tests using `assert_cmd`, `tempfile`, and `predicates`
 
 Generated project state lives under `.specrail/`:
 
-- `.specrail/project.yaml`
-- `.specrail/features/*.yaml`
-- `.specrail/outcomes/<feature>/*.yaml`
-- `.specrail/tests/manifest.yaml`
-- `.specrail/state/current.yaml`
-- `.specrail/state/ledger.jsonl`
+- `.specrail/project.yaml` — human-editable project config
+- `.specrail/specrail.db` — SQLite database (solutions, projects, components, features, outcomes, tests, active state)
+- `.specrail/state/ledger.jsonl` — append-only audit log
 
-Treat `src/core/repository.rs` as the source of truth for where project files belong.
+Treat `src/core/repository.rs` as the source of truth for where project files belong and `src/core/database.rs` for the SQLite schema.
 
 ## Normal workflow
 
 The intended CLI flow is:
 
 1. `specrail init` (pass `--no-wizard` to skip the interactive onboarding walkthrough)
-2. `specrail feature new ...`
-3. `specrail outcome new ...`
-4. `specrail test add ...`
-5. `specrail test set-status <id> written`
-6. `specrail feature activate <id>`
-7. `specrail outcome activate <feature> <outcome>`
-8. `specrail implement`
-9. `specrail verify`
-10. `specrail advance`
+   - The wizard creates a solution, project, and component before features
+   - `--no-wizard` seeds `default-solution`, `default-project`, and `default-component` automatically
+2. *(optional)* `specrail solution new ...` / `specrail project new ...` / `specrail component new ...`
+3. `specrail feature new ...`
+4. `specrail outcome new ...`
+5. `specrail test add ...`
+6. `specrail test set-status <id> written`
+7. `specrail feature activate <id>`
+8. `specrail outcome activate <feature> <outcome>`
+9. `specrail implement`
+10. `specrail verify`
+11. `specrail advance`
 
 Additional commands:
 
@@ -69,9 +70,9 @@ Important gating rules:
 ## Coding conventions
 
 - Use `anyhow::Result` with contextual errors via `.context(...)` / `.with_context(...)`.
-- Persisted data is serialized with `serde_yaml`; ledger entries are JSON Lines in `ledger.jsonl`.
+- Domain data (features, outcomes, tests, active state) is stored in SQLite via `src/core/database.rs`; `project.yaml` is still YAML and `ledger.jsonl` is JSON Lines.
 - Keep changes small and aligned with the existing module layout.
-- Reuse `Repository` helpers instead of hardcoding `.specrail` paths.
+- Reuse `Repository` helpers instead of hardcoding `.specrail` paths or calling `Database` directly.
 - Integration tests are preferred over unit tests in this repo; follow the existing `tests/*.rs` pattern with `Command::cargo_bin("specrail")` and `TempDir`.
 
 ## Validation commands
@@ -106,8 +107,8 @@ These commands pass in the current repository state and are the baseline validat
 
 ## Practical pitfalls
 
-- `.specrail/state/current.yaml` only tracks one active feature and one active outcome.
-- Tests are registered in the manifest; they are not auto-discovered from the filesystem.
+- Active state (active feature, active outcome, active component/project/solution) is stored in `specrail.db`, not in a `current.yaml` file.
+- Tests are registered in the database manifest; they are not auto-discovered from the filesystem.
 - `test add` records a path but does not verify that the file exists.
 - `prerequisites`, `dependencies`, and `required_tests` are modeled but not meaningfully enforced yet; do not assume they drive execution.
 - `ledger.jsonl` is append-only audit history, not the primary state store.
