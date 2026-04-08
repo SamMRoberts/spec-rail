@@ -183,17 +183,31 @@ fn prompt_outcome<R: BufRead, W: Write>(
         return Ok(None);
     };
 
+    writeln!(writer, "  title  — short label shown in `outcome list` and status")?;
     let title = prompt_required(reader, writer, "Outcome title: ")?;
+
+    writeln!(writer, "  goal   — acceptance criterion: what 'done' looks like for this outcome")?;
     let goal = prompt_required(reader, writer, "Outcome goal: ")?;
+
+    writeln!(writer, "  order  — sequence position; `specrail advance` steps through outcomes in this order")?;
     let order = prompt_u32_with_default(
         reader,
         writer,
         &format!("Outcome order [{default_order}]: "),
         default_order,
     )?;
+
+    writeln!(writer, "  prereq — outcome IDs that must be verified before this one can be activated")?;
     let prerequisites = collect_list(reader, writer, "Outcome prerequisite")?;
+
+    writeln!(writer, "  allow  — glob paths the AI agent may modify (leave blank to allow all paths)")?;
     let allowed_paths = collect_list(reader, writer, "Allowed path")?;
+
+    writeln!(writer, "  forbid — glob paths the AI agent must NOT touch (e.g. unrelated modules)")?;
     let forbidden_paths = collect_list(reader, writer, "Forbidden path")?;
+
+    writeln!(writer, "  test   — test file paths for AI generation via `specrail test generate`")?;
+    writeln!(writer, "           (you can also add tests later with `specrail test add`)")?;
     let required_tests = collect_list(reader, writer, "Required test path")?;
 
     Ok(Some(outcome::NewArgs {

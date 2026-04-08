@@ -11,9 +11,10 @@ use serde_json::{json, Map, Value};
 
 use crate::core::{
     ledger::Ledger,
-    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestStatus},
+    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
     repository::Repository,
 };
+use crate::commands;
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
 const UI_EXTENSION_NAME: &str = "io.modelcontextprotocol/ui";
@@ -254,6 +255,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_feature_show" => tool_feature_show(arguments),
         "specrail_outcome_list" => tool_outcome_list(arguments),
         "specrail_outcome_show" => tool_outcome_show(arguments),
+        "specrail_outcome_test_review" => tool_outcome_test_review(arguments),
         "specrail_test_list" => tool_test_list(arguments),
         "specrail_trace" => tool_trace(arguments),
         "specrail_init" => tool_init(arguments),
@@ -263,7 +265,10 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_outcome_new" => tool_outcome_new(arguments),
         "specrail_outcome_activate" => tool_outcome_activate(arguments),
         "specrail_outcome_edit" => tool_outcome_edit(arguments),
+        "specrail_outcome_add_required_test" => tool_outcome_add_required_test(arguments),
+        "specrail_outcome_unverify" => tool_outcome_unverify(arguments),
         "specrail_test_add" => tool_test_add(arguments),
+        "specrail_test_suggest" => tool_test_suggest(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
         "specrail_implement" => tool_implement(arguments),
@@ -291,6 +296,93 @@ struct OutcomeWorkflowSnapshot {
     outcome: OutcomeSpec,
     test_count: usize,
     planned_test_ids: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct OutcomeTestReview {
+    feature_id: String,
+    outcome_id: String,
+    required_test_paths: Vec<String>,
+    related_tests: Vec<TestSpec>,
+    missing_required_tests: Vec<String>,
+    planned_required_tests: Vec<String>,
+    undeclared_tests: Vec<TestSpec>,
+    suggested_test_paths: Vec<String>,
+    openable_test_paths: Vec<String>,
+    required_test_count: usize,
+    related_test_count: usize,
+    has_no_required_tests: bool,
+    has_no_related_tests: bool,
+    has_gaps: bool,
+    needs_generation: bool,
+}
+
+fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> OutcomeTestReview {
+    let required_test_paths = outcome.required_tests.clone();
+    let related_tests: Vec<TestSpec> = manifest
+        .tests
+        .iter()
+        .filter(|test| test.feature_id == outcome.feature_id && test.outcome_id == outcome.id)
+        .cloned()
+        .collect();
+
+    let missing_required_tests: Vec<String> = required_test_paths
+        .iter()
+        .filter(|path| !related_tests.iter().any(|test| test.path == **path))
+        .cloned()
+        .collect();
+
+    let planned_required_tests: Vec<String> = required_test_paths
+        .iter()
+        .filter(|path| {
+            related_tests
+                .iter()
+                .any(|test| test.path == **path && test.status == TestStatus::Planned)
+        })
+        .cloned()
+        .collect();
+
+    let undeclared_tests: Vec<TestSpec> = related_tests
+        .iter()
+        .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
+        .cloned()
+        .collect();
+
+    let mut suggested_test_paths = missing_required_tests.clone();
+    for path in &planned_required_tests {
+        if !suggested_test_paths.contains(path) {
+            suggested_test_paths.push(path.clone());
+        }
+    }
+
+    let openable_test_paths = related_tests
+        .iter()
+        .map(|test| test.path.clone())
+        .collect();
+    let has_no_required_tests = required_test_paths.is_empty();
+    let has_no_related_tests = related_tests.is_empty();
+    let has_gaps = has_no_required_tests
+        || has_no_related_tests
+        || !missing_required_tests.is_empty()
+        || !planned_required_tests.is_empty();
+
+    OutcomeTestReview {
+        feature_id: outcome.feature_id.clone(),
+        outcome_id: outcome.id.clone(),
+        required_test_count: required_test_paths.len(),
+        related_test_count: related_tests.len(),
+        required_test_paths,
+        related_tests,
+        missing_required_tests,
+        planned_required_tests,
+        undeclared_tests,
+        suggested_test_paths: suggested_test_paths.clone(),
+        openable_test_paths,
+        has_no_required_tests,
+        has_no_related_tests,
+        has_gaps,
+        needs_generation: !suggested_test_paths.is_empty(),
+    }
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -464,47 +556,42 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         let outcome_summaries: Vec<Value> = outcomes
             .iter()
             .map(|outcome| {
-                let test_count = manifest
-                    .tests
+                let review = build_outcome_test_review(outcome, &manifest);
+                let test_count = review.related_test_count;
+                let planned_test_count = review.planned_required_tests.len();
+                let passing_test_count = review
+                    .related_tests
                     .iter()
-                    .filter(|t| t.feature_id == feature_id && t.outcome_id == outcome.id)
-                    .count();
-                let planned_test_count = manifest
-                    .tests
-                    .iter()
-                    .filter(|t| {
-                        t.feature_id == feature_id
-                            && t.outcome_id == outcome.id
-                            && t.status == TestStatus::Planned
-                    })
-                    .count();
-                let passing_test_count = manifest
-                    .tests
-                    .iter()
-                    .filter(|t| {
-                        t.feature_id == feature_id
-                            && t.outcome_id == outcome.id
-                            && t.status == TestStatus::Passing
-                    })
+                    .filter(|test| test.status == TestStatus::Passing)
                     .count();
                 json!({
                     "id": outcome.id,
                     "title": outcome.title,
+                    "goal": outcome.goal,
                     "status": outcome.status,
                     "order": outcome.order,
                     "isActive": active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                     "testCount": test_count,
                     "plannedTestCount": planned_test_count,
-                    "passingTestCount": passing_test_count
+                    "passingTestCount": passing_test_count,
+                    "requiredTestCount": review.required_test_count,
+                    "missingRequiredTestCount": review.missing_required_tests.len(),
+                    "undeclaredTestCount": review.undeclared_tests.len(),
+                    "hasTestGaps": review.has_gaps,
+                    "needsTestGeneration": review.needs_generation,
+                    "testReview": review,
+                    "availableActions": outcome_available_actions(
+                        &outcome.status,
+                        active_outcome_id.as_deref() == Some(outcome.id.as_str()),
+                        test_count,
+                        review.needs_generation || review.has_no_required_tests,
+                    )
                 })
             })
             .collect();
 
-        let count = outcome_summaries.len();
         return Ok(feature_navigate_payload(
-            format!(
-                "Feature '{feature_id}' selected. Found {count} outcome(s). Select an outcome with specrail_outcome_activate or create a new one with specrail_outcome_new."
-            ),
+            String::new(),
             Some(json!({
                 "mode": "outcome_selection",
                 "activeFeatureId": active_feature_id,
@@ -518,17 +605,26 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "selectOutcomeTool": "specrail_outcome_activate",
                     "createOutcomeTool": "specrail_outcome_new",
                     "editOutcomeTool": "specrail_outcome_edit",
-                    "activateOutcomeTool": "specrail_outcome_activate"
+                    "activateOutcomeTool": "specrail_outcome_activate",
+                    "unverifyOutcomeTool": "specrail_outcome_unverify",
+                    "implementTool": "specrail_implement",
+                    "verifyTool": "specrail_verify",
+                    "advanceTool": "specrail_advance",
+                    "testListTool": "specrail_test_list",
+                    "testReviewTool": "specrail_outcome_test_review",
+                    "testSuggestTool": "specrail_test_suggest",
+                    "testGenerateTool": "specrail_test_generate",
+                    "featureShowTool": "specrail_feature_show",
+                    "outcomeShowTool": "specrail_outcome_show",
+                    "statusTool": "specrail_status",
+                    "traceTool": "specrail_trace"
                 }
             })),
         ));
     }
 
-    let count = feature_summaries.len();
     Ok(feature_navigate_payload(
-        format!(
-            "Found {count} feature(s). Select a feature by calling specrail_feature_navigate with feature_id, or create a new feature with specrail_feature_new."
-        ),
+        String::new(),
         Some(json!({
             "mode": "feature_selection",
             "activeFeatureId": active_feature_id,
@@ -539,10 +635,48 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "selectFeatureTool": "specrail_feature_navigate",
                 "createFeatureTool": "specrail_feature_new",
                 "editFeatureTool": "specrail_feature_edit",
-                "activateFeatureTool": "specrail_feature_activate"
+                "activateFeatureTool": "specrail_feature_activate",
+                "statusTool": "specrail_status",
+                "traceTool": "specrail_trace"
             }
         })),
     ))
+}
+
+fn outcome_available_actions(
+    status: &OutcomeStatus,
+    is_active: bool,
+    test_count: usize,
+    needs_test_generation: bool,
+) -> Vec<&'static str> {
+    let mut actions = vec!["edit", "show"];
+
+    if test_count > 0 {
+        actions.push("tests");
+    }
+
+    if needs_test_generation && !matches!(status, OutcomeStatus::Skipped) {
+        actions.push("generate_tests");
+    }
+
+    if !matches!(status, OutcomeStatus::Verified | OutcomeStatus::Skipped) && !is_active {
+        actions.push("activate");
+    }
+
+    if is_active {
+        actions.push("implement");
+        actions.push("verify");
+    }
+
+    if *status == OutcomeStatus::Verified && is_active {
+        actions.push("advance");
+    }
+
+    if matches!(status, OutcomeStatus::Verified | OutcomeStatus::Failed | OutcomeStatus::Skipped) {
+        actions.push("unverify");
+    }
+
+    actions
 }
 
 fn resource_definitions() -> Vec<Value> {
@@ -621,6 +755,22 @@ fn tool_outcome_show(arguments: &Map<String, Value>) -> Result<Value> {
     Ok(tool_success_payload(
         format!("Loaded outcome '{outcome_id}' for feature '{feature_id}'."),
         Some(json!({ "outcome": outcome })),
+    ))
+}
+
+fn tool_outcome_test_review(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let outcome = repo.load_outcome(&feature_id, &outcome_id)?;
+    let manifest = repo.load_manifest()?;
+    let review = build_outcome_test_review(&outcome, &manifest);
+
+    Ok(tool_success_payload(
+        format!(
+            "Reviewed tests for outcome '{outcome_id}' in feature '{feature_id}'."
+        ),
+        Some(json!({ "outcome": outcome, "review": review })),
     ))
 }
 
@@ -827,6 +977,48 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     run_cli_tool(&cwd, args)
 }
 
+fn tool_outcome_unverify(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let outcome = crate::commands::outcome::reset_status_to_pending(&repo, &feature_id, &outcome_id)?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Outcome '{outcome_id}' for feature '{feature_id}' reset to pending."
+        ),
+        Some(json!({ "outcome": outcome })),
+    ))
+}
+
+fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let path = require_string(arguments, "path")?;
+    let added = crate::commands::outcome::ensure_required_test(&repo, &feature_id, &outcome_id, &path)?;
+
+    Ok(tool_success_payload(
+        if added {
+            format!(
+                "Added '{}' to required_tests for outcome '{}:{}'.",
+                path, feature_id, outcome_id
+            )
+        } else {
+            format!(
+                "'{}' is already listed in required_tests for outcome '{}:{}'.",
+                path, feature_id, outcome_id
+            )
+        },
+        Some(json!({
+            "feature_id": feature_id,
+            "outcome_id": outcome_id,
+            "path": path,
+            "added": added,
+        })),
+    ))
+}
+
 fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let id = require_string(arguments, "id")?;
@@ -856,13 +1048,58 @@ fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+
+    if feature_id.is_some() || outcome_id.is_some() {
+        let repo = discover_repo(arguments)?;
+        let summary = commands::test::generate_scoped(
+            &repo,
+            feature_id.as_deref(),
+            outcome_id.as_deref(),
+            agent.as_deref(),
+        )?;
+
+        return Ok(tool_success_payload(
+            format!(
+                "Generated {} test file(s) for {} with agent '{}'.",
+                summary.generated_count, summary.scope_label, summary.agent
+            ),
+            Some(json!({ "generation": summary })),
+        ));
+    }
+
     let cwd = resolve_cwd(arguments)?;
     let mut args = vec!["test".to_string(), "generate".to_string()];
-    if let Some(agent) = optional_string(arguments, "agent") {
+    if let Some(agent) = agent {
         args.push("--agent".to_string());
         args.push(agent);
     }
     run_cli_tool(&cwd, args)
+}
+
+fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+    let preview = commands::test::preview(
+        &repo,
+        feature_id.as_deref(),
+        outcome_id.as_deref(),
+        agent.as_deref(),
+    )?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Previewed {} suggested test file(s) with agent '{}' for {}.",
+            preview.suggestions.len(),
+            preview.agent,
+            preview.scope_label
+        ),
+        Some(json!({ "preview": preview })),
+    ))
 }
 
 fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1460,6 +1697,20 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_outcome_test_review",
+            "title": "Review Outcome Tests",
+            "description": "Review one outcome's test health. Returns related manifest tests, missing required_tests paths, planned required tests, undeclared tests, and suggested test paths to add or generate.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier." }
+                },
+                "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
             "name": "specrail_test_list",
             "title": "List Tests",
             "description": "List tests from the specrail manifest. Filter by feature_id and/or outcome_id. Returns tests with their status (planned, written, passing, failing). Use to check whether tests are ready before implementation.",
@@ -1469,6 +1720,20 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string" },
                     "feature_id": { "type": "string", "description": "Filter to tests for this feature." },
                     "outcome_id": { "type": "string", "description": "Filter to tests for this outcome (requires feature_id)." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_test_suggest",
+            "title": "Preview Test Suggestions",
+            "description": "Preview agent-generated required test suggestions without writing files or changing the manifest. Can be scoped to one feature and outcome to inspect missing test ideas safely before generation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature identifier to scope preview." },
+                    "outcome_id": { "type": "string", "description": "Optional outcome identifier within feature_id." },
+                    "agent": { "type": "string", "description": "Optional agent override for previewing suggestions." }
                 }
             }
         }),
@@ -1604,6 +1869,35 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_outcome_unverify",
+            "title": "Reset Outcome To Pending",
+            "description": "Reset a verified, failed, or skipped outcome back to pending without changing its title, goal, or path constraints. Use this when you want to reopen an outcome for more implementation work.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier to reset." }
+                },
+                "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_add_required_test",
+            "title": "Add Required Test",
+            "description": "Add an existing related test path into the outcome's required_tests list so the outcome YAML and manifest stay aligned.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string" },
+                    "outcome_id": { "type": "string" },
+                    "path": { "type": "string", "description": "Related test path to add into required_tests." }
+                },
+                "required": ["feature_id", "outcome_id", "path"]
+            }
+        }),
+        json!({
             "name": "specrail_test_add",
             "title": "Add Test",
             "description": "Register a test in the specrail manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
@@ -1624,11 +1918,13 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned tests in the active outcome. After generating, set test status to 'written' with specrail_test_set_status.",
+            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with no required_tests yet, the agent can bootstrap an initial test path and specrail will persist it back into the outcome YAML.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature ID to scope generation to a specific outcome." },
+                    "outcome_id": { "type": "string", "description": "Optional outcome ID to scope generation to a specific outcome. Requires feature_id." },
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }

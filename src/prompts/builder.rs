@@ -123,11 +123,15 @@ pub fn build_test_generation_prompt(
     config: &ProjectConfig,
     features: &[(FeatureSpec, Vec<OutcomeSpec>)],
     manifest: &TestManifest,
+    allow_path_discovery: bool,
 ) -> anyhow::Result<String> {
     let mut prompt = String::new();
 
     prompt.push_str("# specrail - Test Generation Task\n\n");
     prompt.push_str("Generate the required test files declared in outcome YAML.\n");
+    if allow_path_discovery {
+        prompt.push_str("If the scoped outcome has no required_tests yet, choose exactly one canonical test path for it and include that path in the response.\n");
+    }
     prompt.push_str("Return JSON only. Do not wrap the JSON in markdown fences.\n\n");
 
     prompt.push_str("## Response format\n");
@@ -147,11 +151,20 @@ pub fn build_test_generation_prompt(
 
     prompt.push_str("## Rules\n");
     prompt.push_str("1. Generate exactly one test object for each required test path declared in outcome.required_tests.\n");
-    prompt.push_str("2. Do not invent extra test paths.\n");
-    prompt.push_str("3. Use the declared feature_id and outcome_id for each generated test.\n");
-    prompt.push_str("4. The content must be a complete file that can be written directly to disk.\n");
-    prompt.push_str("5. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
-    prompt.push_str("6. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+    if allow_path_discovery {
+        prompt.push_str("2. If the scoped outcome has no required_tests yet, generate exactly one focused test object for that outcome and choose a canonical path for it.\n");
+        prompt.push_str("3. Do not invent extra test paths beyond declared required_tests, except for that single bootstrap test when no required_tests exist.\n");
+        prompt.push_str("4. Use the declared feature_id and outcome_id for each generated test.\n");
+        prompt.push_str("5. The content must be a complete file that can be written directly to disk.\n");
+        prompt.push_str("6. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
+        prompt.push_str("7. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+    } else {
+        prompt.push_str("2. Do not invent extra test paths.\n");
+        prompt.push_str("3. Use the declared feature_id and outcome_id for each generated test.\n");
+        prompt.push_str("4. The content must be a complete file that can be written directly to disk.\n");
+        prompt.push_str("5. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
+        prompt.push_str("6. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+    }
 
     prompt.push_str("## Project YAML\n```yaml\n");
     prompt.push_str(&serde_yaml::to_string(config)?);

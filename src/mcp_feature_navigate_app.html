@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,124 +8,1500 @@
     <style>
         :root {
             color-scheme: light dark;
-            --bg: light-dark(#f5f5f5, #1e1e1e);
-            --bg-card: light-dark(#ffffff, #252526);
-            --bg-card-hover: light-dark(#f9f9f9, #2d2d2d);
-            --bg-section: light-dark(#fafafa, #1e1e1e);
-            --fg: light-dark(#1e1e1e, #cccccc);
-            --fg-muted: light-dark(#6e6e6e, #858585);
-            --fg-dim: light-dark(#999, #555);
-            --border: light-dark(#e0e0e0, #3c3c3c);
-            --border-focus: light-dark(#0078d4, #3794ff);
-            --accent: light-dark(#0078d4, #3794ff);
-            --active-bg: light-dark(#fff8e7, #2b2000);
-            --active-border: light-dark(#f0a500, #f0a500);
-            --active-fg: light-dark(#7a5200, #f0c050);
-            --verified-bg: light-dark(#e8f5e9, #1a3320);
-            --verified-border: light-dark(#4caf50, #4caf50);
-            --verified-fg: light-dark(#2e7d32, #81c784);
-            --failed-bg: light-dark(#ffebee, #3b0000);
-            --failed-border: light-dark(#f44336, #f44336);
-            --failed-fg: light-dark(#c62828, #ef9a9a);
-            --pending-bg: light-dark(#f5f5f5, #252526);
-            --pending-border: light-dark(#bdbdbd, #555);
-            --pending-fg: light-dark(#555, #888);
-            --skipped-fg: light-dark(#aaa, #555);
-            --progress-track: light-dark(#e0e0e0, #3c3c3c);
-            --progress-fill: light-dark(#4caf50, #4caf50);
+            --bg: light-dark(#edf2f8, #0d1118);
+            --bg-card: light-dark(rgba(255, 255, 255, 0.82), rgba(20, 27, 38, 0.9));
+            --bg-card-hover: light-dark(rgba(255, 255, 255, 0.97), rgba(30, 38, 52, 0.96));
+            --bg-section: light-dark(rgba(248, 250, 255, 0.88), rgba(14, 19, 28, 0.84));
+            --fg: light-dark(#0f172a, #e5edf7);
+            --fg-muted: light-dark(#64748b, #9da9ba);
+            --fg-dim: light-dark(#94a3b8, #738094);
+            --border: light-dark(rgba(148, 163, 184, 0.28), rgba(130, 145, 166, 0.2));
+            --border-focus: light-dark(#3b82f6, #60a5fa);
+            --accent: light-dark(#3563e9, #6ea8ff);
+            --accent-soft: light-dark(rgba(231, 240, 255, 0.92), rgba(29, 43, 66, 0.9));
+            --active-bg: light-dark(rgba(255, 248, 228, 0.92), rgba(48, 35, 6, 0.86));
+            --active-border: light-dark(#f59e0b, #f59e0b);
+            --active-fg: light-dark(#92400e, #fbbf24);
+            --verified-bg: light-dark(rgba(236, 253, 245, 0.94), rgba(6, 42, 24, 0.88));
+            --verified-border: light-dark(#22c55e, #22c55e);
+            --verified-fg: light-dark(#166534, #4ade80);
+            --failed-bg: light-dark(rgba(255, 241, 242, 0.94), rgba(63, 11, 18, 0.88));
+            --failed-border: light-dark(#ef4444, #ef4444);
+            --failed-fg: light-dark(#991b1b, #fca5a5);
+            --pending-bg: light-dark(rgba(248, 250, 252, 0.94), rgba(29, 35, 46, 0.92));
+            --pending-border: light-dark(#cbd5e1, #4b5563);
+            --pending-fg: light-dark(#64748b, #9ca3af);
+            --progress-track: light-dark(rgba(203, 213, 225, 0.72), rgba(51, 65, 85, 0.9));
+            --progress-fill: light-dark(#22c55e, #22c55e);
+            --hero-start: light-dark(rgba(255, 255, 255, 0.95), rgba(21, 28, 39, 0.98));
+            --hero-end: light-dark(rgba(238, 244, 255, 0.88), rgba(14, 19, 29, 0.92));
+            --hero-outline: light-dark(rgba(148, 163, 184, 0.22), rgba(151, 173, 201, 0.15));
+            --hero-glow: light-dark(rgba(53, 99, 233, 0.22), rgba(110, 168, 255, 0.18));
+            --hero-sheen: light-dark(rgba(34, 197, 94, 0.12), rgba(74, 222, 128, 0.1));
+            --hero-figure-a: light-dark(#dbeafe, #1f3b63);
+            --hero-figure-b: light-dark(#bfdbfe, #305789);
+            --hero-figure-c: light-dark(#ffffff, #0f1723);
+            --shadow-sm: light-dark(0 10px 24px rgba(15, 23, 42, 0.08), 0 12px 30px rgba(2, 6, 23, 0.45));
+            --shadow-lg: light-dark(0 24px 70px rgba(15, 23, 42, 0.12), 0 28px 80px rgba(2, 6, 23, 0.55));
+            --console-bg: #0f1117;
+            --console-border-top: #2a2a35;
+            --console-toolbar-bg: #161620;
+            --console-fg: #c8cdd8;
+            --console-fg-muted: #4a4d5a;
+            --console-ts: #3d4050;
+            --console-info: #60a5fa;
+            --console-success: #4ade80;
+            --console-error: #f87171;
+            --console-action: #c084fc;
+            --console-warn: #fbbf24;
             --radius: 6px;
-            --radius-lg: 10px;
+            --radius-lg: 16px;
             --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+            --font-mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+            --console-height: 126px;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: var(--font-ui); font-size: 13px; background: var(--bg); color: var(--fg); line-height: 1.5; }
-        .app { max-width: 680px; margin: 0 auto; padding: 12px 14px 24px; }
-        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-        .header-logo { font-size: 18px; }
-        .header-title { font-size: 15px; font-weight: 600; }
-        .header-actions { margin-left: auto; display: flex; gap: 6px; }
-        .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-muted); margin-bottom: 12px; }
-        .breadcrumb-item.clickable { color: var(--accent); cursor: pointer; }
-        .breadcrumb-item.clickable:hover { text-decoration: underline; }
-        .breadcrumb-sep { color: var(--fg-dim); }
-        .dashboard { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-        .stat-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
-        .stat-chip strong { color: var(--fg); font-weight: 600; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); }
-        .btn { appearance: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--fg); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; transition: background 120ms, border-color 120ms; white-space: nowrap; }
-        .btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); }
-        .btn:disabled { opacity: 0.55; cursor: default; pointer-events: none; }
-        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn-primary:hover { filter: brightness(0.88); }
-        .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); }
-        .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border); color: var(--fg); }
-        .btn-sm { padding: 3px 8px; font-size: 11px; }
-        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-        .feature-grid { display: grid; gap: 8px; margin-bottom: 10px; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; transition: border-color 120ms; }
-        .card:hover { border-color: var(--accent); }
-        .card.active-card { border-color: var(--active-border); background: var(--active-bg); }
-        .card-row { display: flex; align-items: flex-start; gap: 10px; }
-        .card-body { flex: 1; min-width: 0; }
-        .card-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 2px; }
-        .card-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-meta { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
-        .card-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
-        .progress-wrap { margin-top: 8px; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-muted); margin-bottom: 3px; }
-        .progress-bar { height: 5px; background: var(--progress-track); border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--progress-fill); border-radius: 3px; transition: width 300ms; }
-        .badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
-        .badge-active { background: var(--active-bg); border-color: var(--active-border); color: var(--active-fg); }
-        .badge-verified { background: var(--verified-bg); border-color: var(--verified-border); color: var(--verified-fg); }
-        .badge-failed { background: var(--failed-bg); border-color: var(--failed-border); color: var(--failed-fg); }
-        .badge-pending { background: var(--pending-bg); border-color: var(--pending-border); color: var(--pending-fg); }
-        .badge-skipped { background: var(--pending-bg); border-color: var(--pending-border); color: var(--skipped-fg); }
-        .test-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
-        .test-chip { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-section); color: var(--fg-muted); }
-        .test-chip.passing { color: var(--verified-fg); border-color: var(--verified-border); background: var(--verified-bg); }
-        .test-chip.warning { color: var(--active-fg); border-color: var(--active-border); background: var(--active-bg); }
-        .outcome-list { list-style: none; display: grid; gap: 7px; margin-bottom: 10px; }
-        .outcome-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; transition: border-color 120ms; }
-        .outcome-item:hover { border-color: var(--accent); }
-        .outcome-item.active-outcome { border-color: var(--active-border); background: var(--active-bg); }
-        .outcome-item.verified-outcome { border-left: 3px solid var(--verified-border); }
-        .outcome-item.failed-outcome { border-left: 3px solid var(--failed-border); }
-        .outcome-num { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); margin-bottom: 2px; }
-        .outcome-title { font-size: 13px; font-weight: 600; }
-        .outcome-id { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
-        .outcome-row { display: flex; align-items: flex-start; gap: 8px; }
-        .outcome-body { flex: 1; min-width: 0; }
-        .editor { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-        .editor-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
-        .field-grid { display: grid; gap: 9px; }
-        label { display: grid; gap: 4px; font-size: 12px; }
-        label span { font-weight: 600; }
-        input[type="text"], input[type="number"], textarea { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-section); color: var(--fg); padding: 6px 8px; font: inherit; font-size: 12px; transition: border-color 120ms; }
-        input:focus, textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent); }
-        textarea { min-height: 70px; resize: vertical; }
-        .field-hint { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
-        .status-bar { border-radius: var(--radius); padding: 8px 10px; font-size: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--fg-muted); }
-        .status-bar.error { border-color: var(--failed-border); background: var(--failed-bg); color: var(--failed-fg); }
-        .status-bar.success { border-color: var(--verified-border); background: var(--verified-bg); color: var(--verified-fg); }
-        .empty { text-align: center; padding: 28px 16px; color: var(--fg-muted); border: 1px dashed var(--border); border-radius: var(--radius-lg); font-size: 13px; line-height: 1.6; }
-        .empty-icon { font-size: 28px; margin-bottom: 8px; }
-        .empty-title { font-weight: 600; color: var(--fg); margin-bottom: 4px; }
-        @media (max-width: 520px) { .app { padding: 8px 10px 20px; } .dashboard { gap: 5px; } .card-row { flex-direction: column; } }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            font-size: 13px;
+            background:
+                radial-gradient(circle at top left, color-mix(in srgb, var(--hero-glow) 100%, transparent), transparent 32%),
+                radial-gradient(circle at top right, color-mix(in srgb, var(--hero-sheen) 100%, transparent), transparent 28%),
+                var(--bg);
+            color: var(--fg);
+            line-height: 1.5;
+            padding: 12px;
+        }
+
+        /* App shell */
+        .app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 760px;
+            height: 680px;
+            margin: 0 auto;
+            position: relative;
+            isolation: isolate;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 94%, transparent), color-mix(in srgb, var(--bg-section) 92%, transparent));
+            overflow: hidden;
+            border-radius: var(--radius-lg);
+            border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(16px);
+        }
+
+        .app::before,
+        .app::after {
+            content: "";
+            position: absolute;
+            inset: auto auto 0 0;
+            pointer-events: none;
+            z-index: -1;
+            border-radius: 999px;
+            filter: blur(12px);
+            opacity: 0.9;
+        }
+
+        .app::before {
+            width: 180px;
+            height: 180px;
+            background: color-mix(in srgb, var(--hero-glow) 72%, transparent);
+            top: -40px;
+            right: -40px;
+            left: auto;
+        }
+
+        .app::after {
+            width: 150px;
+            height: 150px;
+            background: color-mix(in srgb, var(--hero-sheen) 78%, transparent);
+            bottom: 92px;
+            left: -30px;
+        }
+
+        .app-header {
+            flex-shrink: 0;
+            background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+            backdrop-filter: blur(16px);
+        }
+
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+            padding: 16px 16px 18px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .app-body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .app-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .app-body::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .app-console {
+            flex-shrink: 0;
+            height: var(--console-height);
+            background: var(--console-bg);
+            border-top: 1px solid var(--console-border-top);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px 4px;
+        }
+
+        .header-logo {
+            font-size: 18px;
+            line-height: 1;
+            filter: drop-shadow(0 6px 10px rgba(37, 99, 235, 0.18));
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-tag {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: color-mix(in srgb, var(--accent-soft) 82%, transparent);
+            color: var(--accent);
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--border-focus) 55%, transparent);
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        /* Workflow stepper */
+        .workflow-bar {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px 10px;
+            gap: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .workflow-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .wf-step {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--fg-dim);
+            white-space: nowrap;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .wf-num {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1.5px solid var(--pending-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            background: var(--bg-card);
+            flex-shrink: 0;
+            transition: all 120ms;
+        }
+
+        .wf-step.wf-done .wf-num {
+            background: var(--verified-border);
+            border-color: var(--verified-border);
+            color: #fff;
+        }
+
+        .wf-step.wf-active .wf-num {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+        }
+
+        .wf-step.wf-active .wf-label {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .wf-step.wf-done .wf-label {
+            color: var(--verified-fg);
+        }
+
+        .wf-sep {
+            width: 14px;
+            height: 1.5px;
+            background: var(--pending-border);
+            flex-shrink: 0;
+            margin: 0 2px;
+        }
+
+        .wf-sep.wf-done {
+            background: var(--verified-border);
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--fg-muted);
+            padding: 6px 16px 9px;
+            border-top: 1px solid var(--border);
+        }
+
+        .bc-item.clickable {
+            color: var(--accent);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .bc-item.clickable:hover {
+            text-decoration: underline;
+        }
+
+        .bc-sep {
+            color: var(--fg-dim);
+            font-size: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+            color: var(--fg);
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            padding: 5px 10px;
+            transition: background 80ms, border-color 80ms, opacity 80ms, transform 80ms;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        }
+
+        .btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-focus);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            opacity: 0.85;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            border-color: var(--accent);
+        }
+
+        .btn-success {
+            background: var(--verified-border);
+            border-color: var(--verified-border);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--fg-muted);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border);
+            color: var(--fg);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border-color: transparent;
+            color: var(--failed-fg);
+        }
+
+        .btn-danger:hover {
+            background: var(--failed-bg);
+            border-color: var(--failed-border);
+        }
+
+        .btn-sm {
+            padding: 4px 9px;
+            font-size: 11px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-chip {
+            background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+        }
+
+        .stat-chip strong {
+            color: var(--fg);
+            font-weight: 700;
+        }
+
+        .hero-panel {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 152px;
+            gap: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border-radius: 22px;
+            border: 1px solid var(--hero-outline);
+            background:
+                linear-gradient(145deg, var(--hero-start), var(--hero-end)),
+                radial-gradient(circle at top right, color-mix(in srgb, var(--hero-glow) 70%, transparent), transparent 48%);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hero-panel::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(130deg, transparent 38%, color-mix(in srgb, var(--hero-sheen) 34%, transparent) 100%);
+            pointer-events: none;
+        }
+
+        .hero-copy,
+        .hero-figure {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-copy {
+            min-width: 0;
+        }
+
+        .hero-kicker {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+
+        .hero-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 7px;
+        }
+
+        .hero-title {
+            font-size: 22px;
+            line-height: 1.05;
+            font-weight: 750;
+            letter-spacing: -0.04em;
+            color: var(--fg);
+        }
+
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--border-focus) 36%, transparent);
+            background: color-mix(in srgb, var(--accent-soft) 76%, transparent);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .hero-desc {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--fg-muted);
+            max-width: 52ch;
+        }
+
+        .hero-meta {
+            margin-top: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+            border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+            color: var(--fg-muted);
+            font-size: 11px;
+        }
+
+        .hero-meta::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--verified-border) 70%, var(--accent)));
+            box-shadow: 0 0 0 5px color-mix(in srgb, var(--hero-glow) 55%, transparent);
+            flex-shrink: 0;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .hero-stat {
+            padding: 10px 11px;
+            border-radius: 16px;
+            border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+            background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+            min-width: 0;
+        }
+
+        .hero-stat-value {
+            font-size: 17px;
+            line-height: 1.1;
+            font-weight: 760;
+            letter-spacing: -0.03em;
+            color: var(--fg);
+        }
+
+        .hero-stat-label {
+            margin-top: 3px;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+
+        .hero-stat.tone-success .hero-stat-value {
+            color: var(--verified-fg);
+        }
+
+        .hero-stat.tone-accent .hero-stat-value {
+            color: var(--accent);
+        }
+
+        .hero-stat.tone-warn .hero-stat-value {
+            color: var(--active-fg);
+        }
+
+        .hero-stat.tone-muted .hero-stat-value {
+            color: var(--fg-muted);
+        }
+
+        .hero-figure {
+            align-self: stretch;
+            min-height: 132px;
+            border-radius: 24px;
+            position: relative;
+            display: block;
+            transform: perspective(900px) rotateX(7deg) rotateY(-10deg);
+            transform-style: preserve-3d;
+        }
+
+        .hero-figure-shadow,
+        .hero-figure-base,
+        .hero-figure-card,
+        .hero-figure-orb,
+        .hero-figure-icon {
+            position: absolute;
+        }
+
+        .hero-figure-shadow {
+            inset: auto 18px 8px 22px;
+            height: 18px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.18);
+            filter: blur(16px);
+            transform: translateZ(-12px);
+        }
+
+        .hero-figure-base {
+            inset: 24px 14px 18px;
+            border-radius: 28px;
+            background: linear-gradient(160deg, var(--hero-figure-a), var(--hero-figure-b));
+            box-shadow: 0 20px 30px rgba(37, 99, 235, 0.18);
+        }
+
+        .hero-figure-base::before,
+        .hero-figure-base::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .hero-figure-base::before {
+            width: 84px;
+            height: 10px;
+            left: 18px;
+            top: 22px;
+        }
+
+        .hero-figure-base::after {
+            width: 54px;
+            height: 10px;
+            left: 18px;
+            top: 40px;
+            opacity: 0.74;
+        }
+
+        .hero-figure-card {
+            inset: 42px 28px 34px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--hero-figure-c) 98%, transparent), color-mix(in srgb, var(--bg-card) 88%, transparent));
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+            transform: translateZ(18px);
+        }
+
+        .hero-figure-card::before,
+        .hero-figure-card::after {
+            content: "";
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            border-radius: 999px;
+        }
+
+        .hero-figure-card::before {
+            top: 18px;
+            height: 10px;
+            background: color-mix(in srgb, var(--accent-soft) 72%, white);
+        }
+
+        .hero-figure-card::after {
+            top: 36px;
+            height: 8px;
+            background: color-mix(in srgb, var(--border) 72%, white);
+        }
+
+        .hero-figure-orb {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            right: 20px;
+            top: 20px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), color-mix(in srgb, var(--verified-border) 74%, var(--accent)));
+            box-shadow: 0 16px 30px rgba(34, 197, 94, 0.2);
+            transform: translateZ(26px);
+        }
+
+        .hero-figure-icon {
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            transform: translateZ(34px);
+            text-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+        }
+
+        /* Next step banner */
+        .next-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 12px 13px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--accent);
+            background: color-mix(in srgb, var(--accent-soft) 86%, transparent);
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .next-banner-icon {
+            font-size: 17px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .next-banner-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .next-banner-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .next-banner-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+        }
+
+        .next-banner-desc {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.5;
+        }
+
+        .next-banner-actions {
+            margin-top: 8px;
+        }
+
+        /* Section */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+
+        /* Cards */
+        .feature-grid {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .card {
+            background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 98%, transparent), color-mix(in srgb, var(--bg-section) 80%, transparent));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            transition: border-color 100ms, box-shadow 100ms, transform 100ms;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+        }
+
+        .card:hover {
+            border-color: var(--border-focus);
+            box-shadow: 0 14px 28px light-dark(rgba(15, 23, 42, 0.08), rgba(2, 6, 23, 0.34));
+            transform: translateY(-1px);
+        }
+
+        .card.active-card {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--active-border) 18%, transparent);
+        }
+
+        .card-collapsible,
+        .outcome-item-collapsible {
+            overflow: hidden;
+        }
+
+        .card-summary,
+        .outcome-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 11px 13px;
+            user-select: none;
+        }
+
+        .card-summary::-webkit-details-marker,
+        .outcome-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .card-summary:hover,
+        .outcome-summary:hover {
+            background: color-mix(in srgb, var(--bg-card-hover) 75%, transparent);
+        }
+
+        .card-content,
+        .outcome-content {
+            padding: 0 13px 12px;
+        }
+
+        .card-toggle,
+        .outcome-toggle {
+            font-size: 10px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .card-toggle::before,
+        .outcome-toggle::before {
+            content: "\25B8";
+            font-size: 10px;
+            transition: transform 120ms ease;
+            display: inline-block;
+        }
+
+        .card-collapsible[open] .card-toggle::before,
+        .outcome-item-collapsible[open] .outcome-toggle::before {
+            transform: rotate(90deg);
+        }
+
+        .card-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-id {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-bottom: 1px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .card-meta {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .card-note {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 9px;
+            line-height: 1.55;
+        }
+
+        /* Progress */
+        .progress-wrap {
+            margin-top: 4px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--progress-track);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--progress-fill);
+            border-radius: 2px;
+            transition: width 400ms ease;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+            border: 1px solid;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge-active {
+            background: var(--active-bg);
+            border-color: var(--active-border);
+            color: var(--active-fg);
+        }
+
+        .badge-verified {
+            background: var(--verified-bg);
+            border-color: var(--verified-border);
+            color: var(--verified-fg);
+        }
+
+        .badge-failed {
+            background: var(--failed-bg);
+            border-color: var(--failed-border);
+            color: var(--failed-fg);
+        }
+
+        .badge-pending {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--pending-fg);
+        }
+
+        .badge-skipped {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--fg-dim);
+        }
+
+        /* Test chips */
+        .test-chips {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            margin-top: 3px;
+        }
+
+        .test-chip {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg-muted);
+        }
+
+        .test-chip.passing {
+            color: var(--verified-fg);
+            border-color: var(--verified-border);
+            background: var(--verified-bg);
+        }
+
+        .test-chip.warning {
+            color: var(--active-fg);
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .test-chip.danger {
+            color: var(--failed-fg);
+            border-color: var(--failed-border);
+            background: var(--failed-bg);
+        }
+
+        /* Outcomes */
+        .outcome-list {
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .outcome-item {
+            background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 98%, transparent), color-mix(in srgb, var(--bg-section) 82%, transparent));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            transition: border-color 100ms, box-shadow 100ms;
+        }
+
+        .outcome-item:hover {
+            border-color: var(--border-focus);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+        }
+
+        .outcome-item.active-outcome {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .outcome-item.verified-outcome {
+            border-left: 3px solid var(--verified-border);
+        }
+
+        .outcome-item.failed-outcome {
+            border-left: 3px solid var(--failed-border);
+        }
+
+        .outcome-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .outcome-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .outcome-num {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--fg-muted);
+            margin-bottom: 1px;
+        }
+
+        .outcome-title {
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .outcome-id {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg-muted);
+        }
+
+        .outcome-goal {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+
+        .section-card {
+            margin-top: 10px;
+            padding: 10px 11px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-section) 96%, transparent);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .section-card:first-child {
+            margin-top: 0;
+        }
+
+        .section-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .section-card-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .section-card-copy {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.45;
+        }
+
+        .suggestion-list,
+        .path-list,
+        .related-test-list {
+            list-style: none;
+            display: grid;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+
+        .suggestion-preview-list {
+            list-style: none;
+            display: grid;
+            gap: 5px;
+            margin-top: 6px;
+        }
+
+        .suggestion-preview-item {
+            padding: 6px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .suggestion-preview-path {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+        }
+
+        .suggestion-preview-copy {
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .suggestion-preview-note {
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-top: 6px;
+        }
+
+        .suggestion-list li,
+        .path-list li {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+            padding: 4px 6px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .related-test-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 8px;
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+            border: 1px solid var(--border);
+        }
+
+        .related-test-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .related-test-id {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--fg-muted);
+        }
+
+        .related-test-path {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .related-test-meta {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .related-test-status {
+            font-size: 10px;
+            margin-top: 4px;
+            line-height: 1.35;
+        }
+
+        .related-test-status.pending {
+            color: var(--accent);
+        }
+
+        .related-test-status.opened {
+            color: var(--verified-fg);
+        }
+
+        .related-test-status.fallback {
+            color: var(--active-fg);
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        /* Editor */
+        .editor {
+            margin-top: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+
+        .editor-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        label {
+            display: grid;
+            gap: 3px;
+            font-size: 12px;
+        }
+
+        label span {
+            font-weight: 600;
+            color: var(--fg-muted);
+            font-size: 11px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg);
+            padding: 5px 8px;
+            font: inherit;
+            font-size: 12px;
+            transition: border-color 100ms;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent);
+        }
+
+        textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .field-hint {
+            font-size: 10px;
+            color: var(--fg-muted);
+        }
+
+        /* Empty */
+        .empty {
+            text-align: center;
+            padding: 30px 18px;
+            color: var(--fg-muted);
+            border: 1.5px dashed var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            line-height: 1.6;
+            background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+        }
+
+        .empty-icon {
+            font-size: 26px;
+            margin-bottom: 7px;
+        }
+
+        .empty-title {
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
+
+        /* Console */
+        .console-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: var(--console-toolbar-bg);
+            border-bottom: 1px solid var(--console-border-top);
+            flex-shrink: 0;
+        }
+
+        .console-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .cdot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .cdot-r {
+            background: #ff5f57;
+        }
+
+        .cdot-y {
+            background: #ffbd2e;
+        }
+
+        .cdot-g {
+            background: #28ca41;
+        }
+
+        .console-title {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--console-fg-muted);
+            letter-spacing: 0.04em;
+            flex: 1;
+            text-align: center;
+        }
+
+        .console-btn {
+            appearance: none;
+            background: transparent;
+            border: none;
+            color: var(--console-fg-muted);
+            cursor: pointer;
+            font-family: var(--font-ui);
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            transition: color 80ms, background 80ms;
+        }
+
+        .console-btn:hover {
+            color: var(--console-fg);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .console-entries {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3px 0;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            scrollbar-width: thin;
+            scrollbar-color: #2a2a35 transparent;
+        }
+
+        .console-entries::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .console-entries::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .console-entries::-webkit-scrollbar-thumb {
+            background: #2a2a35;
+            border-radius: 2px;
+        }
+
+        .console-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 1px 10px;
+            line-height: 1.55;
+        }
+
+        .console-entry:hover {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .con-ts {
+            color: var(--console-ts);
+            font-size: 9px;
+            flex-shrink: 0;
+            padding-top: 2px;
+            min-width: 38px;
+        }
+
+        .con-icon {
+            flex-shrink: 0;
+            padding-top: 1px;
+            font-size: 10px;
+        }
+
+        .con-msg {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .con-info .con-msg {
+            color: var(--console-info);
+        }
+
+        .con-success .con-msg {
+            color: var(--console-success);
+        }
+
+        .con-error .con-msg {
+            color: var(--console-error);
+        }
+
+        .con-action .con-msg {
+            color: var(--console-action);
+        }
+
+        .con-warn .con-msg {
+            color: var(--console-warn);
+        }
+
+        .con-muted .con-msg {
+            color: var(--console-fg-muted);
+        }
+
+        .con-default .con-msg {
+            color: var(--console-fg);
+        }
+
+        @media (max-width: 460px) {
+            body {
+                padding: 0;
+            }
+
+            .app {
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+
+            .app-body {
+                padding: 14px 12px 16px;
+            }
+
+            .wf-label {
+                display: none;
+            }
+
+            .wf-sep {
+                width: 8px;
+            }
+
+            .hero-panel {
+                grid-template-columns: 1fr;
+                padding: 14px;
+            }
+
+            .hero-figure {
+                min-height: 108px;
+                order: -1;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="app">
-        <div class="header">
-            <span class="header-logo">&#x1F682;</span>
-            <span class="header-title">Specrail</span>
-            <div class="header-actions" id="headerActions"></div>
+        <div class="app-header">
+            <div class="header">
+                <span class="header-logo">&#x1F682;</span>
+                <span class="header-title">Specrail</span>
+                <span class="header-tag">TDD</span>
+                <div class="header-actions" id="headerActions"></div>
+            </div>
+            <div id="workflowBar" class="workflow-bar"></div>
+            <div id="breadcrumbBar"></div>
         </div>
-        <div id="statusBar"></div>
-        <div id="root"></div>
+        <div class="app-body" id="root">
+            <div class="empty">
+                <div class="empty-icon">&#x1F682;</div>
+                <div class="empty-title">Specrail</div>
+                <div>Connecting&hellip;</div>
+            </div>
+        </div>
+        <div class="app-console">
+            <div class="console-toolbar">
+                <div class="console-dots">
+                    <div class="cdot cdot-r"></div>
+                    <div class="cdot cdot-y"></div>
+                    <div class="cdot cdot-g"></div>
+                </div>
+                <span class="console-title">specrail &mdash; console</span>
+                <button class="console-btn" id="consoleClear" title="Clear console">&#x232B; clear</button>
+            </div>
+            <div class="console-entries" id="consoleEntries"></div>
+        </div>
     </div>
+
     <script>
         (() => {
             const state = {
@@ -133,239 +1510,1132 @@
                 creatingFeature: false, creatingOutcome: false,
                 featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
                 isSaving: false, isActivating: null,
+                runningAction: null,
+                expandedCards: {},
+                expandedPanels: {},
+                fileOpenStates: {},
+                suggestionPreviews: {},
+                suggestionPreviewErrors: {},
             };
             let nextId = 1;
             const pending = new Map();
 
+            // Console
+            const CON_ICONS = { info: "\u2139", success: "\u2713", error: "\u2717", action: "\u25C6", warn: "\u26A0", muted: "\u00B7", default: "\u203A" };
+
+            function appendLog(msg, type) {
+                type = type || "default";
+                const el = document.getElementById("consoleEntries");
+                if (!el) return;
+                const now = new Date();
+                const ts = now.toTimeString().slice(0, 8);
+                const entry = document.createElement("div");
+                entry.className = "console-entry con-" + type;
+                entry.innerHTML =
+                    '<span class="con-ts">' + ts + '</span>' +
+                    '<span class="con-icon">' + (CON_ICONS[type] || "\u203A") + '</span>' +
+                    '<span class="con-msg">' + esc(msg) + '</span>';
+                el.appendChild(entry);
+                el.scrollTop = el.scrollHeight;
+                while (el.children.length > 200) el.removeChild(el.firstChild);
+            }
+
+            function clearConsole() {
+                var el = document.getElementById("consoleEntries");
+                if (el) el.innerHTML = "";
+            }
+
+            document.getElementById("consoleClear").addEventListener("click", clearConsole);
+
+            // IPC
             function sendRequest(m, p) {
-                const id = nextId++;
-                window.parent.postMessage({ jsonrpc: "2.0", id, method: m, params: p }, "*");
-                return new Promise((res, rej) => pending.set(id, { resolve: res, reject: rej }));
+                var id = nextId++;
+                window.parent.postMessage({ jsonrpc: "2.0", id: id, method: m, params: p }, "*");
+                return new Promise(function (res, rej) { pending.set(id, { resolve: res, reject: rej }); });
+            }
+            function sendRequestWithTimeout(m, p, timeoutMs) {
+                var id = nextId++;
+                window.parent.postMessage({ jsonrpc: "2.0", id: id, method: m, params: p }, "*");
+                return new Promise(function (res, rej) {
+                    var timeout = setTimeout(function () {
+                        if (!pending.has(id)) return;
+                        pending.delete(id);
+                        rej(new Error("Timed out waiting for host acknowledgement."));
+                    }, timeoutMs || 800);
+                    pending.set(id, {
+                        resolve: function (value) {
+                            clearTimeout(timeout);
+                            res(value);
+                        },
+                        reject: function (error) {
+                            clearTimeout(timeout);
+                            rej(error);
+                        }
+                    });
+                });
             }
             function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
-            function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id, result: r }, "*"); }
-            async function callTool(name, args) { return sendRequest("tools/call", { name, arguments: args }); }
+            function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id: id, result: r }, "*"); }
+            function callTool(name, args) { return sendRequest("tools/call", { name: name, arguments: args }); }
 
+            // Utilities
             function esc(v) {
-                return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-                    .replaceAll('"','&quot;').replaceAll("'","&#39;");
+                return String(v == null ? "" : v)
+                    .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", "&#39;");
             }
-            function toolText(r) { return r?.content?.find?.(b => b?.type === "text")?.text ?? ""; }
+            function toolText(r) { return (r && r.content && r.content.find(function (b) { return b && b.type === "text"; }) || {}).text || ""; }
             function merge(t, s) {
                 if (!s || typeof s !== "object") return t;
-                for (const [k, v] of Object.entries(s))
-                    t[k] = (v && typeof v === "object" && !Array.isArray(v)) ? merge(t[k] && typeof t[k] === "object" ? t[k] : {}, v) : v;
+                Object.entries(s).forEach(function (kv) {
+                    var k = kv[0], v = kv[1];
+                    t[k] = (v && typeof v === "object" && !Array.isArray(v))
+                        ? merge(t[k] && typeof t[k] === "object" ? t[k] : {}, v) : v;
+                });
                 return t;
             }
-            function linesToArray(v) { return String(v ?? "").split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
+            function linesToArray(v) { return String(v == null ? "" : v).split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
             function arrayToLines(v) { return Array.isArray(v) ? v.join("\n") : ""; }
+            function cardStateKey(kind) {
+                var parts = Array.prototype.slice.call(arguments, 1).map(function (p) { return String(p == null ? "" : p); });
+                return [kind].concat(parts).join(":");
+            }
+            function panelStateKey(kind) {
+                var parts = Array.prototype.slice.call(arguments, 1).map(function (p) { return String(p == null ? "" : p); });
+                return [kind].concat(parts).join(":");
+            }
+            function isCardExpanded(key, accordionGroup) {
+                return accordionGroup ? state.expandedCards[accordionGroup] === key : state.expandedCards[key] === true;
+            }
+            function setCardExpanded(key, expanded, accordionGroup) {
+                if (accordionGroup) {
+                    if (expanded) state.expandedCards[accordionGroup] = key;
+                    else if (state.expandedCards[accordionGroup] === key) delete state.expandedCards[accordionGroup];
+                    return;
+                }
+                state.expandedCards[key] = expanded;
+            }
+            function ensureCardExpanded(key, accordionGroup) {
+                if (!isCardExpanded(key, accordionGroup)) setCardExpanded(key, true, accordionGroup);
+            }
+            function isPanelExpanded(key) { return state.expandedPanels[key] === true; }
+            function togglePanelExpanded(key) {
+                state.expandedPanels[key] = !state.expandedPanels[key];
+                render();
+            }
 
+            // Workflow steps
+            var WORKFLOW_STEPS = [
+                { id: "feature", label: "Feature", tip: "Select or create a feature to work on" },
+                { id: "outcome", label: "Outcome", tip: "Choose an outcome milestone to target" },
+                { id: "tests", label: "Tests", tip: "Write tests that define the outcome" },
+                { id: "implement", label: "Implement", tip: "Run AI-assisted implementation" },
+                { id: "verify", label: "Verify", tip: "Run tests to confirm implementation" },
+                { id: "advance", label: "Advance", tip: "Move to the next outcome or complete feature" },
+            ];
+
+            function computeWorkflowStep(data) {
+                if (!data) return "feature";
+                var mode = data.mode;
+                var features = Array.isArray(data.features) ? data.features : [];
+
+                if (mode === "outcome_selection") {
+                    var outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
+                    if (!outcomes.length) return "outcome";
+                    var activeOutcome = outcomes.find(function (o) { return o.isActive; });
+                    if (!activeOutcome) return "outcome";
+                    var st = activeOutcome.status;
+                    var tc = Number(activeOutcome.testCount || 0);
+                    var pc = Number(activeOutcome.plannedTestCount || 0);
+                    if (st === "verified") return "advance";
+                    if (tc === 0 || pc > 0) return "tests";
+                    if (st === "failed") return "implement";
+                    return "implement";
+                }
+
+                if (!features.length) return "feature";
+                if (!data.activeFeatureId) return "feature";
+                return "feature";
+            }
+
+            function renderWorkflowBar(data) {
+                var bar = document.getElementById("workflowBar");
+                if (!bar) return;
+                bar.innerHTML = "";
+                var currentStepId = computeWorkflowStep(data);
+                var currentIdx = WORKFLOW_STEPS.findIndex(function (s) { return s.id === currentStepId; });
+
+                WORKFLOW_STEPS.forEach(function (step, i) {
+                    var isDone = i < currentIdx;
+                    var isActive = i === currentIdx;
+
+                    var el = document.createElement("div");
+                    el.className = "wf-step" + (isDone ? " wf-done" : "") + (isActive ? " wf-active" : "");
+                    el.title = step.tip;
+
+                    var num = document.createElement("div");
+                    num.className = "wf-num";
+                    num.textContent = isDone ? "\u2713" : String(i + 1);
+                    el.appendChild(num);
+
+                    var lbl = document.createElement("span");
+                    lbl.className = "wf-label";
+                    lbl.textContent = step.label;
+                    el.appendChild(lbl);
+                    bar.appendChild(el);
+
+                    if (i < WORKFLOW_STEPS.length - 1) {
+                        var sep = document.createElement("div");
+                        sep.className = "wf-sep" + (isDone ? " wf-done" : "");
+                        bar.appendChild(sep);
+                    }
+                });
+            }
+
+            // Next step banner
+            function buildNextStepBanner(data, root) {
+                var mode = data && data.mode;
+                var features = Array.isArray(data && data.features) ? data.features : [];
+                var outcomes = Array.isArray(data && data.outcomes) ? data.outcomes : [];
+                var activeOutcome = outcomes.find(function (o) { return o.isActive; });
+                var icon, label, title, desc, actions = [];
+
+                if (mode === "feature_selection") {
+                    if (!features.length) {
+                        icon = "\u{1F3D7}\uFE0F"; label = "Step 1 of 6 \u2014 Feature";
+                        title = "Create your first feature";
+                        desc = "Features define what you're building. Each feature contains outcome milestones and tests.";
+                        actions = [{ text: "+ New Feature", fn: startNewFeature, kind: "primary" }];
+                    } else if (!data.activeFeatureId) {
+                        icon = "\u{1F4C2}"; label = "Step 1 of 6 \u2014 Feature";
+                        title = "Open a feature to get started";
+                        desc = "Open a feature card to inspect its outcomes and start the TDD loop.";
+                    } else {
+                        var af = features.find(function (f) { return f.isActive; });
+                        if (af) {
+                            icon = "\u25B6\uFE0F"; label = "Active Feature";
+                            title = "Continue with: " + (af.title || af.id);
+                            desc = "Open the active feature to review outcomes, tests, and the next milestone.";
+                            actions = [{ text: "Open Active Feature", fn: function () { selectFeature(af.id); }, kind: "primary" }];
+                        }
+                    }
+                } else if (mode === "outcome_selection") {
+                    if (!outcomes.length) {
+                        icon = "\u{1F3AF}"; label = "Step 2 of 6 \u2014 Outcome";
+                        title = "Add your first outcome";
+                        desc = "Outcomes are verifiable milestones. Each outcome has tests that prove it's complete.";
+                    } else if (!activeOutcome) {
+                        icon = "\u{1F3AF}"; label = "Step 2 of 6 \u2014 Outcome";
+                        title = "Activate an outcome to begin";
+                        desc = "Activate one outcome so implementation, verification, and test generation target the right milestone.";
+                    } else {
+                        var tc = Number(activeOutcome.testCount || 0);
+                        var pc = Number(activeOutcome.plannedTestCount || 0);
+                        var needsGeneration = !!activeOutcome.needsTestGeneration;
+                        var st = activeOutcome.status;
+                        if (tc === 0 || needsGeneration) {
+                            icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
+                            title = tc === 0 ? "Add outcome tests" : "Close the remaining test gaps";
+                            desc = needsGeneration
+                                ? "Generate or register the missing required tests before implementation so the outcome has a complete test target."
+                                : "Register the outcome tests first so implementation has a concrete target to satisfy.";
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
+                        } else if (pc > 0) {
+                            icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
+                            title = pc + " test" + (pc > 1 ? "s" : "") + " still in planned status";
+                            desc = "Move planned tests to written or passing before implementation so the outcome gate can run cleanly.";
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
+                        } else if (st === "active" || st === "failed") {
+                            icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
+                            title = st === "failed" ? "Implementation failed \u2014 try again" : "Ready to implement";
+                            desc = "Specrail will use the active agent to write code that satisfies your tests.";
+                            actions = [
+                                { text: "Run Implement", fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); }, kind: "primary" },
+                                { text: "Run Verify", fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); }, kind: "default" },
+                            ];
+                        } else if (st === "verified") {
+                            icon = "\u{1F680}"; label = "Step 6 of 6 \u2014 Advance";
+                            title = "Outcome verified! Ready to advance";
+                            desc = "All tests pass. Advance to activate the next outcome in sequence.";
+                            actions = [{ text: "Advance To Next Outcome", fn: function () { runToolAction("Advance To Next Outcome", "specrail_advance", {}, { refresh: true }); }, kind: "success" }];
+                        }
+                    }
+                }
+
+                if (!title) return;
+
+                var banner = document.createElement("div");
+                banner.className = "next-banner";
+                var iconEl = document.createElement("div");
+                iconEl.className = "next-banner-icon";
+                iconEl.textContent = icon;
+                var body = document.createElement("div");
+                body.className = "next-banner-body";
+                body.innerHTML =
+                    '<div class="next-banner-label">' + esc(label) + '</div>' +
+                    '<div class="next-banner-title">' + esc(title) + '</div>' +
+                    '<div class="next-banner-desc">' + esc(desc) + '</div>';
+                if (actions.length) {
+                    var act = document.createElement("div");
+                    act.className = "next-banner-actions btn-group";
+                    actions.forEach(function (a) {
+                        var b = document.createElement("button");
+                        b.className = "btn btn-sm btn-" + (a.kind || "default");
+                        b.textContent = a.text;
+                        b.disabled = state.isSaving || !!state.runningAction;
+                        b.addEventListener("click", a.fn);
+                        act.appendChild(b);
+                    });
+                    body.appendChild(act);
+                }
+                banner.appendChild(iconEl);
+                banner.appendChild(body);
+                root.appendChild(banner);
+            }
+
+            // Collapsible cards
+            function updateCollapsibleToggleLabel(details, collapsedLabel, expandedLabel) {
+                var toggle = details && details.querySelector("summary .card-toggle, summary .outcome-toggle");
+                if (toggle) toggle.textContent = details.open ? expandedLabel : collapsedLabel;
+            }
+
+            function makeCollapsibleCard(options) {
+                var key = options.key, baseClass = options.baseClass, extraClass = options.extraClass || "",
+                    summaryClass = options.summaryClass, contentClass = options.contentClass,
+                    toggleClass = options.toggleClass, collapsedLabel = options.collapsedLabel,
+                    expandedLabel = options.expandedLabel, buildSummary = options.buildSummary,
+                    buildContent = options.buildContent, accordionGroup = options.accordionGroup;
+
+                var details = document.createElement("details");
+                details.className = (baseClass + " " + extraClass).trim();
+                details.dataset.cardKey = key;
+                if (accordionGroup) details.dataset.accordionGroup = accordionGroup;
+                details.open = isCardExpanded(key, accordionGroup);
+                details.addEventListener("toggle", function () {
+                    setCardExpanded(key, details.open, accordionGroup);
+                    updateCollapsibleToggleLabel(details, collapsedLabel, expandedLabel);
+
+                    if (details.open && accordionGroup) {
+                        Array.prototype.forEach.call(
+                            document.querySelectorAll("details[data-accordion-group]"),
+                            function (other) {
+                                if (other === details) return;
+                                if (other.dataset.accordionGroup !== accordionGroup) return;
+                                if (!other.open) return;
+                                other.open = false;
+                            }
+                        );
+                    }
+
+                    reportSize();
+                });
+
+                var summary = document.createElement("summary");
+                summary.className = summaryClass;
+                buildSummary(summary, details.open);
+
+                var toggle = document.createElement("span");
+                toggle.className = toggleClass;
+                toggle.textContent = details.open ? expandedLabel : collapsedLabel;
+                summary.appendChild(toggle);
+                details.appendChild(summary);
+
+                var content = document.createElement("div");
+                content.className = contentClass;
+                buildContent(content);
+                details.appendChild(content);
+                return details;
+            }
+
+            // Badge
             function badge(status) {
-                const map = {
-                    active: ["badge-active", "\u26A1 Active"], verified: ["badge-verified", "\u2705 Verified"],
-                    failed: ["badge-failed", "\u274C Failed"], pending: ["badge-pending", "\u25CB Pending"],
-                    skipped: ["badge-skipped", "\u2013 Skipped"], planned: ["badge-pending", "\u25CB Planned"],
+                var map = {
+                    active: ["badge-active", "\u26A1 Active"],
+                    verified: ["badge-verified", "\u2705 Verified"],
+                    failed: ["badge-failed", "\u2717 Failed"],
+                    pending: ["badge-pending", "\u25CB Pending"],
+                    skipped: ["badge-skipped", "\u2013 Skipped"],
+                    planned: ["badge-pending", "\u25CB Planned"],
                 };
-                const [cls, label] = map[status] ?? ["badge-pending", status];
-                const el = document.createElement("span");
-                el.className = "badge " + cls; el.textContent = label; return el;
+                var pair = map[status] || ["badge-pending", status];
+                var el = document.createElement("span");
+                el.className = "badge " + pair[0];
+                el.textContent = pair[1];
+                return el;
             }
 
-            function showStatus(msg, variant) {
-                const el = document.getElementById("statusBar");
-                if (!msg) { el.innerHTML = ""; return; }
-                el.innerHTML = `<div class="status-bar${variant ? " " + variant : ""}">${esc(msg)}</div>`;
-            }
-
-            function applyHostStyles() {
-                const root = document.documentElement;
-                const vars = state.hostContext?.styles?.variables;
-                if (vars && typeof vars === "object")
-                    for (const [k, v] of Object.entries(vars)) if (typeof v === "string") root.style.setProperty(k, v);
-                const theme = state.hostContext?.theme;
-                if (theme === "dark" || theme === "light") root.style.colorScheme = theme;
-            }
-
+            // Core actions
             async function selectFeature(featureId) {
                 state.pendingFeatureId = featureId; render();
+                appendLog("Opening feature: " + featureId, "action");
                 try {
-                    state.toolResult = await callTool("specrail_feature_navigate", { ...state.toolArguments, feature_id: featureId });
+                    state.toolResult = await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments, { feature_id: featureId }));
                     state.pendingFeatureId = null; state.editingFeatureId = null; state.featureDraft = null;
-                    state.creatingOutcome = false; state.newOutcomeDraft = null; showStatus(""); render();
-                } catch (e) { state.pendingFeatureId = null; showStatus(e?.message ?? String(e), "error"); render(); }
+                    state.creatingOutcome = false; state.newOutcomeDraft = null;
+                    appendLog("Loaded feature: " + featureId, "success");
+                    render();
+                } catch (e) {
+                    state.pendingFeatureId = null;
+                    appendLog("Error: " + (e && e.message ? e.message : String(e)), "error");
+                    render();
+                }
             }
 
             async function returnToFeatures() {
-                state.editingFeatureId = null; state.editingOutcomeId = null; state.featureDraft = null;
-                state.outcomeDraft = null; state.creatingFeature = false; state.newFeatureDraft = null;
-                showStatus("Loading\u2026");
-                try { state.toolResult = await callTool("specrail_feature_navigate", { ...state.toolArguments }); showStatus(""); render(); }
-                catch (e) { showStatus(e?.message ?? String(e), "error"); render(); }
+                state.editingFeatureId = null; state.editingOutcomeId = null;
+                state.featureDraft = null; state.outcomeDraft = null;
+                state.creatingFeature = false; state.newFeatureDraft = null;
+                appendLog("Returning to feature list\u2026", "muted");
+                try {
+                    state.toolResult = await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments));
+                    appendLog("Feature list loaded.", "success"); render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); render(); }
             }
 
             async function refreshView() {
-                const sc = state.toolResult?.structuredContent;
-                state.toolResult = (sc?.mode === "outcome_selection" && sc?.selectedFeatureId)
-                    ? await callTool("specrail_feature_navigate", { ...state.toolArguments, feature_id: sc.selectedFeatureId })
-                    : await callTool("specrail_feature_navigate", { ...state.toolArguments });
+                var sc = state.toolResult && state.toolResult.structuredContent;
+                state.toolResult = (sc && sc.mode === "outcome_selection" && sc.selectedFeatureId)
+                    ? await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments, { feature_id: sc.selectedFeatureId }))
+                    : await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments));
+            }
+
+            async function runToolAction(title, name, args, options) {
+                args = args || {}; options = options || {};
+                var refresh = options.refresh || false;
+                var actionKey = name + ":" + JSON.stringify(args);
+                state.runningAction = actionKey;
+                appendLog("Running: " + title + "\u2026", "action");
+                render();
+                try {
+                    var result = await callTool(name, Object.assign({}, state.toolArguments, args));
+                    var text = toolText(result);
+                    if (result && result.isError) {
+                        appendLog(title + " failed: " + (text || "Unknown error"), "error");
+                        state.runningAction = null; render(); return;
+                    }
+                    if (text) appendLog(title + ": " + text, "success");
+                    else appendLog(title + " completed.", "success");
+                    if (refresh) await refreshView();
+                    state.runningAction = null; render();
+                } catch (e) {
+                    appendLog(title + " error: " + (e && e.message ? e.message : String(e)), "error");
+                    state.runningAction = null; render();
+                }
+            }
+
+            function isActionRunning(name, args) {
+                args = args || {};
+                return state.runningAction === (name + ":" + JSON.stringify(args));
+            }
+
+            function appendActionButton(container, config) {
+                var title = config.title, tool = config.tool, args = config.args || {},
+                    kind = config.kind || "default", refresh = config.refresh || false;
+                var button = document.createElement("button");
+                button.className = kind === "primary" ? "btn btn-primary btn-sm"
+                    : kind === "ghost" ? "btn btn-ghost btn-sm"
+                        : kind === "success" ? "btn btn-success btn-sm"
+                            : kind === "danger" ? "btn btn-danger btn-sm"
+                                : "btn btn-sm";
+                button.disabled = state.isSaving || isActionRunning(tool, args);
+                button.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
+                button.addEventListener("click", function () { runToolAction(title, tool, args, { refresh: refresh }); });
+                container.appendChild(button);
             }
 
             async function activateFeature(id) {
                 state.isActivating = id; render();
-                try { await callTool("specrail_feature_activate", { ...state.toolArguments, id }); await refreshView(); state.isActivating = null; showStatus("Feature activated: " + id, "success"); render(); }
-                catch (e) { state.isActivating = null; showStatus(e?.message ?? String(e), "error"); render(); }
+                appendLog("Activating feature: " + id, "action");
+                try {
+                    await callTool("specrail_feature_activate", Object.assign({}, state.toolArguments, { id: id }));
+                    await refreshView();
+                    appendLog("Feature activated: " + id, "success");
+                    state.isActivating = null; render();
+                } catch (e) {
+                    appendLog("Error: " + (e && e.message ? e.message : String(e)), "error");
+                    state.isActivating = null; render();
+                }
             }
 
             async function activateOutcome(featureId, outcomeId) {
                 state.isActivating = outcomeId; render();
-                try { await callTool("specrail_outcome_activate", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId }); await refreshView(); state.isActivating = null; showStatus("Outcome activated: " + outcomeId, "success"); render(); }
-                catch (e) { state.isActivating = null; showStatus(e?.message ?? String(e), "error"); render(); }
+                appendLog("Activating outcome: " + outcomeId, "action");
+                try {
+                    await callTool("specrail_outcome_activate", Object.assign({}, state.toolArguments, { feature_id: featureId, outcome_id: outcomeId }));
+                    await refreshView();
+                    appendLog("Outcome activated: " + outcomeId, "success");
+                    state.isActivating = null; render();
+                } catch (e) {
+                    appendLog("Error: " + (e && e.message ? e.message : String(e)), "error");
+                    state.isActivating = null; render();
+                }
             }
 
-            async function startFeatureEdit(featureId) {
-                showStatus("Loading\u2026");
-                try {
-                    const res = await callTool("specrail_feature_show", { ...state.toolArguments, id: featureId });
-                    const f = res?.structuredContent?.feature ?? {};
-                    state.editingFeatureId = featureId;
-                    state.featureDraft = { id: f.id ?? featureId, title: f.title ?? "", purpose: f.purpose ?? "",
-                        outcomes: arrayToLines(f.outcomes), constraints: arrayToLines(f.constraints),
-                        non_goals: arrayToLines(f.non_goals), dependencies: arrayToLines(f.dependencies) };
-                    showStatus(""); render();
-                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
+            function getOutcomeReview(outcome) {
+                return outcome && outcome.testReview && typeof outcome.testReview === "object" ? outcome.testReview : null;
             }
+
+            function reviewSummary(review) {
+                if (!review) return { tone: "muted", text: "Test health is not available for this outcome yet." };
+                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test paths to make this outcome verifiable." };
+                if (review.has_no_related_tests) return { tone: "warn", text: "No manifest tests are linked to this outcome yet." };
+                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test path" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.planned_required_tests.length > 0) return { tone: "warn", text: review.planned_required_tests.length + " required test" + (review.planned_required_tests.length !== 1 ? "s remain" : " remains") + " in planned status." };
+                return { tone: "success", text: "Required tests are linked and ready to drive implementation." };
+            }
+
+            function testStatusChipClass(status) {
+                return status === "passing" ? "passing"
+                    : status === "planned" ? "warning"
+                        : status === "failing" ? "danger"
+                            : "";
+            }
+
+            function appendTestChip(container, label, tone) {
+                var chip = document.createElement("span");
+                chip.className = "test-chip" + (tone ? " " + tone : "");
+                chip.textContent = label;
+                container.appendChild(chip);
+            }
+
+            function testFileName(path) {
+                var parts = String(path || "").split("/");
+                return parts[parts.length - 1] || String(path || "");
+            }
+
+            function testDisplayName(test) {
+                var fileName = testFileName(test && test.path);
+                var methodName = String((test && test.id) || "unnamed-test");
+                return fileName === methodName ? fileName : (fileName + " :: " + methodName);
+            }
+
+            function isUndeclaredRelatedTest(review, test) {
+                if (!review || !Array.isArray(review.undeclared_tests) || !test) return false;
+                return review.undeclared_tests.some(function (candidate) {
+                    return String(candidate.path || "") === String(test.path || "")
+                        && String(candidate.id || "") === String(test.id || "");
+                });
+            }
+
+            function renderPathList(paths, className) {
+                var list = document.createElement("ul");
+                list.className = className || "path-list";
+                paths.forEach(function (path) {
+                    var item = document.createElement("li");
+                    item.textContent = path;
+                    list.appendChild(item);
+                });
+                return list;
+            }
+
+            function fileOpenStateKey(path) {
+                return panelStateKey("open-file", path);
+            }
+
+            function getFileOpenState(path) {
+                return state.fileOpenStates[fileOpenStateKey(path)] || null;
+            }
+
+            function setFileOpenState(path, status, message) {
+                state.fileOpenStates[fileOpenStateKey(path)] = { status: status, message: message };
+            }
+
+            async function requestOpenRelatedTest(path) {
+                var params = {
+                    path: path,
+                    cwd: state.toolArguments && state.toolArguments.cwd ? state.toolArguments.cwd : null,
+                };
+
+                setFileOpenState(path, "pending", "Awaiting host acknowledgement for the file-open request.");
+                render();
+
+                try {
+                    var result = await sendRequestWithTimeout("ui/requests/open-file", params, 900);
+                    if (result && result.opened === false) {
+                        throw new Error(result.message || "Host declined the file-open request.");
+                    }
+
+                    setFileOpenState(path, "opened", "Host acknowledged the file-open request.");
+                    appendLog("Host acknowledged file open: " + path, "success");
+                } catch (e) {
+                    sendNotification("ui/notifications/open-file", params);
+                    setFileOpenState(path, "fallback", "No acknowledgement received. Sent a best-effort open notification; keep using the inline test panel if nothing opens.");
+                    appendLog("No host acknowledgement for file open: " + path + ". Sent fallback notification.", "warn");
+                }
+
+                render();
+            }
+
+            function suggestionPreviewKey(featureId, outcomeId) {
+                return panelStateKey("ai-suggestions", featureId, outcomeId);
+            }
+
+            function getSuggestionPreview(featureId, outcomeId) {
+                return state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] || null;
+            }
+
+            function getSuggestionPreviewError(featureId, outcomeId) {
+                return state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)] || null;
+            }
+
+            async function previewOutcomeSuggestions(featureId, outcomeId) {
+                var actionKey = "test-suggest:" + featureId + ":" + outcomeId;
+                state.runningAction = actionKey;
+                delete state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)];
+                appendLog("Previewing AI test suggestions for: " + outcomeId, "action");
+                render();
+                try {
+                    var result = await callTool("specrail_test_suggest", Object.assign({}, state.toolArguments, {
+                        feature_id: featureId,
+                        outcome_id: outcomeId,
+                    }));
+                    if (result && result.isError) {
+                        throw new Error(toolText(result) || "Suggestion preview failed.");
+                    }
+
+                    var preview = result && result.structuredContent && result.structuredContent.preview;
+                    state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] = preview || null;
+                    appendLog("AI preview ready for: " + outcomeId, "success");
+                } catch (e) {
+                    state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)] = e && e.message ? e.message : String(e);
+                    appendLog("AI preview failed for " + outcomeId + ": " + (e && e.message ? e.message : String(e)), "error");
+                }
+                state.runningAction = null;
+                render();
+            }
+
+            function renderSuggestionPreview(featureId, outcomeId) {
+                var preview = getSuggestionPreview(featureId, outcomeId);
+                var previewError = getSuggestionPreviewError(featureId, outcomeId);
+                if (!preview && !previewError) return null;
+
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">AI preview suggestions</span>';
+                var previewBadge = badge(preview && preview.exact_path_match ? "verified" : "failed");
+                previewBadge.textContent = preview && preview.exact_path_match ? "\u2713 Match" : "\u26A0 Review";
+                head.appendChild(previewBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                if (previewError) {
+                    copy.textContent = previewError;
+                    section.appendChild(copy);
+                    return section;
+                }
+
+                copy.textContent = "Preview only. These suggestions did not write files or update the manifest.";
+                section.appendChild(copy);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                appendTestChip(chips, preview.suggestions.length + " suggestion" + (preview.suggestions.length !== 1 ? "s" : ""), "");
+                if (preview.missing_expected_paths.length > 0) appendTestChip(chips, preview.missing_expected_paths.length + " missing", "danger");
+                if (preview.unexpected_paths.length > 0) appendTestChip(chips, preview.unexpected_paths.length + " unexpected", "warning");
+                section.appendChild(chips);
+
+                if (Array.isArray(preview.suggestions) && preview.suggestions.length > 0) {
+                    var list = document.createElement("ul");
+                    list.className = "suggestion-preview-list";
+                    preview.suggestions.forEach(function (suggestion) {
+                        var item = document.createElement("li");
+                        item.className = "suggestion-preview-item";
+                        item.innerHTML =
+                            '<div class="suggestion-preview-path">' + esc(suggestion.path) + '</div>' +
+                            '<div class="related-test-meta"></div>' +
+                            '<div class="suggestion-preview-copy">' + esc(suggestion.content_preview || "No content preview available.") + '</div>';
+                        var meta = item.querySelector(".related-test-meta");
+                        appendTestChip(meta, String(suggestion.kind || "unit"), "");
+                        appendTestChip(meta, String(suggestion.content_line_count || 0) + " lines", "");
+                        list.appendChild(item);
+                    });
+                    section.appendChild(list);
+                }
+
+                if (preview.missing_expected_paths.length > 0) {
+                    var missingTitle = document.createElement("div");
+                    missingTitle.className = "card-note";
+                    missingTitle.textContent = "Still missing from the AI preview";
+                    section.appendChild(missingTitle);
+                    section.appendChild(renderPathList(preview.missing_expected_paths, "path-list"));
+                }
+
+                if (preview.unexpected_paths.length > 0) {
+                    var unexpectedTitle = document.createElement("div");
+                    unexpectedTitle.className = "card-note";
+                    unexpectedTitle.textContent = "Unexpected preview paths";
+                    section.appendChild(unexpectedTitle);
+                    section.appendChild(renderPathList(preview.unexpected_paths, "path-list"));
+                }
+
+                var note = document.createElement("div");
+                note.className = "suggestion-preview-note";
+                note.textContent = "Agent: " + esc(preview.agent || "unknown") + " • Scope: " + esc(preview.scope_label || (featureId + ":" + outcomeId));
+                section.appendChild(note);
+                return section;
+            }
+
+            function renderTestHealthSection(featureId, outcome, isActiveOutcome) {
+                var review = getOutcomeReview(outcome);
+                if (!review) return null;
+
+                var summary = reviewSummary(review);
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Test health</span>';
+                var healthBadge = badge(review.has_gaps ? "failed" : "verified");
+                healthBadge.textContent = review.has_gaps ? "\u26A0 Gaps" : "\u2713 Ready";
+                head.appendChild(healthBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = summary.text;
+                section.appendChild(copy);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                appendTestChip(chips, review.related_test_count + " linked", "");
+                appendTestChip(chips, review.required_test_count + " required", "");
+                if (review.missing_required_tests.length > 0) appendTestChip(chips, review.missing_required_tests.length + " missing", "danger");
+                if (review.planned_required_tests.length > 0) appendTestChip(chips, review.planned_required_tests.length + " planned", "warning");
+                if (review.undeclared_tests.length > 0) appendTestChip(chips, review.undeclared_tests.length + " undeclared", "warning");
+                section.appendChild(chips);
+
+                if (review.suggested_test_paths.length > 0) {
+                    var suggestionTitle = document.createElement("div");
+                    suggestionTitle.className = "card-note";
+                    suggestionTitle.textContent = "Suggested next tests";
+                    section.appendChild(suggestionTitle);
+                    section.appendChild(renderPathList(review.suggested_test_paths, "suggestion-list"));
+                }
+
+                if (review.required_test_paths.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                    var requiredTitle = document.createElement("div");
+                    requiredTitle.className = "card-note";
+                    requiredTitle.textContent = "Required test paths";
+                    section.appendChild(requiredTitle);
+                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                }
+
+                var actionRow = document.createElement("div");
+                actionRow.className = "inline-actions";
+                var suggestionActionKey = "test-suggest:" + featureId + ":" + outcome.id;
+                if (review.required_test_count > 0 && review.has_gaps) {
+                    var previewBtn = document.createElement("button");
+                    previewBtn.className = "btn btn-sm";
+                    previewBtn.disabled = state.isSaving || state.runningAction === suggestionActionKey;
+                    previewBtn.textContent = state.runningAction === suggestionActionKey
+                        ? "Previewing AI Suggestions…"
+                        : (getSuggestionPreview(featureId, outcome.id) ? "Refresh AI Suggestions" : "Preview AI Suggestions");
+                    previewBtn.addEventListener("click", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        previewOutcomeSuggestions(featureId, outcome.id);
+                    });
+                    actionRow.appendChild(previewBtn);
+                }
+
+                if (review.has_no_required_tests) {
+                    appendActionButton(actionRow, {
+                        title: "Generate Initial Test",
+                        tool: "specrail_test_generate",
+                        args: { feature_id: featureId, outcome_id: outcome.id },
+                        kind: "primary",
+                        refresh: true
+                    });
+
+                    var addRequiredBtn = document.createElement("button");
+                    addRequiredBtn.className = "btn btn-sm";
+                    addRequiredBtn.disabled = state.isSaving;
+                    addRequiredBtn.textContent = "Add Required Tests";
+                    addRequiredBtn.addEventListener("click", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        startOutcomeEdit(featureId, outcome.id);
+                    });
+                    actionRow.appendChild(addRequiredBtn);
+                }
+
+                if (review.needs_generation) {
+                    appendActionButton(actionRow, {
+                        title: "Generate Missing Tests",
+                        tool: "specrail_test_generate",
+                        args: { feature_id: featureId, outcome_id: outcome.id },
+                        kind: "primary",
+                        refresh: true
+                    });
+                }
+
+                if (actionRow.childNodes.length > 0) {
+                    section.appendChild(actionRow);
+                }
+
+                return section;
+            }
+
+            function renderRelatedTestsSection(featureId, outcome) {
+                var review = getOutcomeReview(outcome);
+                if (!review) return null;
+
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Related tests</span>';
+                var countBadge = document.createElement("span");
+                countBadge.className = "stat-chip";
+                countBadge.innerHTML = '<strong>' + review.related_test_count + '</strong> test' + (review.related_test_count !== 1 ? 's' : '');
+                head.appendChild(countBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = review.related_test_count > 0
+                    ? review.related_test_count + " manifest test" + (review.related_test_count !== 1 ? "s are" : " is") + " linked to this outcome."
+                    : "No manifest tests are linked yet. Use the required test paths below to register or generate them.";
+                section.appendChild(copy);
+
+                if (review.related_tests.length > 0) {
+                    var list = document.createElement("ul");
+                    list.className = "related-test-list";
+                    review.related_tests.forEach(function (test) {
+                        var item = document.createElement("li");
+                        item.className = "related-test-item";
+                        var isUndeclared = isUndeclaredRelatedTest(review, test);
+
+                        var main = document.createElement("div");
+                        main.className = "related-test-main";
+                        main.innerHTML =
+                            '<div class="related-test-id">' + esc(testDisplayName(test)) + '</div>' +
+                            '<div class="related-test-path">' + esc(String(test.path || "")) + '</div>';
+                        var meta = document.createElement("div");
+                        meta.className = "related-test-meta";
+                        appendTestChip(meta, String(test.status || "planned"), testStatusChipClass(String(test.status || "planned")));
+                        appendTestChip(meta, String(test.kind || "unit"), "");
+                        if (isUndeclared) appendTestChip(meta, "not required", "warning");
+                        main.appendChild(meta);
+                        item.appendChild(main);
+
+                        if (isUndeclared) {
+                            var actions = document.createElement("div");
+                            actions.className = "btn-group";
+                            appendActionButton(actions, {
+                                title: "Add As Required",
+                                tool: "specrail_outcome_add_required_test",
+                                args: { feature_id: featureId, outcome_id: outcome.id, path: test.path },
+                                refresh: true,
+                            });
+                            item.appendChild(actions);
+                        }
+
+                        list.appendChild(item);
+                    });
+                    section.appendChild(list);
+                }
+
+                if (review.required_test_paths.length > 0) {
+                    var requiredTitle = document.createElement("div");
+                    requiredTitle.className = "card-note";
+                    requiredTitle.textContent = "Expected required test paths";
+                    section.appendChild(requiredTitle);
+                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                }
+
+                return section;
+            }
+
+            function appendUtilityActions(container, context) {
+                context = context || {};
+                var refreshArgs = context.featureId ? { feature_id: context.featureId } : {};
+                appendActionButton(container, { title: "\u21BA Refresh", tool: "specrail_feature_navigate", args: refreshArgs, refresh: true });
+            }
+
+            // Editors
+            async function startFeatureEdit(featureId) {
+                appendLog("Loading feature for edit: " + featureId + "\u2026", "muted");
+                try {
+                    var res = await callTool("specrail_feature_show", Object.assign({}, state.toolArguments, { id: featureId }));
+                    var f = (res && res.structuredContent && res.structuredContent.feature) || {};
+                    var sc = state.toolResult && state.toolResult.structuredContent;
+                    var featureKey = sc && sc.mode === "outcome_selection"
+                        ? cardStateKey("selected-feature", featureId)
+                        : cardStateKey("feature", featureId);
+                    var accordionGroup = sc && sc.mode === "outcome_selection" ? null : "feature-selection";
+                    ensureCardExpanded(featureKey, accordionGroup);
+                    state.editingFeatureId = featureId;
+                    state.featureDraft = {
+                        id: f.id || featureId, title: f.title || "", purpose: f.purpose || "",
+                        outcomes: arrayToLines(f.outcomes), constraints: arrayToLines(f.constraints),
+                        non_goals: arrayToLines(f.non_goals), dependencies: arrayToLines(f.dependencies)
+                    };
+                    appendLog("Editing feature: " + featureId, "info"); render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); }
+            }
+
             function cancelFeatureEdit() { state.editingFeatureId = null; state.featureDraft = null; render(); }
 
             async function saveFeatureEdit(e) {
                 e.preventDefault(); if (!state.featureDraft) return;
                 state.isSaving = true; render();
+                appendLog("Saving feature\u2026", "action");
                 try {
-                    await callTool("specrail_feature_edit", { ...state.toolArguments, id: state.featureDraft.id,
-                        title: state.featureDraft.title, purpose: state.featureDraft.purpose,
+                    await callTool("specrail_feature_edit", Object.assign({}, state.toolArguments, {
+                        id: state.featureDraft.id, title: state.featureDraft.title, purpose: state.featureDraft.purpose,
                         outcomes: linesToArray(state.featureDraft.outcomes), constraints: linesToArray(state.featureDraft.constraints),
-                        non_goals: linesToArray(state.featureDraft.non_goals), dependencies: linesToArray(state.featureDraft.dependencies) });
+                        non_goals: linesToArray(state.featureDraft.non_goals), dependencies: linesToArray(state.featureDraft.dependencies)
+                    }));
                     state.editingFeatureId = null; state.featureDraft = null;
-                    await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
-                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
+                    await refreshView(); appendLog("Feature saved.", "success"); state.isSaving = false; render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); state.isSaving = false; render(); }
             }
 
             async function startOutcomeEdit(featureId, outcomeId) {
-                showStatus("Loading\u2026");
+                appendLog("Loading outcome for edit: " + outcomeId + "\u2026", "muted");
                 try {
-                    const res = await callTool("specrail_outcome_show", { ...state.toolArguments, feature_id: featureId, outcome_id: outcomeId });
-                    const o = res?.structuredContent?.outcome ?? {};
+                    var res = await callTool("specrail_outcome_show", Object.assign({}, state.toolArguments, { feature_id: featureId, outcome_id: outcomeId }));
+                    var o = (res && res.structuredContent && res.structuredContent.outcome) || {};
+                    ensureCardExpanded(cardStateKey("outcome", featureId, outcomeId), "outcome-selection:" + featureId);
                     state.editingOutcomeId = outcomeId;
-                    state.outcomeDraft = { feature_id: featureId, outcome_id: o.id ?? outcomeId, title: o.title ?? "",
-                        goal: o.goal ?? "", order: String(o.order ?? 1),
+                    state.outcomeDraft = {
+                        feature_id: featureId, outcome_id: o.id || outcomeId, title: o.title || "",
+                        goal: o.goal || "", order: String(o.order || 1),
                         prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
-                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests) };
-                    showStatus(""); render();
-                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
+                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests)
+                    };
+                    appendLog("Editing outcome: " + outcomeId, "info"); render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); }
             }
+
             function cancelOutcomeEdit() { state.editingOutcomeId = null; state.outcomeDraft = null; render(); }
 
             async function saveOutcomeEdit(e) {
                 e.preventDefault(); if (!state.outcomeDraft) return;
                 state.isSaving = true; render();
+                appendLog("Saving outcome\u2026", "action");
                 try {
-                    await callTool("specrail_outcome_edit", { ...state.toolArguments,
+                    await callTool("specrail_outcome_edit", Object.assign({}, state.toolArguments, {
                         feature_id: state.outcomeDraft.feature_id, outcome_id: state.outcomeDraft.outcome_id,
-                        title: state.outcomeDraft.title, goal: state.outcomeDraft.goal, order: Number(state.outcomeDraft.order ?? 1),
+                        title: state.outcomeDraft.title, goal: state.outcomeDraft.goal, order: Number(state.outcomeDraft.order || 1),
                         prerequisites: linesToArray(state.outcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.outcomeDraft.required_tests) });
+                        required_tests: linesToArray(state.outcomeDraft.required_tests)
+                    }));
                     state.editingOutcomeId = null; state.outcomeDraft = null;
-                    await refreshView(); state.isSaving = false; showStatus("Saved.", "success"); render();
-                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
+                    await refreshView(); appendLog("Outcome saved.", "success"); state.isSaving = false; render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); state.isSaving = false; render(); }
             }
 
-            function startNewFeature() { state.creatingFeature = true; state.newFeatureDraft = { id: "", title: "", purpose: "", outcomes: "", constraints: "", non_goals: "", dependencies: "" }; render(); }
+            function startNewFeature() {
+                state.creatingFeature = true;
+                state.newFeatureDraft = { id: "", title: "", purpose: "", outcomes: "", constraints: "", non_goals: "", dependencies: "" };
+                appendLog("Creating new feature\u2026", "info"); render();
+            }
             function cancelNewFeature() { state.creatingFeature = false; state.newFeatureDraft = null; render(); }
 
             async function saveNewFeature(e) {
                 e.preventDefault(); if (!state.newFeatureDraft) return;
                 state.isSaving = true; render();
+                appendLog("Creating feature\u2026", "action");
                 try {
-                    await callTool("specrail_feature_new", { ...state.toolArguments, id: state.newFeatureDraft.id, title: state.newFeatureDraft.title, purpose: state.newFeatureDraft.purpose, outcomes: linesToArray(state.newFeatureDraft.outcomes), constraints: linesToArray(state.newFeatureDraft.constraints), non_goals: linesToArray(state.newFeatureDraft.non_goals), dependencies: linesToArray(state.newFeatureDraft.dependencies) });
+                    await callTool("specrail_feature_new", Object.assign({}, state.toolArguments, {
+                        id: state.newFeatureDraft.id, title: state.newFeatureDraft.title, purpose: state.newFeatureDraft.purpose,
+                        outcomes: linesToArray(state.newFeatureDraft.outcomes), constraints: linesToArray(state.newFeatureDraft.constraints),
+                        non_goals: linesToArray(state.newFeatureDraft.non_goals), dependencies: linesToArray(state.newFeatureDraft.dependencies)
+                    }));
                     state.creatingFeature = false; state.newFeatureDraft = null;
-                    await refreshView(); state.isSaving = false; showStatus("Feature created.", "success"); render();
-                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
+                    await refreshView(); appendLog("Feature created.", "success"); state.isSaving = false; render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); state.isSaving = false; render(); }
             }
 
-            function startNewOutcome(featureId, suggestedOrder) { state.creatingOutcome = true; state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder ?? 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "" }; render(); }
+            function startNewOutcome(featureId, suggestedOrder) {
+                state.creatingOutcome = true;
+                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "" };
+                appendLog("Creating new outcome\u2026", "info"); render();
+            }
             function cancelNewOutcome() { state.creatingOutcome = false; state.newOutcomeDraft = null; render(); }
 
             async function saveNewOutcome(e) {
                 e.preventDefault(); if (!state.newOutcomeDraft) return;
                 state.isSaving = true; render();
+                appendLog("Creating outcome\u2026", "action");
                 try {
-                    await callTool("specrail_outcome_new", { ...state.toolArguments, feature_id: state.newOutcomeDraft.feature_id, outcome_id: state.newOutcomeDraft.outcome_id, title: state.newOutcomeDraft.title, goal: state.newOutcomeDraft.goal, order: Number(state.newOutcomeDraft.order ?? 1), prerequisites: linesToArray(state.newOutcomeDraft.prerequisites), allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths), forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths), required_tests: linesToArray(state.newOutcomeDraft.required_tests) });
+                    await callTool("specrail_outcome_new", Object.assign({}, state.toolArguments, {
+                        feature_id: state.newOutcomeDraft.feature_id, outcome_id: state.newOutcomeDraft.outcome_id,
+                        title: state.newOutcomeDraft.title, goal: state.newOutcomeDraft.goal, order: Number(state.newOutcomeDraft.order || 1),
+                        prerequisites: linesToArray(state.newOutcomeDraft.prerequisites),
+                        allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths),
+                        forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths),
+                        required_tests: linesToArray(state.newOutcomeDraft.required_tests)
+                    }));
                     state.creatingOutcome = false; state.newOutcomeDraft = null;
-                    await refreshView(); state.isSaving = false; showStatus("Outcome created.", "success"); render();
-                } catch (e) { state.isSaving = false; showStatus(e?.message ?? String(e), "error"); render(); }
+                    await refreshView(); appendLog("Outcome created.", "success"); state.isSaving = false; render();
+                } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); state.isSaving = false; render(); }
             }
 
             function mkField(label, key, value, target, multiline, hint) {
-                const lbl = document.createElement("label");
-                lbl.innerHTML = `<span>${esc(label)}</span>`;
-                const inp = document.createElement(multiline ? "textarea" : "input");
+                var lbl = document.createElement("label");
+                lbl.innerHTML = '<span>' + esc(label) + '</span>';
+                var inp = document.createElement(multiline ? "textarea" : "input");
                 if (!multiline) inp.type = key === "order" ? "number" : "text";
                 if (key === "order") inp.min = "1";
-                inp.value = value ?? "";
-                inp.addEventListener("input", ev => {
-                    const v = ev.target.value;
+                inp.value = value || "";
+                inp.addEventListener("input", function (ev) {
+                    var v = ev.target.value;
                     if (target === "feature" && state.featureDraft) state.featureDraft[key] = v;
                     if (target === "outcome" && state.outcomeDraft) state.outcomeDraft[key] = v;
                     if (target === "newFeature" && state.newFeatureDraft) state.newFeatureDraft[key] = v;
                     if (target === "newOutcome" && state.newOutcomeDraft) state.newOutcomeDraft[key] = v;
                 });
                 lbl.appendChild(inp);
-                if (hint) { const p = document.createElement("p"); p.className = "field-hint"; p.textContent = hint; lbl.appendChild(p); }
+                if (hint) { var p = document.createElement("p"); p.className = "field-hint"; p.textContent = hint; lbl.appendChild(p); }
                 return lbl;
             }
 
             function renderEditor(title, fields, onSubmit, onCancel) {
-                const wrap = document.createElement("div"); wrap.className = "editor";
-                const h = document.createElement("div"); h.className = "editor-title"; h.textContent = title; wrap.appendChild(h);
-                const form = document.createElement("form"); form.addEventListener("submit", onSubmit);
-                const grid = document.createElement("div"); grid.className = "field-grid";
-                fields.forEach(f => grid.appendChild(f)); form.appendChild(grid);
-                const actions = document.createElement("div"); actions.className = "btn-group"; actions.style.marginTop = "10px";
-                const save = document.createElement("button"); save.className = "btn btn-primary btn-sm"; save.type = "submit";
+                var wrap = document.createElement("div"); wrap.className = "editor";
+                var h = document.createElement("div"); h.className = "editor-title"; h.textContent = title; wrap.appendChild(h);
+                var form = document.createElement("form"); form.addEventListener("submit", onSubmit);
+                var grid = document.createElement("div"); grid.className = "field-grid";
+                fields.forEach(function (f) { grid.appendChild(f); }); form.appendChild(grid);
+                var actions = document.createElement("div"); actions.className = "btn-group"; actions.style.marginTop = "10px";
+                var save = document.createElement("button"); save.className = "btn btn-primary btn-sm"; save.type = "submit";
                 save.disabled = state.isSaving; save.textContent = state.isSaving ? "Saving\u2026" : "Save";
-                const cancel = document.createElement("button"); cancel.className = "btn btn-ghost btn-sm"; cancel.type = "button";
+                var cancel = document.createElement("button"); cancel.className = "btn btn-ghost btn-sm"; cancel.type = "button";
                 cancel.disabled = state.isSaving; cancel.textContent = "Cancel"; cancel.addEventListener("click", onCancel);
-                actions.appendChild(save); actions.appendChild(cancel); form.appendChild(actions); wrap.appendChild(form); return wrap;
+                actions.appendChild(save); actions.appendChild(cancel); form.appendChild(actions); wrap.appendChild(form);
+                return wrap;
             }
 
+            function appendFeatureProgress(container, outcomeCount, verifiedCount) {
+                if (outcomeCount > 0) {
+                    var pct = Math.round((verifiedCount / outcomeCount) * 100);
+                    var prog = document.createElement("div");
+                    prog.className = "progress-wrap";
+                    prog.innerHTML =
+                        '<div class="progress-label"><span>' + verifiedCount + '/' + outcomeCount + ' outcomes verified</span><span>' + pct + '%</span></div>' +
+                        '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>';
+                    container.appendChild(prog); return;
+                }
+                var meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; container.appendChild(meta);
+            }
+
+            function createHeroStat(value, label, tone) {
+                var stat = document.createElement("div");
+                stat.className = "hero-stat" + (tone ? " tone-" + tone : "");
+                stat.innerHTML =
+                    '<div class="hero-stat-value">' + esc(value) + '</div>' +
+                    '<div class="hero-stat-label">' + esc(label) + '</div>';
+                return stat;
+            }
+
+            function createHeroFigure(icon) {
+                var figure = document.createElement("div");
+                figure.className = "hero-figure";
+                figure.innerHTML =
+                    '<div class="hero-figure-shadow"></div>' +
+                    '<div class="hero-figure-base"></div>' +
+                    '<div class="hero-figure-card"></div>' +
+                    '<div class="hero-figure-orb"></div>';
+                var iconEl = document.createElement("div");
+                iconEl.className = "hero-figure-icon";
+                iconEl.textContent = icon || "\u{1F686}";
+                figure.appendChild(iconEl);
+                return figure;
+            }
+
+            function buildHeroPanel(options) {
+                options = options || {};
+                var hero = document.createElement("section");
+                hero.className = "hero-panel";
+
+                var copy = document.createElement("div");
+                copy.className = "hero-copy";
+                copy.innerHTML =
+                    '<div class="hero-kicker">' + esc(options.kicker || "Workspace overview") + '</div>' +
+                    '<div class="hero-title-row">' +
+                    '<div class="hero-title">' + esc(options.title || "Specrail") + '</div>' +
+                    (options.badgeText ? '<span class="hero-pill">' + esc(options.badgeText) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="hero-desc">' + esc(options.description || "") + '</div>';
+
+                if (options.meta) {
+                    var meta = document.createElement("div");
+                    meta.className = "hero-meta";
+                    meta.textContent = options.meta;
+                    copy.appendChild(meta);
+                }
+
+                if (Array.isArray(options.stats) && options.stats.length > 0) {
+                    var grid = document.createElement("div");
+                    grid.className = "hero-grid";
+                    options.stats.forEach(function (stat) {
+                        grid.appendChild(createHeroStat(stat.value, stat.label, stat.tone));
+                    });
+                    copy.appendChild(grid);
+                }
+
+                hero.appendChild(copy);
+                hero.appendChild(createHeroFigure(options.icon));
+                return hero;
+            }
+
+            // Feature Selection View
             function renderFeatureSelection(data) {
-                const features = Array.isArray(data.features) ? data.features : [];
-                const root = document.getElementById("root"); root.innerHTML = "";
-                const ha = document.getElementById("headerActions"); ha.innerHTML = "";
+                var features = Array.isArray(data.features) ? data.features : [];
+                var root = document.getElementById("root"); root.innerHTML = "";
+                var ha = document.getElementById("headerActions"); ha.innerHTML = "";
+                var total = features.length;
+                var totalOutcomes = features.reduce(function (n, f) { return n + Number(f.outcomeCount || 0); }, 0);
+                var verified = features.reduce(function (n, f) { return n + Number(f.verifiedOutcomeCount || 0); }, 0);
+                var activeFeature = features.find(function (f) { return f.isActive; });
 
                 if (!state.creatingFeature) {
-                    const btn = document.createElement("button"); btn.className = "btn btn-primary btn-sm";
-                    btn.textContent = "+ New Feature"; btn.disabled = state.isSaving;
+                    var btn = document.createElement("button"); btn.className = "btn btn-primary btn-sm";
+                    btn.textContent = "+ Feature"; btn.disabled = state.isSaving;
                     btn.addEventListener("click", startNewFeature); ha.appendChild(btn);
                 }
+                appendUtilityActions(ha);
 
-                if (features.length > 0) {
-                    const dash = document.createElement("div"); dash.className = "dashboard";
-                    const total = features.length;
-                    const verified = features.reduce((n, f) => n + Number(f.verifiedOutcomeCount ?? 0), 0);
-                    const totalOutcomes = features.reduce((n, f) => n + Number(f.outcomeCount ?? 0), 0);
-                    dash.innerHTML = `<span class="stat-chip"><strong>${total}</strong> feature${total !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${totalOutcomes}</strong> outcome${totalOutcomes !== 1 ? "s" : ""}</span><span class="stat-chip"><strong>${verified}</strong> verified</span>`;
-                    root.appendChild(dash);
-                }
+                root.appendChild(buildHeroPanel({
+                    kicker: "Workspace overview",
+                    title: features.length ? "Shape the next verified milestone" : "Start your specrail workspace",
+                    badgeText: activeFeature ? "Active feature" : (features.length ? "Navigator ready" : "Fresh workspace"),
+                    description: features.length
+                        ? (activeFeature
+                            ? "Review progress, reopen the active feature, and keep the outcome-driven loop moving without hunting through clutter."
+                            : "Choose a feature to inspect outcomes, verify test readiness, and move into implementation with a clearer visual map.")
+                        : "Create a feature to begin the outcome-gated TDD flow. Specrail will guide you from planning to verification with focused next actions.",
+                    meta: activeFeature
+                        ? "Current focus: " + (activeFeature.title || activeFeature.id)
+                        : "Modern, outcome-driven planning with a single place to track momentum.",
+                    stats: [
+                        { value: String(total), label: "Features", tone: "accent" },
+                        { value: String(totalOutcomes), label: "Outcomes", tone: "default" },
+                        { value: String(verified), label: "Verified", tone: "success" },
+                        { value: activeFeature ? "Live" : "Idle", label: "Focus rail", tone: activeFeature ? "warn" : "muted" },
+                    ],
+                    icon: features.length ? "\u{1F6E4}\uFE0F" : "\u{1F682}",
+                }));
+
+                buildNextStepBanner(data, root);
 
                 if (state.creatingFeature && state.newFeatureDraft) {
-                    const d = state.newFeatureDraft;
+                    var d = state.newFeatureDraft;
                     root.appendChild(renderEditor("New Feature", [
                         mkField("ID (slug)", "id", d.id, "newFeature"),
                         mkField("Title", "title", d.title, "newFeature"),
                         mkField("Purpose", "purpose", d.purpose, "newFeature", true),
-                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "newFeature", true, "Optional"),
+                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "newFeature", true, "Optional: list expected outcomes"),
                         mkField("Constraints (one per line)", "constraints", d.constraints, "newFeature", true),
                         mkField("Non-goals (one per line)", "non_goals", d.non_goals, "newFeature", true),
                     ], saveNewFeature, cancelNewFeature));
@@ -373,123 +2643,209 @@
                 }
 
                 if (!features.length) {
-                    const empty = document.createElement("div"); empty.className = "empty";
-                    empty.innerHTML = `<div class="empty-icon">&#x1F3D7;&#xFE0F;</div><div class="empty-title">No features yet</div><div>Click &ldquo;+ New Feature&rdquo; to get started.</div>`;
+                    var empty = document.createElement("div"); empty.className = "empty";
+                    empty.innerHTML = '<div class="empty-icon">\u{1F3D7}\uFE0F</div><div class="empty-title">No features yet</div><div>Click &ldquo;+ Feature&rdquo; above to create your first feature.</div>';
                     root.appendChild(empty); return;
                 }
 
-                const sec = document.createElement("div"); sec.className = "section-header";
-                sec.innerHTML = `<span class="section-label">Features</span>`; root.appendChild(sec);
+                var sec = document.createElement("div"); sec.className = "section-header";
+                sec.innerHTML = '<span class="section-label">Features</span>'; root.appendChild(sec);
 
-                const grid = document.createElement("div"); grid.className = "feature-grid";
-                for (const feature of features) {
-                    const isActive = !!feature.isActive;
-                    const outcomeCount = Number(feature.outcomeCount ?? 0);
-                    const verifiedCount = Number(feature.verifiedOutcomeCount ?? 0);
-                    const pct = outcomeCount > 0 ? Math.round((verifiedCount / outcomeCount) * 100) : 0;
+                var grid = document.createElement("div"); grid.className = "feature-grid";
+                features.forEach(function (feature) {
+                    var isActive = !!feature.isActive;
+                    var outcomeCount = Number(feature.outcomeCount || 0);
+                    var verifiedCount = Number(feature.verifiedOutcomeCount || 0);
+                    var featureKey = cardStateKey("feature", feature.id);
 
-                    const card = document.createElement("div"); card.className = "card" + (isActive ? " active-card" : "");
-                    const row = document.createElement("div"); row.className = "card-row";
-                    const body = document.createElement("div"); body.className = "card-body";
-                    body.innerHTML = `<div class="card-id">${esc(feature.id)}</div><div class="card-title">${esc(feature.title || feature.id)}</div>`;
-                    row.appendChild(body); row.appendChild(badge(isActive ? "active" : String(feature.status ?? "pending")));
-                    card.appendChild(row);
+                    var card = makeCollapsibleCard({
+                        key: featureKey,
+                        baseClass: "card card-collapsible",
+                        extraClass: isActive ? "active-card" : "",
+                        summaryClass: "card-summary",
+                        contentClass: "card-content",
+                        toggleClass: "card-toggle",
+                        collapsedLabel: "Quick actions",
+                        expandedLabel: "Hide actions",
+                        accordionGroup: "feature-selection",
+                        buildSummary: function (summary) {
+                            var row = document.createElement("div"); row.className = "card-row";
+                            var body = document.createElement("div"); body.className = "card-body";
+                            body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div>';
+                            row.appendChild(body);
+                            row.appendChild(badge(isActive ? "active" : String(feature.status || "pending")));
+                            summary.appendChild(row);
+                            appendFeatureProgress(summary, outcomeCount, verifiedCount);
+                        },
+                        buildContent: function (content) {
+                            var actions = document.createElement("div"); actions.className = "card-actions";
+                            var openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
+                            openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
+                            openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open Outcomes";
+                            (function (fid) {
+                                openBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); selectFeature(fid); });
+                            })(feature.id);
+                            actions.appendChild(openBtn);
 
-                    if (outcomeCount > 0) {
-                        const prog = document.createElement("div"); prog.className = "progress-wrap";
-                        prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
-                        card.appendChild(prog);
-                    } else {
-                        const meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; card.appendChild(meta);
-                    }
+                            if (!isActive) {
+                                var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                                actBtn.disabled = state.isActivating === feature.id || state.isSaving;
+                                actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Activate Feature";
+                                (function (fid) {
+                                    actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
+                                })(feature.id);
+                                actions.appendChild(actBtn);
+                            }
+                            var editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                            editBtn.disabled = state.isSaving; editBtn.textContent = "Edit Feature";
+                            (function (fid) {
+                                editBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
+                            })(feature.id);
+                            actions.appendChild(editBtn);
+                            content.appendChild(actions);
 
-                    const actions = document.createElement("div"); actions.className = "card-actions";
-                    const openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
-                    openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
-                    openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open";
-                    openBtn.addEventListener("click", () => selectFeature(feature.id)); actions.appendChild(openBtn);
+                            var note = document.createElement("div");
+                            note.className = "card-note";
+                            note.textContent = outcomeCount > 0
+                                ? verifiedCount + " of " + outcomeCount + " outcomes verified. Open the feature to inspect milestones and tests."
+                                : "No outcomes yet. Open the feature to add the first verifiable milestone.";
+                            content.appendChild(note);
 
-                    if (!isActive) {
-                        const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
-                        actBtn.disabled = state.isActivating === feature.id || state.isSaving;
-                        actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Set Active";
-                        actBtn.addEventListener("click", () => activateFeature(feature.id)); actions.appendChild(actBtn);
-                    }
-                    const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                    editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                    editBtn.addEventListener("click", () => startFeatureEdit(feature.id)); actions.appendChild(editBtn);
-                    card.appendChild(actions);
-
-                    if (state.editingFeatureId === feature.id && state.featureDraft) {
-                        const d = state.featureDraft;
-                        card.appendChild(renderEditor(`Edit: ${feature.id}`, [
-                            mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
-                            mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
-                            mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
-                            mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
-                            mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
-                        ], saveFeatureEdit, cancelFeatureEdit));
-                    }
+                            if (state.editingFeatureId === feature.id && state.featureDraft) {
+                                var d = state.featureDraft;
+                                content.appendChild(renderEditor("Edit: " + feature.id, [
+                                    mkField("Title", "title", d.title, "feature"),
+                                    mkField("Purpose", "purpose", d.purpose, "feature", true),
+                                    mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                                    mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                                    mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                                    mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                                ], saveFeatureEdit, cancelFeatureEdit));
+                            }
+                        },
+                    });
                     grid.appendChild(card);
-                }
+                });
                 root.appendChild(grid);
             }
 
+            // Outcome Selection View
             function renderOutcomeSelection(data) {
-                const selectedFeature = data.selectedFeature ?? {};
-                const outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
-                const featureId = data.selectedFeatureId ?? selectedFeature.id ?? "";
-                const suggestedOrder = Number(data.suggestedNewOutcomeOrder ?? outcomes.length + 1);
-                const root = document.getElementById("root"); root.innerHTML = "";
+                var selectedFeature = data.selectedFeature || {};
+                var outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
+                var featureId = data.selectedFeatureId || selectedFeature.id || "";
+                var suggestedOrder = Number(data.suggestedNewOutcomeOrder || outcomes.length + 1);
+                var root = document.getElementById("root"); root.innerHTML = "";
+                var ha = document.getElementById("headerActions"); ha.innerHTML = "";
 
-                const bc = document.createElement("div"); bc.className = "breadcrumb";
-                const backLink = document.createElement("span"); backLink.className = "breadcrumb-item clickable";
-                backLink.textContent = "Features"; backLink.addEventListener("click", returnToFeatures);
-                bc.appendChild(backLink);
-                bc.innerHTML += `<span class="breadcrumb-sep">\u203A</span><span class="breadcrumb-item">${esc(selectedFeature.title || featureId)}</span>`;
-                root.appendChild(bc);
-
-                const ha = document.getElementById("headerActions"); ha.innerHTML = "";
-                const backBtn = document.createElement("button"); backBtn.className = "btn btn-ghost btn-sm";
+                var backBtn = document.createElement("button"); backBtn.className = "btn btn-ghost btn-sm";
                 backBtn.textContent = "\u2190 Back"; backBtn.addEventListener("click", returnToFeatures); ha.appendChild(backBtn);
                 if (!state.creatingOutcome) {
-                    const newBtn = document.createElement("button"); newBtn.className = "btn btn-primary btn-sm";
-                    newBtn.textContent = "+ New Outcome"; newBtn.disabled = state.isSaving;
-                    newBtn.addEventListener("click", () => startNewOutcome(featureId, suggestedOrder)); ha.appendChild(newBtn);
+                    var newBtn = document.createElement("button"); newBtn.className = "btn btn-primary btn-sm";
+                    newBtn.textContent = "+ Outcome"; newBtn.disabled = state.isSaving;
+                    (function (fid, ord) {
+                        newBtn.addEventListener("click", function () { startNewOutcome(fid, ord); });
+                    })(featureId, suggestedOrder);
+                    ha.appendChild(newBtn);
                 }
+                appendUtilityActions(ha, { featureId: featureId });
 
-                const isActive = data.activeFeatureId === featureId;
-                const fCard = document.createElement("div"); fCard.className = "card" + (isActive ? " active-card" : ""); fCard.style.marginBottom = "14px";
-                const fRow = document.createElement("div"); fRow.className = "card-row";
-                const fBody = document.createElement("div"); fBody.className = "card-body";
-                fBody.innerHTML = `<div class="card-id">${esc(featureId)}</div><div class="card-title">${esc(selectedFeature.title || featureId)}</div>`;
-                fRow.appendChild(fBody); fRow.appendChild(badge(isActive ? "active" : String(selectedFeature.status ?? "pending")));
-                fCard.appendChild(fRow);
-                const fActions = document.createElement("div"); fActions.className = "card-actions";
-                if (!isActive) {
-                    const actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
-                    actBtn.disabled = state.isActivating === featureId || state.isSaving;
-                    actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Set Active";
-                    actBtn.addEventListener("click", () => activateFeature(featureId)); fActions.appendChild(actBtn);
-                }
-                const feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
-                feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
-                feEditBtn.addEventListener("click", () => startFeatureEdit(featureId)); fActions.appendChild(feEditBtn);
-                fCard.appendChild(fActions);
-                if (state.editingFeatureId === featureId && state.featureDraft) {
-                    const d = state.featureDraft;
-                    fCard.appendChild(renderEditor(`Edit: ${featureId}`, [
-                        mkField("Title", "title", d.title, "feature"), mkField("Purpose", "purpose", d.purpose, "feature", true),
-                        mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
-                        mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
-                        mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
-                        mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
-                    ], saveFeatureEdit, cancelFeatureEdit));
-                }
+                var bcBar = document.getElementById("breadcrumbBar"); bcBar.innerHTML = "";
+                var bc = document.createElement("div"); bc.className = "breadcrumb";
+                var backLink = document.createElement("span"); backLink.className = "bc-item clickable";
+                backLink.textContent = "Features"; backLink.addEventListener("click", returnToFeatures);
+                bc.appendChild(backLink);
+                bc.innerHTML += '<span class="bc-sep">\u203A</span><span class="bc-item">' + esc(selectedFeature.title || featureId) + '</span>';
+                bcBar.appendChild(bc);
+
+                var isActiveF = data.activeFeatureId === featureId;
+                var featureOutcomeCount = outcomes.length;
+                var featureVerifiedCount = outcomes.filter(function (o) { return o.status === "verified"; }).length;
+                var activeOutcome = outcomes.find(function (o) { return o.isActive; });
+                var plannedTests = outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0);
+                var selectedFeatureKey = cardStateKey("selected-feature", featureId);
+
+                root.appendChild(buildHeroPanel({
+                    kicker: "Focused feature",
+                    title: selectedFeature.title || featureId || "Feature details",
+                    badgeText: isActiveF ? "Active feature" : "Feature selected",
+                    description: selectedFeature.purpose
+                        ? selectedFeature.purpose
+                        : "Review outcome milestones, test readiness, and the next command to keep the TDD loop moving.",
+                    meta: activeOutcome
+                        ? "Current outcome: " + (activeOutcome.title || activeOutcome.id)
+                        : (outcomes.length ? "Choose the next outcome to activate or inspect." : "Add the first verifiable outcome to begin."),
+                    stats: [
+                        { value: String(featureOutcomeCount), label: "Outcomes", tone: "accent" },
+                        { value: String(featureVerifiedCount), label: "Verified", tone: "success" },
+                        { value: String(Math.max(featureOutcomeCount - featureVerifiedCount, 0)), label: "Remaining", tone: featureOutcomeCount > featureVerifiedCount ? "warn" : "muted" },
+                        { value: plannedTests > 0 ? String(plannedTests) : "Ready", label: plannedTests > 0 ? "Planned tests" : "Test status", tone: plannedTests > 0 ? "warn" : "success" },
+                    ],
+                    icon: activeOutcome && activeOutcome.status === "verified" ? "\u{1F680}" : "\u{1F3AF}",
+                }));
+
+                var fCard = makeCollapsibleCard({
+                    key: selectedFeatureKey,
+                    baseClass: "card card-collapsible",
+                    extraClass: isActiveF ? "active-card" : "",
+                    summaryClass: "card-summary",
+                    contentClass: "card-content",
+                    toggleClass: "card-toggle",
+                    collapsedLabel: "Feature details",
+                    expandedLabel: "Hide details",
+                    buildSummary: function (summary) {
+                        var fRow = document.createElement("div"); fRow.className = "card-row";
+                        var fBody = document.createElement("div"); fBody.className = "card-body";
+                        fBody.innerHTML = '<div class="card-id">' + esc(featureId) + '</div><div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
+                        fRow.appendChild(fBody);
+                        fRow.appendChild(badge(isActiveF ? "active" : String(selectedFeature.status || "pending")));
+                        summary.appendChild(fRow);
+                        appendFeatureProgress(summary, featureOutcomeCount, featureVerifiedCount);
+                    },
+                    buildContent: function (content) {
+                        var fActions = document.createElement("div"); fActions.className = "card-actions";
+                        if (!isActiveF) {
+                            var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
+                            actBtn.disabled = state.isActivating === featureId || state.isSaving;
+                            actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Activate Feature";
+                            (function (fid) {
+                                actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
+                            })(featureId);
+                            fActions.appendChild(actBtn);
+                        }
+                        var feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
+                        feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
+                        (function (fid) {
+                            feEditBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
+                        })(featureId);
+                        fActions.appendChild(feEditBtn);
+                        content.appendChild(fActions);
+
+                        var featureNote = document.createElement("div");
+                        featureNote.className = "card-note";
+                        featureNote.textContent = featureVerifiedCount + " of " + featureOutcomeCount + " outcomes are verified for this feature.";
+                        content.appendChild(featureNote);
+
+                        if (state.editingFeatureId === featureId && state.featureDraft) {
+                            var d = state.featureDraft;
+                            content.appendChild(renderEditor("Edit: " + featureId, [
+                                mkField("Title", "title", d.title, "feature"),
+                                mkField("Purpose", "purpose", d.purpose, "feature", true),
+                                mkField("Outcomes (one per line)", "outcomes", d.outcomes, "feature", true),
+                                mkField("Constraints (one per line)", "constraints", d.constraints, "feature", true),
+                                mkField("Non-goals (one per line)", "non_goals", d.non_goals, "feature", true),
+                                mkField("Dependencies (feature IDs, one per line)", "dependencies", d.dependencies, "feature", true),
+                            ], saveFeatureEdit, cancelFeatureEdit));
+                        }
+                    },
+                });
+                fCard.style.marginBottom = "12px";
                 root.appendChild(fCard);
 
+                buildNextStepBanner(data, root);
+
                 if (state.creatingOutcome && state.newOutcomeDraft) {
-                    const d = state.newOutcomeDraft;
+                    var d = state.newOutcomeDraft;
                     root.appendChild(renderEditor("New Outcome", [
                         mkField("ID (slug)", "outcome_id", d.outcome_id, "newOutcome"),
                         mkField("Title", "title", d.title, "newOutcome"),
@@ -497,137 +2853,248 @@
                         mkField("Order", "order", d.order, "newOutcome"),
                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "newOutcome", true),
                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "newOutcome", true),
+                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "newOutcome", true, "Test file paths that must pass"),
                     ], saveNewOutcome, cancelNewOutcome));
                 }
 
                 if (!outcomes.length && !state.creatingOutcome) {
-                    const empty = document.createElement("div"); empty.className = "empty";
-                    empty.innerHTML = `<div class="empty-icon">&#x1F4CB;</div><div class="empty-title">No outcomes yet</div><div>Click &ldquo;+ New Outcome&rdquo; to add the first milestone.</div>`;
+                    var empty = document.createElement("div"); empty.className = "empty";
+                    empty.innerHTML = '<div class="empty-icon">\u{1F3AF}</div><div class="empty-title">No outcomes yet</div><div>Click &ldquo;+ Outcome&rdquo; to add the first verifiable milestone.</div>';
                     root.appendChild(empty); return;
                 }
 
                 if (outcomes.length > 0) {
-                    const verifiedCount = outcomes.filter(o => o.status === "verified").length;
-                    const sec = document.createElement("div"); sec.className = "section-header";
-                    sec.innerHTML = `<span class="section-label">Outcomes</span><span class="stat-chip"><strong>${verifiedCount}/${outcomes.length}</strong> verified</span>`;
+                    var sec = document.createElement("div"); sec.className = "section-header";
+                    sec.innerHTML = '<span class="section-label">Outcomes</span><span class="stat-chip"><strong>' + featureVerifiedCount + '/' + outcomes.length + '</strong> verified</span>';
                     root.appendChild(sec);
 
-                    const list = document.createElement("ul"); list.className = "outcome-list";
-                    for (const outcome of outcomes) {
-                        const isActiveOutcome = !!outcome.isActive;
-                        const item = document.createElement("li");
-                        let cls = "outcome-item";
+                    var list = document.createElement("ul"); list.className = "outcome-list";
+                    outcomes.forEach(function (outcome) {
+                        var isActiveOutcome = !!outcome.isActive;
+                        var cls = "outcome-item";
                         if (isActiveOutcome) cls += " active-outcome";
                         if (outcome.status === "verified") cls += " verified-outcome";
                         if (outcome.status === "failed") cls += " failed-outcome";
-                        item.className = cls;
+                        var outcomeKey = cardStateKey("outcome", featureId, outcome.id);
 
-                        const row = document.createElement("div"); row.className = "outcome-row";
-                        const body = document.createElement("div"); body.className = "outcome-body";
-                        body.innerHTML = `<div class="outcome-num">Outcome ${esc(outcome.order ?? "?")}</div><div class="outcome-title">${esc(outcome.title || outcome.id)}</div><div class="outcome-id">${esc(outcome.id)}</div>`;
+                        var item = makeCollapsibleCard({
+                            key: outcomeKey,
+                            baseClass: cls + " outcome-item-collapsible",
+                            summaryClass: "outcome-summary",
+                            contentClass: "outcome-content",
+                            toggleClass: "outcome-toggle",
+                            collapsedLabel: "Inspect outcome",
+                            expandedLabel: "Hide outcome",
+                            accordionGroup: "outcome-selection:" + featureId,
+                            buildSummary: function (summary) {
+                                var row = document.createElement("div"); row.className = "outcome-row";
+                                var body = document.createElement("div"); body.className = "outcome-body";
+                                var review = getOutcomeReview(outcome);
+                                body.innerHTML =
+                                    '<div class="outcome-num">Outcome ' + esc(outcome.order != null ? outcome.order : "?") + '</div>' +
+                                    '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>' +
+                                    '<div class="outcome-id">' + esc(outcome.id) + '</div>' +
+                                    '<div class="outcome-goal">' + esc(outcome.goal || "") + '</div>';
 
-                        const testCount = Number(outcome.testCount ?? 0);
-                        const passingCount = Number(outcome.passingTestCount ?? 0);
-                        const plannedCount = Number(outcome.plannedTestCount ?? 0);
-                        const chips = document.createElement("div"); chips.className = "test-chips";
-                        if (testCount > 0) {
-                            const all = document.createElement("span"); all.className = "test-chip"; all.textContent = `${testCount} test${testCount !== 1 ? "s" : ""}`;
-                            chips.appendChild(all);
-                            if (passingCount > 0) { const p = document.createElement("span"); p.className = "test-chip passing"; p.textContent = `${passingCount} passing`; chips.appendChild(p); }
-                            if (plannedCount > 0) { const p = document.createElement("span"); p.className = "test-chip warning"; p.textContent = `${plannedCount} planned`; chips.appendChild(p); }
-                        } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
-                            const noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
-                        }
-                        if (chips.childNodes.length > 0) body.appendChild(chips);
+                                var tc = Number(outcome.testCount || 0);
+                                var passingCount = Number(outcome.passingTestCount || 0);
+                                var plannedCount = Number(outcome.plannedTestCount || 0);
+                                var chips = document.createElement("div"); chips.className = "test-chips";
+                                if (tc > 0) {
+                                    var all = document.createElement("span"); all.className = "test-chip"; all.textContent = tc + " test" + (tc !== 1 ? "s" : ""); chips.appendChild(all);
+                                    if (passingCount > 0) { var p = document.createElement("span"); p.className = "test-chip passing"; p.textContent = passingCount + " passing"; chips.appendChild(p); }
+                                    if (plannedCount > 0) { var pl = document.createElement("span"); pl.className = "test-chip warning"; pl.textContent = plannedCount + " planned"; chips.appendChild(pl); }
+                                } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                                    var noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
+                                }
+                                if (review && review.missing_required_tests && review.missing_required_tests.length > 0) {
+                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " missing"; chips.appendChild(missing);
+                                }
+                                if (review && review.undeclared_tests && review.undeclared_tests.length > 0) {
+                                    var undeclared = document.createElement("span"); undeclared.className = "test-chip warning"; undeclared.textContent = review.undeclared_tests.length + " undeclared"; chips.appendChild(undeclared);
+                                }
+                                if (chips.childNodes.length > 0) body.appendChild(chips);
+                                row.appendChild(body);
+                                row.appendChild(badge(String(outcome.status || "pending")));
+                                summary.appendChild(row);
+                            },
+                            buildContent: function (content) {
+                                var review = getOutcomeReview(outcome);
+                                var actions = document.createElement("div"); actions.className = "card-actions";
 
-                        row.appendChild(body); row.appendChild(badge(String(outcome.status ?? "pending"))); item.appendChild(row);
+                                if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
+                                    var actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
+                                    actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
+                                    actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate Outcome";
+                                    (function (fid, oid) {
+                                        actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateOutcome(fid, oid); });
+                                    })(featureId, outcome.id);
+                                    actions.appendChild(actBtn);
+                                }
 
-                        const actions = document.createElement("div"); actions.className = "card-actions";
-                        if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
-                            const actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
-                            actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
-                            actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate";
-                            actBtn.addEventListener("click", () => activateOutcome(featureId, outcome.id)); actions.appendChild(actBtn);
-                        }
-                        const editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                        editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                        editBtn.addEventListener("click", () => startOutcomeEdit(featureId, outcome.id)); actions.appendChild(editBtn);
-                        item.appendChild(actions);
+                                if (review && (review.needs_generation || review.has_no_required_tests)) {
+                                    appendActionButton(actions, {
+                                        title: review.has_no_required_tests ? "Generate Initial Test" : "Generate Missing Tests",
+                                        tool: "specrail_test_generate",
+                                        args: { feature_id: featureId, outcome_id: outcome.id },
+                                        refresh: true,
+                                    });
+                                }
 
-                        if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
-                            const d = state.outcomeDraft;
-                            item.appendChild(renderEditor(`Edit: ${outcome.id}`, [
-                                mkField("Title", "title", d.title, "outcome"), mkField("Goal", "goal", d.goal, "outcome", true),
-                                mkField("Order", "order", d.order, "outcome"),
-                                mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
-                                mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
-                                mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
-                                mkField("Required tests (one path/ID per line)", "required_tests", d.required_tests, "outcome", true),
-                            ], saveOutcomeEdit, cancelOutcomeEdit));
-                        }
-                        list.appendChild(item);
-                    }
+                                if (isActiveOutcome) {
+                                    if (outcome.status !== "verified" && outcome.status !== "skipped") {
+                                        appendActionButton(actions, { title: "Run Implement", tool: "specrail_implement", kind: "primary", refresh: true });
+                                        appendActionButton(actions, { title: "Run Verify", tool: "specrail_verify", kind: "success", refresh: true });
+                                    }
+                                    if (outcome.status === "verified") {
+                                        appendActionButton(actions, { title: "Advance To Next Outcome", tool: "specrail_advance", kind: "success", refresh: true });
+                                    }
+                                }
+
+                                if (["verified", "failed", "skipped"].indexOf(String(outcome.status || "")) >= 0) {
+                                    appendActionButton(actions, {
+                                        title: "Reset Status",
+                                        tool: "specrail_outcome_unverify",
+                                        args: { feature_id: featureId, outcome_id: outcome.id },
+                                        kind: "danger",
+                                        refresh: true,
+                                    });
+                                }
+
+                                var editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
+                                editBtn.disabled = state.isSaving; editBtn.textContent = "Edit Outcome";
+                                (function (fid, oid) {
+                                    editBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startOutcomeEdit(fid, oid); });
+                                })(featureId, outcome.id);
+                                actions.appendChild(editBtn);
+                                content.appendChild(actions);
+
+                                var outcomeMeta = document.createElement("div");
+                                outcomeMeta.className = "card-note";
+                                outcomeMeta.textContent = outcome.goal || "No outcome goal recorded.";
+                                content.appendChild(outcomeMeta);
+
+                                var healthSection = renderTestHealthSection(featureId, outcome, isActiveOutcome);
+                                if (healthSection) content.appendChild(healthSection);
+
+                                var suggestionPreviewSection = renderSuggestionPreview(featureId, outcome.id);
+                                if (suggestionPreviewSection) content.appendChild(suggestionPreviewSection);
+
+                                var relatedTestsSection = renderRelatedTestsSection(featureId, outcome);
+                                if (relatedTestsSection) content.appendChild(relatedTestsSection);
+
+                                if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
+                                    var d = state.outcomeDraft;
+                                    content.appendChild(renderEditor("Edit: " + outcome.id, [
+                                        mkField("Title", "title", d.title, "outcome"),
+                                        mkField("Goal", "goal", d.goal, "outcome", true),
+                                        mkField("Order", "order", d.order, "outcome"),
+                                        mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
+                                        mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
+                                        mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
+                                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "outcome", true),
+                                    ], saveOutcomeEdit, cancelOutcomeEdit));
+                                }
+                            },
+                        });
+                        var li = document.createElement("li"); li.appendChild(item); list.appendChild(li);
+                    });
                     root.appendChild(list);
                 }
             }
 
+            // Main render
+            function applyHostStyles() {
+                var root = document.documentElement;
+                var vars = state.hostContext && state.hostContext.styles && state.hostContext.styles.variables;
+                if (vars && typeof vars === "object")
+                    Object.entries(vars).forEach(function (kv) { if (typeof kv[1] === "string") root.style.setProperty(kv[0], kv[1]); });
+                var theme = state.hostContext && state.hostContext.theme;
+                if (theme === "dark" || theme === "light") root.style.colorScheme = theme;
+            }
+
             function render() {
                 applyHostStyles();
-                const result = state.toolResult;
-                const data = (result?.structuredContent && typeof result.structuredContent === "object") ? result.structuredContent : {};
+                var bcBar = document.getElementById("breadcrumbBar");
+                if (bcBar) bcBar.innerHTML = "";
+
+                var result = state.toolResult;
+                var data = (result && result.structuredContent && typeof result.structuredContent === "object") ? result.structuredContent : {};
+
                 if (!result) {
-                    document.getElementById("root").innerHTML = `<div class="empty"><div class="empty-icon">&#x1F682;</div><div class="empty-title">Specrail</div><div>Waiting for data\u2026</div></div>`;
-                    document.getElementById("headerActions").innerHTML = ""; return;
-                }
-                if (result.isError) {
-                    document.getElementById("root").innerHTML = `<div class="empty"><div class="empty-icon">\u26A0\uFE0F</div><div class="empty-title">Tool error</div><div>${esc(toolText(result) || "The MCP tool returned an error.")}</div></div>`;
+                    document.getElementById("root").innerHTML = '<div class="empty"><div class="empty-icon">\u{1F682}</div><div class="empty-title">Specrail</div><div>Waiting for data\u2026</div></div>';
                     document.getElementById("headerActions").innerHTML = "";
-                    showStatus(toolText(result), "error"); return;
+                    renderWorkflowBar({}); return;
                 }
+
+                if (result.isError) {
+                    document.getElementById("root").innerHTML = '<div class="empty"><div class="empty-icon">\u26A0\uFE0F</div><div class="empty-title">Error</div><div>' + esc(toolText(result) || "The MCP tool returned an error.") + '</div></div>';
+                    document.getElementById("headerActions").innerHTML = "";
+                    appendLog("Tool error: " + toolText(result), "error"); return;
+                }
+
+                renderWorkflowBar(data);
                 if (data.mode === "outcome_selection") renderOutcomeSelection(data);
                 else renderFeatureSelection(data);
                 reportSize();
             }
 
             function reportSize() {
-                sendNotification("ui/notifications/size-changed", {
-                    width: Math.ceil(document.documentElement.scrollWidth || document.body.scrollWidth || 0),
-                    height: Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || 0),
-                });
+                sendNotification("ui/notifications/size-changed", { width: 680, height: 680 });
             }
 
-            window.addEventListener("message", event => {
-                const msg = event.data;
+            window.addEventListener("message", function (event) {
+                var msg = event.data;
                 if (!msg || msg.jsonrpc !== "2.0") return;
                 if (typeof msg.id !== "undefined" && pending.has(msg.id)) {
-                    const req = pending.get(msg.id); pending.delete(msg.id);
+                    var req = pending.get(msg.id); pending.delete(msg.id);
                     if (Object.prototype.hasOwnProperty.call(msg, "result")) req.resolve(msg.result);
-                    else req.reject(new Error(msg?.error?.message ?? "Unknown error"));
+                    else req.reject(new Error((msg.error && msg.error.message) || "Unknown error"));
                     return;
                 }
                 if (msg.method === "ui/resource-teardown" && typeof msg.id !== "undefined") { sendResponse(msg.id, {}); return; }
                 if (msg.method === "ui/notifications/tool-input") {
-                    state.toolArguments = (msg.params?.arguments && typeof msg.params.arguments === "object") ? msg.params.arguments : {}; return;
+                    state.toolArguments = (msg.params && msg.params.arguments && typeof msg.params.arguments === "object") ? msg.params.arguments : {};
+                    return;
                 }
                 if (msg.method === "ui/notifications/tool-result") { state.toolResult = msg.params; render(); reportSize(); return; }
-                if (msg.method === "ui/notifications/tool-cancelled") { showStatus(msg.params?.reason ?? "Cancelled.", "error"); return; }
-                if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params ?? {}); render(); }
+                if (msg.method === "ui/notifications/tool-cancelled") { appendLog("Cancelled: " + ((msg.params && msg.params.reason) || "Operation was cancelled."), "warn"); return; }
+                if (msg.method === "ui/notifications/open-file-result") {
+                    var path = msg.params && msg.params.path;
+                    if (path) {
+                        if (msg.params.opened === true) {
+                            setFileOpenState(path, "opened", (msg.params.message || "Host acknowledged the file-open request."));
+                            appendLog("Host acknowledged file open: " + path, "success");
+                        } else {
+                            setFileOpenState(path, "fallback", (msg.params.message || "Host declined the file-open request. Use the inline test panel instead."));
+                            appendLog("Host declined file open: " + path, "warn");
+                        }
+                        render();
+                    }
+                    return;
+                }
+                if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
             });
 
-            new ResizeObserver(() => reportSize()).observe(document.body);
+            new ResizeObserver(function () { reportSize(); }).observe(document.body);
 
-            (async () => {
+            (async function () {
+                appendLog("Specrail Navigator initializing\u2026", "muted");
                 try {
-                    const init = await sendRequest("ui/initialize", {
+                    var init = await sendRequest("ui/initialize", {
                         protocolVersion: "2026-01-26",
-                        clientInfo: { name: "specrail-navigator", version: "2.0.0" },
+                        clientInfo: { name: "specrail-navigator", version: "3.0.0" },
                         capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] },
                     });
-                    state.hostContext = (init?.hostContext && typeof init.hostContext === "object") ? init.hostContext : {};
-                    applyHostStyles(); sendNotification("ui/notifications/initialized", {}); render(); reportSize();
-                } catch (e) { showStatus(e?.message ?? String(e), "error"); }
+                    state.hostContext = (init && init.hostContext && typeof init.hostContext === "object") ? init.hostContext : {};
+                    applyHostStyles();
+                    sendNotification("ui/notifications/initialized", {});
+                    appendLog("Connected. Ready.", "success");
+                    render(); reportSize();
+                } catch (e) { appendLog("Init error: " + (e && e.message ? e.message : String(e)), "error"); }
             })();
         })();
     </script>
 </body>
+
 </html>
