@@ -180,7 +180,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("Open Related Tests"));
+        .contains("Related tests"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()

@@ -1660,6 +1660,17 @@
                 container.appendChild(chip);
             }
 
+            function testFileName(path) {
+                var parts = String(path || "").split("/");
+                return parts[parts.length - 1] || String(path || "");
+            }
+
+            function testDisplayName(test) {
+                var fileName = testFileName(test && test.path);
+                var methodName = String((test && test.id) || "unnamed-test");
+                return fileName === methodName ? fileName : (fileName + " :: " + methodName);
+            }
+
             function renderPathList(paths, className) {
                 var list = document.createElement("ul");
                 list.className = className || "path-list";
@@ -1920,22 +1931,16 @@
                 var review = getOutcomeReview(outcome);
                 if (!review) return null;
 
-                var panelKey = panelStateKey("related-tests", featureId, outcome.id);
                 var section = document.createElement("div");
                 section.className = "section-card";
 
                 var head = document.createElement("div");
                 head.className = "section-card-head";
                 head.innerHTML = '<span class="section-card-title">Related tests</span>';
-                var toggle = document.createElement("button");
-                toggle.className = "btn btn-sm";
-                toggle.textContent = isPanelExpanded(panelKey) ? "Hide Related Tests" : "Open Related Tests";
-                toggle.addEventListener("click", function (ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    togglePanelExpanded(panelKey);
-                });
-                head.appendChild(toggle);
+                var countBadge = document.createElement("span");
+                countBadge.className = "stat-chip";
+                countBadge.innerHTML = '<strong>' + review.related_test_count + '</strong> test' + (review.related_test_count !== 1 ? 's' : '');
+                head.appendChild(countBadge);
                 section.appendChild(head);
 
                 var copy = document.createElement("div");
@@ -1945,48 +1950,24 @@
                     : "No manifest tests are linked yet. Use the required test paths below to register or generate them.";
                 section.appendChild(copy);
 
-                if (!isPanelExpanded(panelKey)) return section;
-
                 if (review.related_tests.length > 0) {
                     var list = document.createElement("ul");
                     list.className = "related-test-list";
                     review.related_tests.forEach(function (test) {
                         var item = document.createElement("li");
                         item.className = "related-test-item";
-                        var fileOpenState = getFileOpenState(test.path);
 
                         var main = document.createElement("div");
                         main.className = "related-test-main";
                         main.innerHTML =
-                            '<div class="related-test-id">' + esc(test.id) + '</div>' +
-                            '<div class="related-test-path">' + esc(test.path) + '</div>';
+                            '<div class="related-test-id">' + esc(testDisplayName(test)) + '</div>' +
+                            '<div class="related-test-path">' + esc(String(test.path || "")) + '</div>';
                         var meta = document.createElement("div");
                         meta.className = "related-test-meta";
-                        appendTestChip(meta, String(test.kind || "unit"), "");
                         appendTestChip(meta, String(test.status || "planned"), testStatusChipClass(String(test.status || "planned")));
+                        appendTestChip(meta, String(test.kind || "unit"), "");
                         main.appendChild(meta);
-                        if (fileOpenState && fileOpenState.message) {
-                            var statusLine = document.createElement("div");
-                            statusLine.className = "related-test-status " + (fileOpenState.status || "fallback");
-                            statusLine.textContent = fileOpenState.message;
-                            main.appendChild(statusLine);
-                        }
                         item.appendChild(main);
-
-                        var openButton = document.createElement("button");
-                        openButton.className = "btn btn-sm";
-                        openButton.disabled = !!fileOpenState && fileOpenState.status === "pending";
-                        openButton.textContent = fileOpenState && fileOpenState.status === "pending"
-                            ? "Opening…"
-                            : fileOpenState && fileOpenState.status === "opened"
-                                ? "Open Again"
-                                : "Open File";
-                        openButton.addEventListener("click", function (ev) {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                            requestOpenRelatedTest(test.path);
-                        });
-                        item.appendChild(openButton);
                         list.appendChild(item);
                     });
                     section.appendChild(list);
