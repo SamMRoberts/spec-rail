@@ -35,6 +35,21 @@ fn plugin_mcp_config_runs_specrail_mcp_server() {
 }
 
 #[test]
+fn workspace_mcp_config_uses_specrail_server_id() {
+    let mcp_config = fs::read_to_string(format!(
+        "{}/.vscode/mcp.json",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+
+    assert!(mcp_config.contains("\"specrail\""));
+    assert!(mcp_config.contains("\"type\": \"stdio\""));
+    assert!(mcp_config.contains("\"command\": \"${workspaceFolder}/target/debug/specrail\""));
+    assert!(mcp_config.contains("\"mcp-server\""));
+    assert!(mcp_config.contains("\"SPECRAIL_MCP_DEBUG_STDERR\": \"1\""));
+}
+
+#[test]
 fn plugin_workflow_stage_skill_exists() {
     let skill_path = format!(
         "{}/.github/plugin/skills/specrail-plan-features/SKILL.md",
@@ -57,4 +72,18 @@ fn plugin_tdd_skill_exists() {
     assert!(skill.contains("name: specrail-tdd"));
     assert!(skill.contains("workflow.recommended_skill"));
     assert!(skill.contains("specrail_status"));
+}
+
+#[test]
+fn workspace_specrail_agent_exists_and_references_workflow_guidance() {
+    let agent_path = format!(
+        "{}/.github/agents/specrail.agent.md",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let agent = fs::read_to_string(agent_path).unwrap();
+
+    assert!(agent.contains("name: Specrail"));
+    assert!(agent.contains("description:"));
+    assert!(agent.contains("specrail_status"));
+    assert!(agent.contains("workflow.recommended_skill"));
 }

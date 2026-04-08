@@ -1,6 +1,6 @@
 {
     "servers": {
-        "SpecRail MCP": {
+        "specrail": {
             "type": "stdio",
             "command": "${workspaceFolder}/target/debug/specrail",
             "env": {
