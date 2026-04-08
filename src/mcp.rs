@@ -507,11 +507,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
             })
             .collect();
 
-        let count = outcome_summaries.len();
         return Ok(feature_navigate_payload(
-            format!(
-                "Feature '{feature_id}' selected. Found {count} outcome(s). Select an outcome with specrail_outcome_activate or create a new one with specrail_outcome_new."
-            ),
+            String::new(),
             Some(json!({
                 "mode": "outcome_selection",
                 "activeFeatureId": active_feature_id,
@@ -541,11 +538,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         ));
     }
 
-    let count = feature_summaries.len();
     Ok(feature_navigate_payload(
-        format!(
-            "Found {count} feature(s). Select a feature by calling specrail_feature_navigate with feature_id, or create a new feature with specrail_feature_new."
-        ),
+        String::new(),
         Some(json!({
             "mode": "feature_selection",
             "activeFeatureId": active_feature_id,
