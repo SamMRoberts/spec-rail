@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
@@ -11,7 +12,7 @@ use serde_json::{json, Map, Value};
 
 use crate::core::{
     ledger::Ledger,
-    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
+    models::{FeatureSpec, LedgerEvent, LedgerEventType, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
     repository::Repository,
 };
 use crate::commands;
@@ -724,6 +725,169 @@ fn feature_navigate_outcome_actions() -> Value {
     })
 }
 
+fn latest_implementation_results(events: &[LedgerEvent]) -> HashMap<(String, String), bool> {
+    let mut results = HashMap::new();
+
+    for event in events {
+        if event.event_type != LedgerEventType::ImplementationRun {
+            continue;
+        }
+
+        let Some(feature_id) = event.feature_id.as_ref() else {
+            continue;
+        };
+        let Some(outcome_id) = event.outcome_id.as_ref() else {
+            continue;
+        };
+        let Some(success) = event.success else {
+            continue;
+        };
+
+        results.insert((feature_id.clone(), outcome_id.clone()), success);
+    }
+
+    results
+}
+
+fn status_indicator_payload(tone: &str, label: &str, detail: impl Into<String>) -> Value {
+    json!({
+        "tone": tone,
+        "label": label,
+        "detail": detail.into()
+    })
+}
+
+fn outcome_has_successful_implement(
+    outcome: &OutcomeSpec,
+    implementation_results: &HashMap<(String, String), bool>,
+) -> bool {
+    implementation_results
+        .get(&(outcome.feature_id.clone(), outcome.id.clone()))
+        .copied()
+        == Some(true)
+}
+
+fn feature_implement_status_payload(
+    outcomes: &[OutcomeSpec],
+    implementation_results: &HashMap<(String, String), bool>,
+) -> Value {
+    if outcomes.is_empty() {
+        return status_indicator_payload(
+            "muted",
+            "Waiting",
+            "Add an outcome before implementation can run for this feature.",
+        );
+    }
+
+    let failed_count = outcomes
+        .iter()
+        .filter(|outcome| outcome.status == OutcomeStatus::Failed)
+        .count();
+    if failed_count > 0 {
+        return status_indicator_payload(
+            "danger",
+            "Retry",
+            format!(
+                "{} outcome{} failed verification and likely need another implement pass.",
+                failed_count,
+                if failed_count == 1 { "" } else { "s" }
+            ),
+        );
+    }
+
+    let outstanding_count = outcomes
+        .iter()
+        .filter(|outcome| match outcome.status {
+            OutcomeStatus::Verified | OutcomeStatus::Skipped => false,
+            OutcomeStatus::Active => !outcome_has_successful_implement(outcome, implementation_results),
+            OutcomeStatus::Pending | OutcomeStatus::Failed => true,
+        })
+        .count();
+
+    if outstanding_count == 0 {
+        return status_indicator_payload(
+            "success",
+            "Done",
+            "Implement has completed successfully for every outcome in this feature.",
+        );
+    }
+
+    status_indicator_payload(
+        "warning",
+        "Needed",
+        format!(
+            "Implement still needs to run for {} outcome{} in this feature.",
+            outstanding_count,
+            if outstanding_count == 1 { "" } else { "s" }
+        ),
+    )
+}
+
+fn feature_verify_status_payload(
+    outcomes: &[OutcomeSpec],
+    implementation_results: &HashMap<(String, String), bool>,
+) -> Value {
+    if outcomes.is_empty() {
+        return status_indicator_payload(
+            "muted",
+            "Waiting",
+            "Add an outcome before verification can run for this feature.",
+        );
+    }
+
+    if outcomes
+        .iter()
+        .all(|outcome| matches!(outcome.status, OutcomeStatus::Verified | OutcomeStatus::Skipped))
+    {
+        return status_indicator_payload(
+            "success",
+            "Done",
+            "Every outcome in this feature is already verified.",
+        );
+    }
+
+    let failed_count = outcomes
+        .iter()
+        .filter(|outcome| outcome.status == OutcomeStatus::Failed)
+        .count();
+    if failed_count > 0 {
+        return status_indicator_payload(
+            "danger",
+            "Failed",
+            format!(
+                "{} outcome{} failed verification. Fix implementation and verify again.",
+                failed_count,
+                if failed_count == 1 { "" } else { "s" }
+            ),
+        );
+    }
+
+    let ready_to_verify_count = outcomes
+        .iter()
+        .filter(|outcome| {
+            outcome.status == OutcomeStatus::Active
+                && outcome_has_successful_implement(outcome, implementation_results)
+        })
+        .count();
+    if ready_to_verify_count > 0 {
+        return status_indicator_payload(
+            "warning",
+            "Needed",
+            format!(
+                "Verify is ready for {} active outcome{} in this feature.",
+                ready_to_verify_count,
+                if ready_to_verify_count == 1 { "" } else { "s" }
+            ),
+        );
+    }
+
+    status_indicator_payload(
+        "muted",
+        "Waiting",
+        "Run implement on the active outcome before verification becomes relevant.",
+    )
+}
+
 fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     repo.ensure_hierarchy()?;
@@ -739,6 +903,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
         .collect();
     let manifest = repo.load_manifest()?;
+    let ledger_events = Ledger::read_all(&repo.ledger_path()).unwrap_or_default();
+    let implementation_results = latest_implementation_results(&ledger_events);
     let active_solution_id = state.active_solution.clone();
     let active_project_id = state.active_project.clone();
     let active_component_id = state.active_component.clone();
@@ -786,6 +952,8 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 .iter()
                 .filter(|outcome| outcome.status == crate::core::models::OutcomeStatus::Active)
                 .count();
+            let implement_status = feature_implement_status_payload(&outcomes, &implementation_results);
+            let verify_status = feature_verify_status_payload(&outcomes, &implementation_results);
             json!({
                 "id": feature.id,
                 "title": feature.title,
@@ -804,7 +972,9 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "failingTestCount": failing_test_count,
                 "undeclaredOutcomeCount": undeclared_outcome_count,
                 "hasUndeclaredTests": undeclared_outcome_count > 0,
-                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str())
+                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str()),
+                "implementStatus": implement_status,
+                "verifyStatus": verify_status
             })
         })
         .collect();

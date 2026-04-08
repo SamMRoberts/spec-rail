@@ -1050,6 +1050,31 @@
             color: var(--fg-dim);
         }
 
+        .btn-status {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--bg-card) 82%, transparent);
+        }
+
+        .btn-status-success {
+            background: var(--verified-border);
+        }
+
+        .btn-status-warning {
+            background: var(--active-border);
+        }
+
+        .btn-status-danger {
+            background: var(--failed-border);
+        }
+
+        .btn-status-muted {
+            background: var(--fg-dim);
+        }
+
         /* Test chips */
         .test-chips {
             display: flex;
@@ -2035,17 +2060,51 @@
 
             function appendActionButton(container, config) {
                 var title = config.title, tool = config.tool, args = config.args || {},
-                    kind = config.kind || "default", refresh = config.refresh || false;
+                    kind = config.kind || "default", refresh = config.refresh || false,
+                    status = config.status || null, disabled = !!config.disabled;
                 var button = document.createElement("button");
                 button.className = kind === "primary" ? "btn btn-primary btn-sm"
                     : kind === "ghost" ? "btn btn-ghost btn-sm"
                         : kind === "success" ? "btn btn-success btn-sm"
                             : kind === "danger" ? "btn btn-danger btn-sm"
                                 : "btn btn-sm";
-                button.disabled = state.isSaving || isActionRunning(tool, args);
-                button.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
+                button.disabled = state.isSaving || isActionRunning(tool, args) || disabled;
+                if (config.tooltip || (status && status.detail)) {
+                    button.title = config.tooltip || status.detail;
+                }
+                var label = document.createElement("span");
+                label.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
+                button.appendChild(label);
+                if (status) {
+                    var tone = String(status.tone || "muted");
+                    var indicator = document.createElement("span");
+                    indicator.className = "btn-status btn-status-" + tone;
+                    indicator.setAttribute("aria-label", String(status.label || tone));
+                    indicator.title = String(status.detail || status.label || "");
+                    button.appendChild(indicator);
+                }
                 button.addEventListener("click", function () { runToolAction(title, tool, args, { refresh: refresh }); });
                 container.appendChild(button);
+            }
+
+            function featureSummaryById(data, featureId) {
+                var features = Array.isArray(data && data.features) ? data.features : [];
+                for (var i = 0; i < features.length; i += 1) {
+                    if (features[i] && features[i].id === featureId) return features[i];
+                }
+                return null;
+            }
+
+            function featureActionStatus(featureSummary, key, fallbackDetail) {
+                var status = featureSummary && featureSummary[key];
+                if (!status || typeof status !== "object") {
+                    return { tone: "muted", label: "Waiting", detail: fallbackDetail || "Status unavailable." };
+                }
+                return {
+                    tone: String(status.tone || "muted"),
+                    label: String(status.label || "Waiting"),
+                    detail: String(status.detail || fallbackDetail || "Status unavailable.")
+                };
             }
 
             async function activateFeature(id) {
@@ -3157,7 +3216,7 @@
                 var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                 var plannedTests = outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0);
                 var selectedFeatureKey = cardStateKey("selected-feature", featureId);
-                var selectedFeatureSummary = {
+                var selectedFeatureSummary = Object.assign({}, featureSummaryById(data, featureId) || {}, {
                     totalTestCount: outcomes.reduce(function (n, o) { return n + Number(o.testCount || 0); }, 0),
                     passingTestCount: outcomes.reduce(function (n, o) { return n + Number(o.passingTestCount || 0); }, 0),
                     writtenTestCount: outcomes.reduce(function (n, o) { return n + Number(o.writtenTestCount || 0); }, 0),
@@ -3166,7 +3225,7 @@
                     undeclaredOutcomeCount: outcomes.reduce(function (n, o) {
                         return n + (Number(o.undeclaredTestCount || 0) > 0 ? 1 : 0);
                     }, 0),
-                };
+                });
 
                 root.appendChild(buildHeroPanel({
                     kicker: "Focused feature",
@@ -3212,6 +3271,9 @@
                     },
                     buildContent: function (content) {
                         var fActions = document.createElement("div"); fActions.className = "card-actions";
+                        var implementStatus = featureActionStatus(selectedFeatureSummary, "implementStatus", "Run implement for each outcome in this feature.");
+                        var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
+                        var featureHasOutcomes = featureOutcomeCount > 0;
                         if (!isActiveF) {
                             var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
                             actBtn.disabled = state.isActivating === featureId || state.isSaving;
@@ -3221,6 +3283,34 @@
                             })(featureId);
                             fActions.appendChild(actBtn);
                         }
+                        appendActionButton(fActions, {
+                            title: "Run Implement",
+                            tool: "specrail_implement",
+                            args: {},
+                            kind: "default",
+                            refresh: true,
+                            disabled: !isActiveF || !featureHasOutcomes,
+                            tooltip: !isActiveF
+                                ? "Activate this feature and one of its outcomes before running implement."
+                                : !featureHasOutcomes
+                                    ? "Create at least one outcome before running implement."
+                                    : implementStatus.detail,
+                            status: implementStatus
+                        });
+                        appendActionButton(fActions, {
+                            title: "Run Verify",
+                            tool: "specrail_verify",
+                            args: {},
+                            kind: "default",
+                            refresh: true,
+                            disabled: !isActiveF || !featureHasOutcomes,
+                            tooltip: !isActiveF
+                                ? "Activate this feature and one of its outcomes before running verify."
+                                : !featureHasOutcomes
+                                    ? "Create at least one outcome before running verify."
+                                    : verifyStatus.detail,
+                            status: verifyStatus
+                        });
                         var feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
                         feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
                         (function (fid) {

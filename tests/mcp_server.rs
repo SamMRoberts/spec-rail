@@ -463,6 +463,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(auth_feature["plannedTestCount"], 2);
     assert_eq!(auth_feature["undeclaredOutcomeCount"], 1);
     assert_eq!(auth_feature["hasUndeclaredTests"], json!(true));
+    assert_eq!(auth_feature["implementStatus"]["tone"], "warning");
+    assert_eq!(auth_feature["implementStatus"]["label"], "Needed");
+    assert_eq!(auth_feature["verifyStatus"]["tone"], "muted");
+    assert_eq!(auth_feature["verifyStatus"]["label"], "Waiting");
     assert_eq!(
         feature_picker["result"]["structuredContent"]["solutions"][0]["id"],
         "default-solution"
