@@ -117,6 +117,83 @@ fn outcome_activate_updates_state() {
 }
 
 #[test]
+fn outcome_new_prints_field_explanations_and_next_steps() {
+    let dir = TempDir::new().unwrap();
+    setup(&dir);
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth-login", "outcome-1-domain",
+            "--title", "Domain Validation",
+            "--goal", "User can log in with valid credentials.",
+            "--order", "1",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("What each field does:"))
+        .stdout(contains("goal   — acceptance criterion"))
+        .stdout(contains("order  — sequence position"))
+        .stdout(contains("allow  — glob paths the AI agent may modify"))
+        .stdout(contains("test   — test file paths for AI-assisted generation"))
+        .stdout(contains("Next steps:"))
+        .stdout(contains("specrail test add"))
+        .stdout(contains("specrail outcome activate auth-login outcome-1-domain"));
+}
+
+#[test]
+fn outcome_show_prints_contextual_labels() {
+    let dir = TempDir::new().unwrap();
+    setup(&dir);
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth-login", "outcome-1-domain",
+            "--title", "Domain Validation",
+            "--goal", "User can log in with valid credentials.",
+            "--order", "1",
+            "--allow", "src/auth/**",
+            "--forbid", "src/billing/**",
+            "--test", "tests/auth/validate.rs",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("order controls the sequence used by `specrail advance`"))
+        .stdout(contains("goal is the acceptance criterion"))
+        .stdout(contains("AI agent may only modify"))
+        .stdout(contains("AI agent must NOT touch"))
+        .stdout(contains("used by `specrail test generate`"))
+        .stdout(contains("add individual tests with `specrail test add`"));
+}
+
+#[test]
+fn outcome_show_suggests_test_add_when_no_required_tests() {
+    let dir = TempDir::new().unwrap();
+    setup(&dir);
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth-login", "outcome-1-domain",
+            "--title", "Domain Validation",
+            "--goal", "User can log in.",
+            "--order", "1",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("No required test paths set."))
+        .stdout(contains("specrail test add"));
+}
+
+#[test]
 fn outcome_new_fails_for_unknown_feature() {
     let dir = TempDir::new().unwrap();
     setup(&dir);

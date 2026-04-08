@@ -138,30 +138,43 @@ pub enum FeatureCommands {
 #[derive(Subcommand, Debug)]
 pub enum OutcomeCommands {
     /// Create a new outcome for a feature
+    ///
+    /// An outcome is one verifiable step inside a feature. Outcomes are
+    /// implemented and verified in `--order` sequence via `specrail advance`.
+    ///
+    /// After creation, register tests with `specrail test add` (or seed test
+    /// paths with `--test` and generate them with `specrail test generate`),
+    /// then activate the outcome with `specrail outcome activate`.
     New {
-        /// Feature ID
+        /// Feature ID this outcome belongs to
         feature_id: String,
-        /// Unique outcome identifier (e.g. outcome-1-domain)
+        /// Unique outcome identifier within the feature (e.g. outcome-1-domain)
         outcome_id: String,
-        /// Short title for the outcome
+        /// Short human-readable title (e.g. "Domain Validation")
         #[arg(long, short)]
         title: String,
-        /// Goal: what this outcome accomplishes
+        /// Acceptance criterion — what "done" looks like for this outcome
+        /// (e.g. "User can log in with email and password and receives a JWT")
         #[arg(long, short)]
         goal: String,
-        /// Outcome execution order (1-based)
+        /// Execution sequence position (1 = first); `specrail advance` follows
+        /// this numeric order across all outcomes in the feature
         #[arg(long, short)]
         order: u32,
-        /// Outcome IDs that must be verified before this one (repeatable)
+        /// Outcome ID that must be verified before this one can be activated
+        /// (repeatable; use the outcome's `outcome_id` value)
         #[arg(long = "prereq")]
         prerequisites: Vec<String>,
-        /// Glob paths the agent is allowed to modify (repeatable)
+        /// Glob path the AI agent may modify when implementing this outcome
+        /// (repeatable; omit to allow all paths — e.g. "src/auth/**")
         #[arg(long = "allow")]
         allowed_paths: Vec<String>,
-        /// Glob paths the agent must NOT touch (repeatable)
+        /// Glob path the AI agent must NOT touch (repeatable;
+        /// e.g. "src/billing/**" to keep unrelated modules off-limits)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Test paths required to pass (repeatable)
+        /// Test file path for AI-assisted generation via `specrail test generate`
+        /// (repeatable; to add individual tests manually use `specrail test add`)
         #[arg(long = "test")]
         required_tests: Vec<String>,
     },
@@ -181,30 +194,34 @@ pub enum OutcomeCommands {
     },
 
     /// Edit an existing outcome
+    ///
+    /// Re-specifying `--allow`, `--forbid`, or `--test` replaces the
+    /// previously stored list entirely (omit the flag to clear the list).
     Edit {
         /// Feature ID
         feature_id: String,
         /// Outcome ID
         outcome_id: String,
-        /// Short title for the outcome
+        /// Short human-readable title
         #[arg(long, short)]
         title: String,
-        /// Goal: what this outcome accomplishes
+        /// Acceptance criterion — what "done" looks like for this outcome
         #[arg(long, short)]
         goal: String,
-        /// Outcome execution order (1-based)
+        /// Execution sequence position; `specrail advance` follows this order
         #[arg(long, short)]
         order: u32,
-        /// Outcome IDs that must be verified before this one (repeatable)
+        /// Outcome ID that must be verified before this one (repeatable)
         #[arg(long = "prereq")]
         prerequisites: Vec<String>,
-        /// Glob paths the agent is allowed to modify (repeatable)
+        /// Glob path the AI agent may modify (repeatable; omit to allow all)
         #[arg(long = "allow")]
         allowed_paths: Vec<String>,
-        /// Glob paths the agent must NOT touch (repeatable)
+        /// Glob path the AI agent must NOT touch (repeatable)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Test paths required to pass (repeatable)
+        /// Test file path for AI-assisted generation via `specrail test generate`
+        /// (repeatable; manage individual tests with `specrail test add/list`)
         #[arg(long = "test")]
         required_tests: Vec<String>,
     },
