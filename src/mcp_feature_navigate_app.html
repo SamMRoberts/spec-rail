@@ -1828,6 +1828,7 @@
                 var features = Array.isArray(data && data.features) ? data.features : [];
                 var outcomes = Array.isArray(data && data.outcomes) ? data.outcomes : [];
                 var activeOutcome = outcomes.find(function (o) { return o.isActive; });
+                var selectedFeatureSummary = featureSummaryById(data, data && data.selectedFeatureId);
                 var icon, label, title, desc, actions = [];
 
                 if (mode === "feature_selection") {
@@ -1876,12 +1877,26 @@
                             desc = "Move planned tests to written or passing before implementation so the outcome gate can run cleanly.";
                             actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
                         } else if (st === "active" || st === "failed") {
+                            var implementStatus = featureActionStatus(selectedFeatureSummary, "implementStatus", "Run implement for each outcome in this feature.");
+                            var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
                             title = st === "failed" ? "Implementation failed \u2014 try again" : "Ready to implement";
                             desc = "Specrail will use the active agent to write code that satisfies your tests.";
                             actions = [
-                                { text: "Run Implement", fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); }, kind: "primary" },
-                                { text: "Run Verify", fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); }, kind: "default" },
+                                {
+                                    text: "Run Implement",
+                                    fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); },
+                                    kind: "primary",
+                                    status: implementStatus,
+                                    tooltip: implementStatus.detail
+                                },
+                                {
+                                    text: "Run Verify",
+                                    fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); },
+                                    kind: "default",
+                                    status: verifyStatus,
+                                    tooltip: verifyStatus.detail
+                                },
                             ];
                         } else if (st === "verified") {
                             icon = "\u{1F680}"; label = "Step 6 of 6 \u2014 Advance";
@@ -1911,8 +1926,21 @@
                     actions.forEach(function (a) {
                         var b = document.createElement("button");
                         b.className = "btn btn-sm btn-" + (a.kind || "default");
-                        b.textContent = a.text;
+                        if (a.tooltip || (a.status && a.status.detail)) {
+                            b.title = a.tooltip || a.status.detail;
+                        }
                         b.disabled = state.isSaving || !!state.runningAction;
+                        var label = document.createElement("span");
+                        label.textContent = a.text;
+                        b.appendChild(label);
+                        if (a.status) {
+                            var tone = String(a.status.tone || "muted");
+                            var indicator = document.createElement("span");
+                            indicator.className = "btn-status btn-status-" + tone;
+                            indicator.setAttribute("aria-label", String(a.status.label || tone));
+                            indicator.title = String(a.status.detail || a.status.label || "");
+                            b.appendChild(indicator);
+                        }
                         b.addEventListener("click", a.fn);
                         act.appendChild(b);
                     });
