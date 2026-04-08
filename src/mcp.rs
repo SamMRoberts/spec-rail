@@ -2429,7 +2429,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_status",
             "title": "Project Status",
-            "description": "Get the current specrail project status, active workflow state, and recommended next action. Always call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
+            "description": "Direct MCP read action: get current project status, active workflow state, and recommended next action. Call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2440,7 +2440,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_feature_navigate",
             "title": "Workflow Navigator",
-            "description": "Interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with their solution/project/component path. With feature_id returns the selected feature's outcomes with test counts and status.",
+            "description": "Direct MCP read action with UI: interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with hierarchy path. With feature_id returns selected outcomes with test counts and status.",
             "_meta": {
                 "ui": {
                     "resourceUri": FEATURE_NAVIGATE_APP_URI,
@@ -2638,7 +2638,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_init",
             "title": "Initialize Project",
-            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure and project config, then (unless no_wizard=true) starts the interactive setup walkthrough to create solution/project/component hierarchy and first feature outcomes.",
+            "description": "Direct MCP mutation action: initialize a specrail project in the given directory. Creates the .specrail/ directory structure and project config, then (unless no_wizard=true) starts the interactive setup walkthrough to create solution/project/component hierarchy and first feature outcomes.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2923,7 +2923,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_add",
             "title": "Add Test",
-            "description": "Register a test in the specrail manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
+            "description": "Direct MCP mutation action: register a test in the manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2942,7 +2942,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete required metadata, the agent can bootstrap initial required test IDs, test names, and file paths and specrail will persist them.",
+            "description": "Direct MCP mutation action: use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete metadata, the agent can bootstrap initial required test IDs, test names, and file paths and specrail will persist them.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2956,7 +2956,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_set_status",
             "title": "Update Test Status",
-            "description": "Update a test's status in the manifest. Allowed transitions: planned → written (test file written), written → passing (test now passes), written/passing → failing (regression). All tests must be non-planned before specrail_implement can run.",
+            "description": "Direct MCP mutation action: update a test's status in the manifest. Allowed transitions: planned → written (test file written), written → passing (test now passes), written/passing → failing (regression). All tests must be non-planned before specrail_implement can run.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2970,7 +2970,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_implement",
             "title": "Implement",
-            "description": "Run the AI implementation agent for the active outcome. Requires: active feature, active outcome, at least one registered test, and no tests in 'planned' status. The agent receives a structured prompt and the list of test paths to pass. After implementing, run specrail_verify.",
+            "description": "Direct MCP mutation action: run the AI implementation agent for the active outcome. Requires active feature, active outcome, at least one registered test, and no tests in 'planned' status. After implementing, run specrail_verify.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2982,7 +2982,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_verify",
             "title": "Verify",
-            "description": "Run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome 'verified' on success or 'failed' on failure. After a failed verify, fix the implementation and call verify again. After verified, call specrail_advance.",
+            "description": "Direct MCP mutation action: run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome verified on success or failed on failure. After verified, call specrail_advance.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2993,7 +2993,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_advance",
             "title": "Advance",
-            "description": "Advance from a verified outcome to the next one in sequence (by order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be in 'verified' status.",
+            "description": "Direct MCP mutation action: advance from a verified outcome to the next one in sequence (order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be verified.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
