@@ -18,7 +18,7 @@ If the active or planned outcomes do not yet have registered, non-`planned` test
 3. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
 4. Determine the best feature order using explicit dependencies first.
 5. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
-6. Before activating or implementing an outcome, confirm that it has registered tests and that none of its required tests are still `planned`.
+6. Before activating or implementing an outcome, call `specrail_outcome_test_review` to verify that the outcome has registered tests and that none of its required tests are still `planned` or missing.
 7. If tests are missing or still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
 8. Activate the first eligible feature with `specrail_feature_activate`.
 9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
@@ -75,14 +75,15 @@ When a feature is completed:
 1. Identify the next eligible feature.
 2. Activate that feature.
 3. Identify the next eligible outcome in that feature.
-4. Confirm that the outcome's tests are registered and ready.
-5. Activate that outcome.
-6. Run `specrail_implement`.
-7. Run `specrail_verify`.
-8. If verification succeeds, run `specrail_advance`.
-9. Repeat until the feature is complete.
-10. Move to the next feature.
-11. Repeat until the full workflow is complete.
+4. Call `specrail_outcome_test_review` to confirm that the outcome's tests are registered, non-`planned`, and have no gaps.
+5. If test gaps exist, resolve them with `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status` before proceeding.
+6. Activate that outcome.
+7. Run `specrail_implement`.
+8. Run `specrail_verify`.
+9. If verification succeeds, run `specrail_advance`.
+10. Repeat until the feature is complete.
+11. Move to the next feature.
+12. Repeat until the full workflow is complete.
 
 ## User interaction guidance
 

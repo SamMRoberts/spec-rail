@@ -2153,10 +2153,10 @@ fn workflow_guidance_for_snapshot(
     let Some(candidate) = candidate else {
         return Ok(WorkflowGuidance {
             stage: "done".to_string(),
-            recommended_skill: "specrail-run-workflow".to_string(),
-            summary: "All known outcomes are already verified or skipped. The TDD workflow is complete.".to_string(),
+            recommended_skill: "specrail-plan-features".to_string(),
+            summary: "All known outcomes are already verified or skipped. Add new features and outcomes to continue the TDD workflow.".to_string(),
             blockers: Vec::new(),
-            next_tools: vec!["specrail_status".to_string(), "specrail_trace".to_string()],
+            next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string(), "specrail_status".to_string()],
             active_feature_id: state.active_feature.clone(),
             active_outcome_id: state.active_outcome.clone(),
             candidate_feature_id: None,
@@ -2645,12 +2645,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_init",
             "title": "Initialize Project",
-            "description": "Direct MCP mutation action: initialize a specrail project in the given directory. Creates the .specrail/ directory structure and project config, then (unless no_wizard=true) starts the interactive setup walkthrough to create solution/project/component hierarchy and first feature outcomes.",
+            "description": "Direct MCP mutation action: initialize a specrail project in the given directory. Creates the .specrail/ directory structure and seeds default solution/project/component. IMPORTANT: always pass no_wizard=true when calling from MCP — the interactive wizard requires a live terminal and will block indefinitely without one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string", "description": "Directory to initialize. Defaults to the server working directory." },
-                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard." }
+                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard. Required when calling from MCP or any non-interactive context." }
                 }
             }
         }),

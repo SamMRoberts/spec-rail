@@ -11,9 +11,9 @@ Default sequence:
 
 1. Call `specrail_status` to determine whether the current directory is already initialized.
 2. If the project is already initialized, do not run `specrail_init` again unless the user explicitly wants to refresh missing files.
-3. If the project is not initialized, call `specrail_init` with the workspace `cwd`.
+3. If the project is not initialized, call `specrail_init` with `no_wizard: true` and the workspace `cwd`. The interactive wizard requires a live terminal that MCP cannot provide — always use `no_wizard: true` when initializing through MCP.
 4. Call `specrail_status` again to confirm that initialization succeeded.
-5. Explain that initialization creates the base `.specrail/` structure, manifest, state file, and ledger.
+5. Explain that initialization creates the base `.specrail/` structure, manifest, state file, and ledger with default solution, project, and component entries.
 6. If the user wants to define the workflow immediately, hand off to the `specrail-plan-features` skill to gather features and outcomes.
 7. After features and outcomes are defined, hand off to the `specrail-prepare-tests` skill to register required tests.
 8. Once tests are ready, hand off to the `specrail-run-workflow` skill to execute the `implement`, `verify`, and `advance` loop.
@@ -35,6 +35,6 @@ User interaction guidance:
 
 Example:
 
-- If `specrail_status` shows no initialized project, run `specrail_init`.
-- Confirm the project is now initialized.
+- If `specrail_status` shows no initialized project, run `specrail_init` with `no_wizard: true`.
+- Confirm the project is now initialized with a default solution, project, and component.
 - Then move into workflow planning, test planning, and activation in that order.
