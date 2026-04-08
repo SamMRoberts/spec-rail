@@ -713,6 +713,8 @@
 
         .next-banner-actions {
             margin-top: 8px;
+            position: relative;
+            z-index: 1;
         }
 
         .hierarchy-panel {
@@ -1932,6 +1934,24 @@
                 return status || null;
             }
 
+            function encodeButtonArgs(args) {
+                try {
+                    return JSON.stringify(args || {});
+                } catch (e) {
+                    return "{}";
+                }
+            }
+
+            function decodeButtonArgs(value) {
+                if (!value) return {};
+                try {
+                    var parsed = JSON.parse(value);
+                    return parsed && typeof parsed === "object" ? parsed : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
             function appendActionButton(container, config) {
                 var title = config.title, tool = config.tool, args = config.args || {},
                     kind = config.kind || "default", refresh = config.refresh || false,
@@ -1943,6 +1963,11 @@
                         : kind === "success" ? "btn btn-success btn-sm"
                             : kind === "danger" ? "btn btn-danger btn-sm"
                                 : "btn btn-sm";
+                button.dataset.toolAction = "true";
+                button.dataset.toolName = tool;
+                button.dataset.toolTitle = title;
+                button.dataset.toolArgs = encodeButtonArgs(args);
+                button.dataset.toolRefresh = refresh ? "true" : "false";
                 button.disabled = state.isSaving || isActionRunning(tool, args) || disabled;
                 if (config.tooltip || (status && status.detail)) {
                     button.title = config.tooltip || status.detail;
@@ -1958,11 +1983,6 @@
                     indicator.title = String(status.detail || status.label || "");
                     button.appendChild(indicator);
                 }
-                button.addEventListener("click", function (ev) {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    runToolAction(title, tool, args, { refresh: refresh });
-                });
                 container.appendChild(button);
             }
 
@@ -3449,6 +3469,20 @@
                     return;
                 }
                 if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
+            });
+
+            document.addEventListener("click", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                if (button.disabled) return;
+                event.preventDefault();
+                event.stopPropagation();
+                runToolAction(
+                    button.dataset.toolTitle || "Run Action",
+                    button.dataset.toolName || "",
+                    decodeButtonArgs(button.dataset.toolArgs),
+                    { refresh: button.dataset.toolRefresh === "true" }
+                );
             });
 
             new ResizeObserver(function () { reportSize(); }).observe(document.body);

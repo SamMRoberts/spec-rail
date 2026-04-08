@@ -215,6 +215,14 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .as_str()
         .unwrap()
         .contains("In progress"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("data-tool-action"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("document.addEventListener(\"click\""));
 
     let status_before = client.request(
         "tools/call",
