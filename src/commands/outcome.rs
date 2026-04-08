@@ -194,6 +194,30 @@ pub(crate) fn edit_outcome(repo: &Repository, args: EditArgs) -> Result<OutcomeS
     Ok(outcome)
 }
 
+pub(crate) fn ensure_required_test(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+    path: &str,
+) -> Result<bool> {
+    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
+
+    if outcome.required_tests.iter().any(|existing| existing == path) {
+        return Ok(false);
+    }
+
+    outcome.required_tests.push(path.to_string());
+    repo.save_outcome(&outcome)?;
+
+    let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
+        .with_feature(feature_id)
+        .with_outcome(outcome_id)
+        .with_message(format!("required test '{}' added", path));
+    Ledger::append(&repo.ledger_path(), &event)?;
+
+    Ok(true)
+}
+
 pub fn edit(repo: &Repository, args: EditArgs) -> Result<()> {
     let outcome = edit_outcome(repo, args)?;
     println!(

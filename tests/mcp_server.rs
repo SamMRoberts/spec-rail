@@ -689,6 +689,102 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     assert!(manifest.contains("tests/auth/login.rs"));
     assert!(manifest.contains("status: written"));
 
+    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
+    assert!(outcome.contains("tests/auth/login.rs"));
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
+    let dir = TempDir::new().unwrap();
+    fs::create_dir_all(dir.path().join(".specrail/agents")).unwrap();
+    fs::write(
+        dir.path().join(".specrail/agents/mock_bootstrap_test_generate.json"),
+        r##"{
+  "tests": [
+    {
+      "feature_id": "auth",
+      "outcome_id": "login",
+      "path": "tests/auth/login.rs",
+      "kind": "unit",
+      "purpose_refs": ["goal:Let a user sign in with valid credentials."],
+      "content": "#[test]\nfn logs_in() {\n    assert!(true);\n}\n"
+    }
+  ]
+}"##,
+    )
+    .unwrap();
+    let command = format!(
+        "cat {}",
+        dir.path()
+            .join(".specrail/agents/mock_bootstrap_test_generate.json")
+            .display()
+    );
+
+    let mut client = McpClient::spawn_with_env(
+        dir.path(),
+        &[("SPECRAIL_AGENT_CMD", command.as_str())],
+    );
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1
+            }
+        }),
+    );
+
+    let generation = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_generate",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "agent": "generic-shell"
+            }
+        }),
+    );
+
+    assert_eq!(generation["result"]["isError"], json!(false));
+    assert!(dir.path().join("tests/auth/login.rs").exists());
+
+    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
+    assert!(outcome.contains("required_tests:"));
+    assert!(outcome.contains("tests/auth/login.rs"));
+
+    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
+    assert!(manifest.contains("tests/auth/login.rs"));
+    assert!(manifest.contains("status: written"));
+
     client.shutdown();
 }
 

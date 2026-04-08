@@ -587,7 +587,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                         &outcome.status,
                         active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                         test_count,
-                        review.needs_generation,
+                        review.needs_generation || review.has_no_required_tests,
                     )
                 })
             })
@@ -1878,7 +1878,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned or missing required tests. By default this targets the active outcome, or you can pass feature_id and outcome_id to target a specific outcome directly.",
+            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with no required_tests yet, the agent can bootstrap an initial test path and specrail will persist it back into the outcome YAML.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

@@ -1898,6 +1898,14 @@
                 }
 
                 if (review.has_no_required_tests) {
+                    appendActionButton(actionRow, {
+                        title: "Generate Initial Test",
+                        tool: "specrail_test_generate",
+                        args: { feature_id: featureId, outcome_id: outcome.id },
+                        kind: "primary",
+                        refresh: true
+                    });
+
                     var addRequiredBtn = document.createElement("button");
                     addRequiredBtn.className = "btn btn-sm";
                     addRequiredBtn.disabled = state.isSaving;
@@ -2468,9 +2476,9 @@
                                     actions.appendChild(actBtn);
                                 }
 
-                                if (review && review.needs_generation) {
+                                if (review && (review.needs_generation || review.has_no_required_tests)) {
                                     appendActionButton(actions, {
-                                        title: "Generate Missing Tests",
+                                        title: review.has_no_required_tests ? "Generate Initial Test" : "Generate Missing Tests",
                                         tool: "specrail_test_generate",
                                         args: { feature_id: featureId, outcome_id: outcome.id },
                                         refresh: true,

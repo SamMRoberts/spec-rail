@@ -54,6 +54,7 @@ struct PreparedTestGeneration {
     expected_paths: BTreeSet<(String, String, String)>,
     outcome_contexts: Vec<OutcomeGenerationContext>,
     scope_label: String,
+    allow_path_discovery: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -90,10 +91,19 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
     repo.load_feature(&args.feature_id)?;
     repo.load_outcome(&args.feature_id, &args.outcome_id)?;
 
+    let feature_id = args.feature_id.clone();
+    let outcome_id = args.outcome_id.clone();
+    let path = args.path.clone();
     let mut manifest = repo.load_manifest()?;
 
     add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
     repo.save_manifest(&manifest)?;
+    let added_to_outcome = crate::commands::outcome::ensure_required_test(
+        repo,
+        &feature_id,
+        &outcome_id,
+        &path,
+    )?;
 
     let test = manifest.tests.last().context("manifest missing inserted test")?;
 
@@ -108,6 +118,9 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
     println!(
         "  Status:  planned — update to 'written' once the test file exists"
     );
+    if added_to_outcome {
+        println!("  Outcome: required_tests updated with {}", path);
+    }
     Ok(())
 }
 
@@ -150,8 +163,12 @@ pub fn generate_scoped(
     let response = parse_generated_tests(&agent_output.result.stdout)?;
     let actual_paths = generated_test_paths(&response);
 
-    if actual_paths != prepared.expected_paths {
+    if !prepared.allow_path_discovery && actual_paths != prepared.expected_paths {
         bail!("generated tests did not match outcome.required_tests declarations");
+    }
+
+    if prepared.allow_path_discovery && response.tests.is_empty() {
+        bail!("generated tests did not include a bootstrap test for the scoped outcome");
     }
 
     let mut generated_count = 0usize;
@@ -170,7 +187,7 @@ pub fn generate_scoped(
                 )
             })?;
 
-        if !outcome.required_tests.iter().any(|path| path == &generated.path) {
+        if !prepared.allow_path_discovery && !outcome.required_tests.iter().any(|path| path == &generated.path) {
             bail!(
                 "generated test path '{}' is not declared in outcome.required_tests for '{}:{}'",
                 generated.path,
@@ -178,6 +195,13 @@ pub fn generate_scoped(
                 generated.outcome_id
             );
         }
+
+        crate::commands::outcome::ensure_required_test(
+            repo,
+            &generated.feature_id,
+            &generated.outcome_id,
+            &generated.path,
+        )?;
 
         let kind = parse_generated_test_kind(&generated.kind)?;
         let id = generate_test_id(&generated.feature_id, &generated.outcome_id, &generated.path);
@@ -350,15 +374,19 @@ fn prepare_test_generation(
     let mut prompt_features = Vec::new();
     let mut outcome_contexts = Vec::new();
     let mut expected_paths = BTreeSet::new();
+    let mut allow_path_discovery = false;
 
     for feature in features {
         let mut outcomes = repo.list_outcomes(&feature.id)?;
         if let Some(selected_outcome_id) = outcome_filter {
             repo.load_outcome(&feature.id, selected_outcome_id)?;
             outcomes.retain(|outcome| outcome.id == selected_outcome_id);
+            if outcomes.iter().any(|outcome| outcome.required_tests.is_empty()) {
+                allow_path_discovery = true;
+            }
+        } else {
+            outcomes.retain(|outcome| !outcome.required_tests.is_empty());
         }
-
-        outcomes.retain(|outcome| !outcome.required_tests.is_empty());
 
         for outcome in &outcomes {
             for path in &outcome.required_tests {
@@ -376,11 +404,16 @@ fn prepare_test_generation(
         }
     }
 
-    if expected_paths.is_empty() {
+    if expected_paths.is_empty() && !allow_path_discovery {
         bail!("no outcome.required_tests entries found — add required test paths to your outcomes first");
     }
 
-    let prompt = builder::build_test_generation_prompt(&config, &prompt_features, &manifest)?;
+    let prompt = builder::build_test_generation_prompt(
+        &config,
+        &prompt_features,
+        &manifest,
+        allow_path_discovery,
+    )?;
     let scope_label = match (feature_filter, outcome_filter) {
         (Some(feature_id), Some(outcome_id)) => format!("{feature_id}:{outcome_id}"),
         (Some(feature_id), None) => format!("feature '{feature_id}'"),
@@ -392,6 +425,7 @@ fn prepare_test_generation(
         expected_paths,
         outcome_contexts,
         scope_label,
+        allow_path_discovery,
     })
 }
 

@@ -166,3 +166,44 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
     let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
     assert!(!manifest.contains("written"));
 }
+
+#[test]
+fn test_add_syncs_required_test_into_outcome_yaml() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
+
+    specrail(&dir)
+        .args([
+            "feature", "new", "auth",
+            "--title", "Auth",
+            "--purpose", "Authenticate users.",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth", "outcome-1",
+            "--title", "Validation",
+            "--goal", "Validate credentials.",
+            "--order", "1",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "test", "add", "auth-outcome-1-validate",
+            "--feature", "auth",
+            "--outcome", "outcome-1",
+            "--path", "tests/auth/validate.rs",
+            "--kind", "unit",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("required_tests updated"));
+
+    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-1.yaml")).unwrap();
+    assert!(outcome.contains("tests/auth/validate.rs"));
+}
