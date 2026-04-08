@@ -4,10 +4,11 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::path::Path;
 
 use super::models::{
-    ComponentSpec, FeatureSpec, OutcomeSpec, ProjectSpec, SolutionSpec,
+    ComponentSpec, FeatureSpec, OutcomeSpec, ProjectSpec, ProjectState, SolutionSpec,
+    TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 pub struct Database {
     conn: Connection,
@@ -34,7 +35,7 @@ impl Database {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .context("reading sqlite schema version")?;
 
-        if version != 0 && version != SCHEMA_VERSION {
+        if version > SCHEMA_VERSION {
             bail!("unsupported specrail database schema version {version}");
         }
 
@@ -96,11 +97,32 @@ impl Database {
                 PRIMARY KEY(feature_id, id),
                 FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS tests (
+                id TEXT PRIMARY KEY,
+                feature_id TEXT NOT NULL,
+                outcome_id TEXT NOT NULL,
+                path TEXT NOT NULL,
+                purpose_refs_json TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                status TEXT NOT NULL,
+                FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE CASCADE,
+                FOREIGN KEY(feature_id, outcome_id) REFERENCES outcomes(feature_id, id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS current_state (
+                slot INTEGER PRIMARY KEY CHECK(slot = 1),
+                active_solution TEXT,
+                active_project TEXT,
+                active_component TEXT,
+                active_feature TEXT,
+                active_outcome TEXT
+            );
             ",
         )
         .context("initializing sqlite schema")?;
 
-        if version == 0 {
+        if version < SCHEMA_VERSION {
             conn.pragma_update(None, "user_version", SCHEMA_VERSION)
                 .context("writing sqlite schema version")?;
         }
@@ -419,6 +441,120 @@ impl Database {
         Ok(())
     }
 
+    pub fn load_manifest(&self) -> Result<TestManifest> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "
+                SELECT id, feature_id, outcome_id, path, purpose_refs_json, kind, status
+                FROM tests
+                ORDER BY id
+                ",
+            )
+            .context("preparing tests query")?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(TestRow {
+                    id: row.get(0)?,
+                    feature_id: row.get(1)?,
+                    outcome_id: row.get(2)?,
+                    path: row.get(3)?,
+                    purpose_refs_json: row.get(4)?,
+                    kind: row.get(5)?,
+                    status: row.get(6)?,
+                })
+            })
+            .context("querying tests")?;
+
+        let mut tests = Vec::new();
+        for row in rows {
+            tests.push(TryInto::<TestSpec>::try_into(row.context("reading test row")?)?);
+        }
+
+        Ok(TestManifest { tests })
+    }
+
+    pub fn save_manifest(&mut self, manifest: &TestManifest) -> Result<()> {
+        let tx = self.conn.transaction().context("starting tests transaction")?;
+        tx.execute("DELETE FROM tests", [])
+            .context("clearing tests table")?;
+
+        for test in &manifest.tests {
+            tx.execute(
+                "
+                INSERT INTO tests (id, feature_id, outcome_id, path, purpose_refs_json, kind, status)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                ",
+                params![
+                    test.id,
+                    test.feature_id,
+                    test.outcome_id,
+                    test.path,
+                    encode_json(&test.purpose_refs)?,
+                    encode_enum(&test.kind)?,
+                    encode_enum(&test.status)?,
+                ],
+            )
+            .with_context(|| format!("saving test '{}'", test.id))?;
+        }
+
+        tx.commit().context("committing tests transaction")?;
+        Ok(())
+    }
+
+    pub fn load_state(&self) -> Result<ProjectState> {
+        let row = self
+            .conn
+            .query_row(
+                "
+                SELECT active_solution, active_project, active_component, active_feature, active_outcome
+                FROM current_state
+                WHERE slot = 1
+                ",
+                [],
+                |row| {
+                    Ok(ProjectState {
+                        active_solution: row.get(0)?,
+                        active_project: row.get(1)?,
+                        active_component: row.get(2)?,
+                        active_feature: row.get(3)?,
+                        active_outcome: row.get(4)?,
+                    })
+                },
+            )
+            .optional()
+            .context("loading current state")?;
+
+        Ok(row.unwrap_or_default())
+    }
+
+    pub fn save_state(&self, state: &ProjectState) -> Result<()> {
+        self.conn
+            .execute(
+                "
+                INSERT INTO current_state (
+                    slot, active_solution, active_project, active_component, active_feature, active_outcome
+                )
+                VALUES (1, ?1, ?2, ?3, ?4, ?5)
+                ON CONFLICT(slot) DO UPDATE SET
+                    active_solution = excluded.active_solution,
+                    active_project = excluded.active_project,
+                    active_component = excluded.active_component,
+                    active_feature = excluded.active_feature,
+                    active_outcome = excluded.active_outcome
+                ",
+                params![
+                    state.active_solution,
+                    state.active_project,
+                    state.active_component,
+                    state.active_feature,
+                    state.active_outcome,
+                ],
+            )
+            .context("saving current state")?;
+        Ok(())
+    }
+
     pub fn list_outcomes(&self, feature_id: &str) -> Result<Vec<OutcomeSpec>> {
         let mut stmt = self
             .conn
@@ -634,6 +770,32 @@ struct OutcomeRow {
     forbidden_paths_json: String,
     required_tests_json: String,
     status: String,
+}
+
+struct TestRow {
+    id: String,
+    feature_id: String,
+    outcome_id: String,
+    path: String,
+    purpose_refs_json: String,
+    kind: String,
+    status: String,
+}
+
+impl TryFrom<TestRow> for TestSpec {
+    type Error = anyhow::Error;
+
+    fn try_from(value: TestRow) -> Result<Self> {
+        Ok(Self {
+            id: value.id,
+            feature_id: value.feature_id,
+            outcome_id: value.outcome_id,
+            path: value.path,
+            purpose_refs: decode_json(&value.purpose_refs_json)?,
+            kind: decode_enum(&value.kind)?,
+            status: decode_enum(&value.status)?,
+        })
+    }
 }
 
 impl TryFrom<OutcomeRow> for OutcomeSpec {

@@ -863,8 +863,8 @@ fn mcp_test_suggest_previews_without_writing_files() {
     );
     assert!(!dir.path().join("tests/auth/login.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(!manifest.contains("tests/auth/login.rs"));
+    let tests = support::tests(&dir);
+    assert!(!tests.iter().any(|test| test.path == "tests/auth/login.rs"));
 
     client.shutdown();
 }
@@ -960,9 +960,10 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     );
     assert!(dir.path().join("tests/auth/login.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/login.rs"));
-    assert!(manifest.contains("status: written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/login.rs" && test.status == "written"
+    }));
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")
         .contains(&"tests/auth/login.rs".to_string()));
@@ -1055,9 +1056,10 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     assert!(support::outcome_required_tests(&dir, "auth", "login")
         .contains(&"tests/auth/login.rs".to_string()));
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/login.rs"));
-    assert!(manifest.contains("status: written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/login.rs" && test.status == "written"
+    }));
 
     client.shutdown();
 }

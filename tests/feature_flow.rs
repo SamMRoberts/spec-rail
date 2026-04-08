@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -145,9 +147,8 @@ fn feature_activate_updates_state() {
         .assert()
         .success();
 
-    let state =
-        fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("feat"), "state should reference active feature");
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_feature.as_deref(), Some("feat"));
 }
 
 #[test]

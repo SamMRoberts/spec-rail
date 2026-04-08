@@ -21,14 +21,14 @@ The tool is designed to help you:
 .specrail/
 ├── project.yaml
 ├── specrail.db
-├── tests/manifest.yaml
+├── agents/
 └── state/
-    ├── current.yaml
     └── ledger.jsonl
 ```
 
-The local database stores solutions, projects, components, features, and outcomes.
-`project.yaml`, `tests/manifest.yaml`, and the files under `state/` remain text-based.
+The local database stores solutions, projects, components, features, outcomes,
+registered tests, and active workflow state. `project.yaml` remains human-editable,
+and `state/ledger.jsonl` remains the append-only audit trail.
 
 Key rules:
 

@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -63,9 +65,10 @@ fn test_generate_creates_files_and_manifest_entries() {
     let test_file = fs::read_to_string(dir.path().join("tests/auth/validate.rs")).unwrap();
     assert!(test_file.contains("validates_credentials"));
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/validate.rs"));
-    assert!(manifest.contains("written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/validate.rs" && test.status == "written"
+    }));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("test_generation_run"));
@@ -163,8 +166,8 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
 
     assert!(!dir.path().join("tests/auth/validate.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(!manifest.contains("written"));
+    let tests = support::tests(&dir);
+    assert!(tests.is_empty());
 }
 
 #[test]

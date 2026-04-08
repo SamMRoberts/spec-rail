@@ -3,6 +3,7 @@ use std::path::Path;
 
 use super::models::ProjectState;
 
+#[allow(dead_code)]
 impl ProjectState {
     pub fn load(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)

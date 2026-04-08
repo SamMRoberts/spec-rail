@@ -21,14 +21,14 @@ fn init_creates_directory_structure() {
     let base = dir.path().join(".specrail");
     assert!(base.is_dir(), ".specrail/ not created");
     assert!(base.join("project.yaml").exists(), "project.yaml missing");
-    assert!(base.join("features").is_dir(), "features/ missing");
-    assert!(base.join("outcomes").is_dir(), "outcomes/ missing");
-    assert!(base.join("tests").is_dir(), "tests/ missing");
-    assert!(base.join("tests/manifest.yaml").exists(), "manifest.yaml missing");
+    assert!(base.join("specrail.db").exists(), "specrail.db missing");
     assert!(base.join("state").is_dir(), "state/ missing");
-    assert!(base.join("state/current.yaml").exists(), "current.yaml missing");
     assert!(base.join("state/ledger.jsonl").exists(), "ledger.jsonl missing");
     assert!(base.join("agents").is_dir(), "agents/ missing");
+    assert!(!base.join("features").exists(), "features/ should not exist");
+    assert!(!base.join("outcomes").exists(), "outcomes/ should not exist");
+    assert!(!base.join("tests").exists(), "tests/ should not exist");
+    assert!(!base.join("state/current.yaml").exists(), "current.yaml should not exist");
 }
 
 #[test]
@@ -59,13 +59,11 @@ fn init_creates_valid_project_yaml() {
 }
 
 #[test]
-fn init_creates_valid_manifest_yaml() {
+fn init_creates_database_artifact() {
     let dir = TempDir::new().unwrap();
     specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
-    let content =
-        fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(content.contains("tests:"), "manifest.yaml should contain 'tests:' key");
+    assert!(dir.path().join(".specrail/specrail.db").exists());
 }
 
 #[test]

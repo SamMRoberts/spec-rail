@@ -114,10 +114,9 @@ fn outcome_activate_updates_state() {
         .assert()
         .success();
 
-    let state =
-        fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("outcome-1-domain"), "state should reference active outcome");
-    assert!(state.contains("auth-login"), "state should reference active feature");
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_outcome.as_deref(), Some("outcome-1-domain"));
+    assert_eq!(state.active_feature.as_deref(), Some("auth-login"));
 }
 
 #[test]

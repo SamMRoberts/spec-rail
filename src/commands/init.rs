@@ -4,7 +4,7 @@ use crate::{
     core::{
         config::ProjectConfig,
         ledger::Ledger,
-        models::{LedgerEvent, LedgerEventType, ProjectState, TestManifest},
+        models::{LedgerEvent, LedgerEventType},
         repository::Repository,
     },
     runtime::filesystem::{ensure_dir, write_if_missing},
@@ -27,12 +27,6 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     // Create directory structure
     for dir in [
         &specrail,
-        &repo.solutions_dir(),
-        &repo.projects_dir(),
-        &repo.components_dir(),
-        &repo.features_dir(),
-        &repo.outcomes_dir(),
-        &repo.tests_dir(),
         &repo.state_dir(),
         &repo.agents_dir(),
     ] {
@@ -52,24 +46,6 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
         &serde_yaml::to_string(&ProjectConfig::default())?,
     )? {
         println!("  created  .specrail/project.yaml");
-    }
-
-    // tests/manifest.yaml
-    let manifest_path = repo.manifest_path();
-    if write_if_missing(
-        &manifest_path,
-        &serde_yaml::to_string(&TestManifest::default())?,
-    )? {
-        println!("  created  .specrail/tests/manifest.yaml");
-    }
-
-    // state/current.yaml
-    let state_path = repo.state_path();
-    if write_if_missing(
-        &state_path,
-        &serde_yaml::to_string(&ProjectState::default())?,
-    )? {
-        println!("  created  .specrail/state/current.yaml");
     }
 
     // state/ledger.jsonl

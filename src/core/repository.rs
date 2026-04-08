@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use super::{
@@ -71,6 +71,7 @@ impl Repository {
         self.specrail_dir().join("outcomes")
     }
 
+    #[allow(dead_code)]
     pub fn tests_dir(&self) -> PathBuf {
         self.specrail_dir().join("tests")
     }
@@ -93,10 +94,12 @@ impl Repository {
         self.specrail_dir().join("project.yaml")
     }
 
+    #[allow(dead_code)]
     pub fn manifest_path(&self) -> PathBuf {
         self.tests_dir().join("manifest.yaml")
     }
 
+    #[allow(dead_code)]
     pub fn state_path(&self) -> PathBuf {
         self.state_dir().join("current.yaml")
     }
@@ -144,11 +147,11 @@ impl Repository {
     }
 
     pub fn load_state(&self) -> Result<ProjectState> {
-        ProjectState::load(&self.state_path())
+        self.database()?.load_state()
     }
 
     pub fn save_state(&self, state: &ProjectState) -> Result<()> {
-        state.save(&self.state_path())
+        self.database()?.save_state(state)
     }
 
     pub fn load_feature(&self, feature_id: &str) -> Result<FeatureSpec> {
@@ -192,30 +195,15 @@ impl Repository {
     }
 
     pub fn load_manifest(&self) -> Result<TestManifest> {
-        let path = self.manifest_path();
-        if !path.exists() {
-            return Ok(TestManifest::default());
-        }
-        let content = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading manifest from {}", path.display()))?;
-        serde_yaml::from_str(&content)
-            .with_context(|| format!("parsing manifest {}", path.display()))
+        self.database()?.load_manifest()
     }
 
     pub fn save_manifest(&self, manifest: &TestManifest) -> Result<()> {
-        let path = self.manifest_path();
-        let content = serde_yaml::to_string(manifest)?;
-        std::fs::write(&path, content)
-            .with_context(|| format!("writing manifest to {}", path.display()))
+        self.database_mut()?.save_manifest(manifest)
     }
 
     pub fn ensure_hierarchy(&self) -> Result<()> {
         let database = self.database()?;
-
-        std::fs::create_dir_all(self.solutions_dir())?;
-        std::fs::create_dir_all(self.projects_dir())?;
-        std::fs::create_dir_all(self.components_dir())?;
-        std::fs::create_dir_all(self.features_dir())?;
 
         if !database.solution_exists(DEFAULT_SOLUTION_ID)? {
             self.save_solution(&SolutionSpec {
@@ -244,27 +232,24 @@ impl Repository {
             })?;
         }
 
-        let state_path = self.state_path();
-        if state_path.exists() {
-            let mut state = self.load_state()?;
-            let mut changed = false;
+        let mut state = self.load_state()?;
+        let mut changed = false;
 
-            if state.active_solution.is_none() {
-                state.active_solution = Some(DEFAULT_SOLUTION_ID.to_string());
-                changed = true;
-            }
-            if state.active_project.is_none() {
-                state.active_project = Some(DEFAULT_PROJECT_ID.to_string());
-                changed = true;
-            }
-            if state.active_component.is_none() {
-                state.active_component = Some(DEFAULT_COMPONENT_ID.to_string());
-                changed = true;
-            }
+        if state.active_solution.is_none() {
+            state.active_solution = Some(DEFAULT_SOLUTION_ID.to_string());
+            changed = true;
+        }
+        if state.active_project.is_none() {
+            state.active_project = Some(DEFAULT_PROJECT_ID.to_string());
+            changed = true;
+        }
+        if state.active_component.is_none() {
+            state.active_component = Some(DEFAULT_COMPONENT_ID.to_string());
+            changed = true;
+        }
 
-            if changed {
-                self.save_state(&state)?;
-            }
+        if changed {
+            self.save_state(&state)?;
         }
 
         Ok(())
@@ -321,6 +306,10 @@ impl Repository {
     }
 
     fn database(&self) -> Result<Database> {
+        Database::open(&self.db_path())
+    }
+
+    fn database_mut(&self) -> Result<Database> {
         Database::open(&self.db_path())
     }
 

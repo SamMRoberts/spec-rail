@@ -3,6 +3,8 @@ use predicates::str::contains;
 use std::fs;
 use tempfile::TempDir;
 
+mod support;
+
 fn specrail(dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("specrail").unwrap();
     cmd.current_dir(dir.path());
@@ -80,9 +82,9 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
         .stdout(contains("outcome-1"))
         .stdout(contains("src/auth/persistence/**"));
 
-    let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("auth"));
-    assert!(state.contains("outcome-2"));
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_feature.as_deref(), Some("auth"));
+    assert_eq!(state.active_outcome.as_deref(), Some("outcome-2"));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("feature_created"));
@@ -144,7 +146,7 @@ fn init_walkthrough_can_repeat_features() {
         .stdout(contains("auth"))
         .stdout(contains("billing"));
 
-    let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("billing"), "last feature should be active");
-    assert!(state.contains("outcome-1"), "last feature outcome should be active");
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_feature.as_deref(), Some("billing"));
+    assert_eq!(state.active_outcome.as_deref(), Some("outcome-1"));
 }

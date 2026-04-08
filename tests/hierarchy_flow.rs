@@ -1,7 +1,8 @@
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::TempDir;
+
+mod support;
 
 fn init(dir: &TempDir) {
     Command::cargo_bin("specrail")
@@ -39,10 +40,10 @@ fn init_bootstraps_default_solution_project_and_component() {
         .success()
         .stdout(contains("Default Component"));
 
-    let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("active_solution: default-solution"));
-    assert!(state.contains("active_project: default-project"));
-    assert!(state.contains("active_component: default-component"));
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_solution.as_deref(), Some("default-solution"));
+    assert_eq!(state.active_project.as_deref(), Some("default-project"));
+    assert_eq!(state.active_component.as_deref(), Some("default-component"));
 }
 
 #[test]
@@ -118,9 +119,9 @@ fn feature_can_be_scoped_to_an_explicit_component_hierarchy() {
         .assert()
         .success();
 
-    let state = fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("active_solution: platform"));
-    assert!(state.contains("active_project: api"));
-    assert!(state.contains("active_component: billing"));
-    assert!(state.contains("active_feature: invoice-sync"));
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_solution.as_deref(), Some("platform"));
+    assert_eq!(state.active_project.as_deref(), Some("api"));
+    assert_eq!(state.active_component.as_deref(), Some("billing"));
+    assert_eq!(state.active_feature.as_deref(), Some("invoice-sync"));
 }
