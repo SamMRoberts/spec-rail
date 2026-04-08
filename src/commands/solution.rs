@@ -31,7 +31,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<SolutionSpec> {
     };
     repo.save_solution(&solution)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
+    let event = LedgerEvent::new(LedgerEventType::SolutionCreated)
         .with_message(format!("solution '{}' created", solution.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
@@ -76,7 +76,7 @@ pub(crate) fn edit_solution(repo: &Repository, args: EditArgs) -> Result<Solutio
     solution.purpose = args.purpose;
     repo.save_solution(&solution)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
+    let event = LedgerEvent::new(LedgerEventType::SolutionEdited)
         .with_message(format!("solution '{}' updated", solution.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
@@ -100,7 +100,7 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
     state.active_outcome = None;
     repo.save_state(&state)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureActivated)
+    let event = LedgerEvent::new(LedgerEventType::SolutionActivated)
         .with_message(format!("solution '{}' activated", id));
     Ledger::append(&repo.ledger_path(), &event)?;
 

@@ -36,7 +36,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ComponentSpec> 
     };
     repo.save_component(&component)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
+    let event = LedgerEvent::new(LedgerEventType::ComponentCreated)
         .with_message(format!("component '{}' created", component.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
@@ -83,7 +83,7 @@ pub(crate) fn edit_component(repo: &Repository, args: EditArgs) -> Result<Compon
     component.purpose = args.purpose;
     repo.save_component(&component)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
+    let event = LedgerEvent::new(LedgerEventType::ComponentEdited)
         .with_message(format!("component '{}' updated", component.id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
@@ -107,7 +107,7 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
     state.active_outcome = None;
     repo.save_state(&state)?;
 
-    let event = LedgerEvent::new(LedgerEventType::FeatureActivated)
+    let event = LedgerEvent::new(LedgerEventType::ComponentActivated)
         .with_message(format!("component '{}' activated", id));
     Ledger::append(&repo.ledger_path(), &event)?;
 

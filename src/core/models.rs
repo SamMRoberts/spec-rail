@@ -57,6 +57,15 @@ pub enum VerificationStatus {
 #[serde(rename_all = "snake_case")]
 pub enum LedgerEventType {
     ProjectInitialized,
+    SolutionCreated,
+    SolutionEdited,
+    SolutionActivated,
+    ProjectCreated,
+    ProjectEdited,
+    ProjectActivated,
+    ComponentCreated,
+    ComponentEdited,
+    ComponentActivated,
     FeatureCreated,
     FeatureEdited,
     FeatureActivated,

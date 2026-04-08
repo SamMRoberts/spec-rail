@@ -45,6 +45,15 @@ pub fn run(repo: &Repository, limit: Option<usize>) -> Result<()> {
 fn format_event_type(et: &LedgerEventType) -> &'static str {
     match et {
         LedgerEventType::ProjectInitialized => "project_initialized",
+        LedgerEventType::SolutionCreated => "solution_created",
+        LedgerEventType::SolutionEdited => "solution_edited",
+        LedgerEventType::SolutionActivated => "solution_activated",
+        LedgerEventType::ProjectCreated => "project_created",
+        LedgerEventType::ProjectEdited => "project_edited",
+        LedgerEventType::ProjectActivated => "project_activated",
+        LedgerEventType::ComponentCreated => "component_created",
+        LedgerEventType::ComponentEdited => "component_edited",
+        LedgerEventType::ComponentActivated => "component_activated",
         LedgerEventType::FeatureCreated => "feature_created",
         LedgerEventType::FeatureEdited => "feature_edited",
         LedgerEventType::FeatureActivated => "feature_activated",
