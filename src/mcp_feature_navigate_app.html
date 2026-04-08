@@ -2983,7 +2983,7 @@
                         buildSummary: function (summary) {
                             var row = document.createElement("div"); row.className = "card-row";
                             var body = document.createElement("div"); body.className = "card-body";
-                            body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div><div class="card-meta">' + esc(feature.pathLabel || "") + '</div>';
+                            body.innerHTML = '<div class="card-title">' + esc(feature.title || feature.id) + '</div><div class="card-meta">' + esc(feature.pathLabel || "") + '</div>';
                             row.appendChild(body);
                             row.appendChild(badge(isActive ? "active" : String(feature.status || "pending")));
                             summary.appendChild(row);
@@ -3117,7 +3117,7 @@
                     buildSummary: function (summary) {
                         var fRow = document.createElement("div"); fRow.className = "card-row";
                         var fBody = document.createElement("div"); fBody.className = "card-body";
-                        fBody.innerHTML = '<div class="card-id">' + esc(featureId) + '</div><div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
+                        fBody.innerHTML = '<div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
                         fRow.appendChild(fBody);
                         fRow.appendChild(badge(isActiveF ? "active" : String(selectedFeature.status || "pending")));
                         summary.appendChild(fRow);
@@ -3213,9 +3213,7 @@
                                 var review = getOutcomeReview(outcome);
                                 body.innerHTML =
                                     '<div class="outcome-num">Outcome ' + esc(outcome.order != null ? outcome.order : "?") + '</div>' +
-                                    '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>' +
-                                    '<div class="outcome-id">' + esc(outcome.id) + '</div>' +
-                                    '<div class="outcome-goal">' + esc(outcome.goal || "") + '</div>';
+                                    '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>';
 
                                 var tc = Number(outcome.testCount || 0);
                                 var passingCount = Number(outcome.passingTestCount || 0);
