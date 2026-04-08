@@ -1046,12 +1046,31 @@
             background: var(--active-border);
         }
 
+        .btn-status-progress {
+            background: var(--accent);
+            animation: btn-status-pulse 900ms ease-in-out infinite;
+        }
+
         .btn-status-danger {
             background: var(--failed-border);
         }
 
         .btn-status-muted {
             background: var(--fg-dim);
+        }
+
+        @keyframes btn-status-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.55;
+                transform: scale(0.84);
+            }
         }
 
         /* Test chips */
@@ -1682,15 +1701,19 @@
                             actions = [
                                 {
                                     text: "Run Implement",
-                                    fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); },
+                                    tool: "specrail_implement",
+                                    args: {},
                                     kind: "primary",
+                                    refresh: true,
                                     status: implementStatus,
                                     tooltip: implementStatus.detail
                                 },
                                 {
                                     text: "Run Verify",
-                                    fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); },
+                                    tool: "specrail_verify",
+                                    args: {},
                                     kind: "default",
+                                    refresh: true,
                                     status: verifyStatus,
                                     tooltip: verifyStatus.detail
                                 },
@@ -1721,7 +1744,22 @@
                     var act = document.createElement("div");
                     act.className = "next-banner-actions btn-group";
                     actions.forEach(function (a) {
+                        if (a.tool) {
+                            appendActionButton(act, {
+                                title: a.text,
+                                tool: a.tool,
+                                args: a.args || {},
+                                kind: a.kind || "default",
+                                refresh: a.refresh || false,
+                                disabled: !!a.disabled,
+                                tooltip: a.tooltip,
+                                status: a.status || null,
+                            });
+                            return;
+                        }
+
                         var b = document.createElement("button");
+                        b.type = "button";
                         b.className = "btn btn-sm btn-" + (a.kind || "default");
                         if (a.tooltip || (a.status && a.status.detail)) {
                             b.title = a.tooltip || a.status.detail;
@@ -1883,11 +1921,23 @@
                 return state.runningAction === (name + ":" + JSON.stringify(args));
             }
 
+            function buttonStatus(status, tool, args, title) {
+                if (tool && isActionRunning(tool, args)) {
+                    return {
+                        tone: "progress",
+                        label: "In progress",
+                        detail: (title || "Action") + " is currently running."
+                    };
+                }
+                return status || null;
+            }
+
             function appendActionButton(container, config) {
                 var title = config.title, tool = config.tool, args = config.args || {},
                     kind = config.kind || "default", refresh = config.refresh || false,
-                    status = config.status || null, disabled = !!config.disabled;
+                    status = buttonStatus(config.status || null, tool, args, title), disabled = !!config.disabled;
                 var button = document.createElement("button");
+                button.type = "button";
                 button.className = kind === "primary" ? "btn btn-primary btn-sm"
                     : kind === "ghost" ? "btn btn-ghost btn-sm"
                         : kind === "success" ? "btn btn-success btn-sm"
@@ -1908,7 +1958,11 @@
                     indicator.title = String(status.detail || status.label || "");
                     button.appendChild(indicator);
                 }
-                button.addEventListener("click", function () { runToolAction(title, tool, args, { refresh: refresh }); });
+                button.addEventListener("click", function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    runToolAction(title, tool, args, { refresh: refresh });
+                });
                 container.appendChild(button);
             }
 
