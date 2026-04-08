@@ -77,6 +77,25 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
         outcome.id, outcome.feature_id
     );
     println!("  Path: {}", path.display());
+    println!();
+    println!("  What each field does:");
+    println!("    title  — human-readable label shown in `outcome list` and status");
+    println!("    goal   — acceptance criterion: what 'done' looks like for this outcome");
+    println!("    order  — sequence position; `specrail advance` steps through outcomes in this order");
+    println!("    prereq — outcome IDs that must be verified before this one can be activated");
+    println!("    allow  — glob paths the AI agent may modify (omit to allow all paths)");
+    println!("    forbid — glob paths the AI agent must NOT touch");
+    println!("    test   — test file paths for AI-assisted generation via `specrail test generate`");
+    println!();
+    println!("  Next steps:");
+    println!(
+        "    Register a test:  specrail test add <test-id> --feature {} --outcome {} --path <path>",
+        outcome.feature_id, outcome.id
+    );
+    println!(
+        "    Activate:         specrail outcome activate {} {}",
+        outcome.feature_id, outcome.id
+    );
     Ok(())
 }
 
@@ -106,34 +125,43 @@ pub fn list(repo: &Repository, feature_id: &str) -> Result<()> {
 pub fn show(repo: &Repository, feature_id: &str, outcome_id: &str) -> Result<()> {
     let o = repo.load_outcome(feature_id, outcome_id)?;
     println!("Outcome: {} (order {})", o.id, o.order);
+    println!("  order controls the sequence used by `specrail advance`");
     println!("Feature: {}", o.feature_id);
     println!("Title:   {}", o.title);
     println!("Goal:    {}", o.goal);
+    println!("  goal is the acceptance criterion — what 'done' looks like for this outcome");
     println!("Status:  {:?}", o.status);
 
     if !o.prerequisites.is_empty() {
-        println!("\nPrerequisites:");
+        println!("\nPrerequisites (must be verified before this outcome can be activated):");
         for pr in &o.prerequisites {
             println!("  • {pr}");
         }
     }
     if !o.allowed_paths.is_empty() {
-        println!("\nAllowed paths:");
+        println!("\nAllowed paths (AI agent may only modify these):");
         for ap in &o.allowed_paths {
             println!("  • {ap}");
         }
     }
     if !o.forbidden_paths.is_empty() {
-        println!("\nForbidden paths:");
+        println!("\nForbidden paths (AI agent must NOT touch these):");
         for fp in &o.forbidden_paths {
             println!("  • {fp}");
         }
     }
     if !o.required_tests.is_empty() {
-        println!("\nRequired tests:");
+        println!("\nRequired test paths (used by `specrail test generate` to create test files):");
         for rt in &o.required_tests {
             println!("  • {rt}");
         }
+        println!("  Tip: add individual tests with `specrail test add`");
+    } else {
+        println!("\nNo required test paths set.");
+        println!(
+            "  Add tests with: specrail test add <id> --feature {} --outcome {} --path <path>",
+            o.feature_id, o.id
+        );
     }
     Ok(())
 }
