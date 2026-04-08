@@ -18,6 +18,7 @@ pub struct NewArgs {
     pub allowed_paths: Vec<String>,
     pub forbidden_paths: Vec<String>,
     pub required_tests: Vec<String>,
+    pub required_test_files: Vec<String>,
 }
 
 pub struct EditArgs {
@@ -30,14 +31,14 @@ pub struct EditArgs {
     pub allowed_paths: Vec<String>,
     pub forbidden_paths: Vec<String>,
     pub required_tests: Vec<String>,
+    pub required_test_files: Vec<String>,
 }
 
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
     // Ensure the feature exists
     repo.load_feature(&args.feature_id)?;
 
-    let path = repo.outcome_path(&args.feature_id, &args.outcome_id);
-    if path.exists() {
+    if repo.outcome_exists(&args.feature_id, &args.outcome_id)? {
         bail!(
             "outcome '{}' already exists for feature '{}'",
             args.outcome_id,
@@ -55,6 +56,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
         allowed_paths: args.allowed_paths,
         forbidden_paths: args.forbidden_paths,
         required_tests: args.required_tests,
+        required_test_files: args.required_test_files,
         status: OutcomeStatus::Pending,
     };
 
@@ -70,13 +72,12 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
 
 pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let outcome = create(repo, args)?;
-    let path = repo.outcome_path(&outcome.feature_id, &outcome.id);
 
     println!(
         "✓ Outcome '{}' created for feature '{}'",
         outcome.id, outcome.feature_id
     );
-    println!("  Path: {}", path.display());
+    println!("  Stored in .specrail/specrail.db");
     println!();
     println!("  What each field does:");
     println!("    title  — human-readable label shown in `outcome list` and status");
@@ -85,7 +86,8 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     println!("    prereq — outcome IDs that must be verified before this one can be activated");
     println!("    allow  — glob paths the AI agent may modify (omit to allow all paths)");
     println!("    forbid — glob paths the AI agent must NOT touch");
-    println!("    test   — test file paths for AI-assisted generation via `specrail test generate`");
+    println!("    test   — required test names/facts that must pass");
+    println!("    test-file — test file paths used by `specrail test generate`");
     println!();
     println!("  Next steps:");
     println!(
@@ -156,13 +158,21 @@ pub fn show(repo: &Repository, feature_id: &str, outcome_id: &str) -> Result<()>
         }
     }
     if !o.required_tests.is_empty() {
-        println!("\nRequired test paths (used by `specrail test generate` to create test files):");
+        println!("\nRequired test names / facts:");
         for rt in &o.required_tests {
             println!("  • {rt}");
         }
         println!("  Tip: add individual tests with `specrail test add`");
     } else {
-        println!("\nNo required test paths set.");
+        println!("\nNo required test names set.");
+    }
+    if !o.required_test_files.is_empty() {
+        println!("\nRequired test files (used by `specrail test generate` to create test files):");
+        for rt in &o.required_test_files {
+            println!("  • {rt}");
+        }
+    } else {
+        println!("\nNo required test file paths set.");
         println!(
             "  Add tests with: specrail test add <id> --feature {} --outcome {} --path <path>",
             o.feature_id, o.id
@@ -181,6 +191,7 @@ pub(crate) fn edit_outcome(repo: &Repository, args: EditArgs) -> Result<OutcomeS
     outcome.allowed_paths = args.allowed_paths;
     outcome.forbidden_paths = args.forbidden_paths;
     outcome.required_tests = args.required_tests;
+    outcome.required_test_files = args.required_test_files;
 
     if matches!(
         outcome.status,
@@ -203,24 +214,43 @@ pub(crate) fn ensure_required_test(
     repo: &Repository,
     feature_id: &str,
     outcome_id: &str,
-    path: &str,
+    test_id: &str,
 ) -> Result<bool> {
     let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
 
-    if outcome.required_tests.iter().any(|existing| existing == path) {
+    if outcome.required_tests.iter().any(|existing| existing == test_id) {
         return Ok(false);
     }
 
-    outcome.required_tests.push(path.to_string());
+    outcome.required_tests.push(test_id.to_string());
     repo.save_outcome(&outcome)?;
 
     let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
         .with_feature(feature_id)
         .with_outcome(outcome_id)
-        .with_message(format!("required test '{}' added", path));
+        .with_message(format!("required test '{}' added", test_id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
     Ok(true)
+}
+
+pub(crate) struct RequiredTestReferenceUpdate {
+    pub added_test_id: bool,
+    pub added_test_file: bool,
+}
+
+pub(crate) fn ensure_required_test_reference(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+    test_id: &str,
+    _path: &str,
+) -> Result<RequiredTestReferenceUpdate> {
+    let added_test_id = ensure_required_test(repo, feature_id, outcome_id, test_id)?;
+    Ok(RequiredTestReferenceUpdate {
+        added_test_id,
+        added_test_file: false,
+    })
 }
 
 pub fn edit(repo: &Repository, args: EditArgs) -> Result<()> {

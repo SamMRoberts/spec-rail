@@ -159,12 +159,16 @@ pub struct OutcomeSpec {
     #[serde(default)]
     pub required_tests: Vec<String>,
     #[serde(default)]
+    pub required_test_files: Vec<String>,
+    #[serde(default)]
     pub status: OutcomeStatus,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TestSpec {
     pub id: String,
+    #[serde(default)]
+    pub name: String,
     pub feature_id: String,
     pub outcome_id: String,
     pub path: String,

@@ -49,7 +49,7 @@ fn run(cli: Cli) -> Result<()> {
     if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;
         let repo = Repository::new(&cwd);
-        let outcome = commands::init::run(&repo)?;
+        let outcome = commands::init::run(&repo, *no_wizard)?;
         if !*no_wizard && outcome.should_start_wizard {
             commands::wizard::run(&repo)?;
         }
@@ -60,7 +60,6 @@ fn run(cli: Cli) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let repo = Repository::discover(&cwd)
         .context("could not find a specrail project — run `specrail init` first")?;
-    repo.ensure_hierarchy()?;
 
     match cli.command {
         Commands::Init { .. } => unreachable!(),
@@ -187,6 +186,7 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
+                required_test_files,
             } => commands::outcome::new(
                 &repo,
                 commands::outcome::NewArgs {
@@ -199,6 +199,7 @@ fn run(cli: Cli) -> Result<()> {
                     allowed_paths,
                     forbidden_paths,
                     required_tests,
+                    required_test_files,
                 },
             ),
             OutcomeCommands::List { feature_id } => commands::outcome::list(&repo, &feature_id),
@@ -216,6 +217,7 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
+                required_test_files,
             } => commands::outcome::edit(
                 &repo,
                 commands::outcome::EditArgs {
@@ -228,6 +230,7 @@ fn run(cli: Cli) -> Result<()> {
                     allowed_paths,
                     forbidden_paths,
                     required_tests,
+                    required_test_files,
                 },
             ),
             OutcomeCommands::Activate {
@@ -239,6 +242,7 @@ fn run(cli: Cli) -> Result<()> {
         Commands::Test(sub) => match sub {
             TestCommands::Add {
                 id,
+                name,
                 feature,
                 outcome,
                 path,
@@ -250,6 +254,7 @@ fn run(cli: Cli) -> Result<()> {
                     &repo,
                     commands::test::AddArgs {
                         id,
+                        name,
                         feature_id: feature,
                         outcome_id: outcome,
                         path,

@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -30,7 +32,8 @@ fn test_generate_creates_files_and_manifest_entries() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -43,6 +46,8 @@ fn test_generate_creates_files_and_manifest_entries() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
+            "id": "validates_credentials",
+            "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -63,9 +68,10 @@ fn test_generate_creates_files_and_manifest_entries() {
     let test_file = fs::read_to_string(dir.path().join("tests/auth/validate.rs")).unwrap();
     assert!(test_file.contains("validates_credentials"));
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/validate.rs"));
-    assert!(manifest.contains("written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/validate.rs" && test.status == "written"
+    }));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("test_generation_run"));
@@ -101,7 +107,7 @@ fn test_generate_requires_declared_required_tests() {
         .args(["test", "generate", "--agent", "generic-shell"])
         .assert()
         .failure()
-        .stderr(contains("no outcome.required_tests entries found"));
+        .stderr(contains("no complete outcome required test declarations found"));
 }
 
 #[test]
@@ -125,7 +131,8 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -138,6 +145,8 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
+            "id": "validates_credentials",
+            "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -163,8 +172,8 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
 
     assert!(!dir.path().join("tests/auth/validate.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(!manifest.contains("written"));
+    let tests = support::tests(&dir);
+    assert!(tests.is_empty());
 }
 
 #[test]
@@ -202,8 +211,13 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         ])
         .assert()
         .success()
-        .stdout(contains("required_tests updated"));
+        .stdout(contains("required_tests updated with auth-outcome-1-validate"))
+        .stdout(contains("Status:  planned"));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/outcome-1.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/validate.rs"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-1"])
+        .assert()
+        .success()
+        .stdout(contains("auth-outcome-1-validate"))
+        .stdout(contains("tests/auth/validate.rs"));
 }

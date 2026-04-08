@@ -5,6 +5,8 @@ use std::{
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
 };
 
+mod support;
+
 use assert_cmd::cargo::cargo_bin;
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -184,6 +186,10 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
+        .contains("specrail_verify"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
         .contains("hero-panel"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
@@ -201,6 +207,30 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .as_str()
         .unwrap()
         .contains("Preview AI Suggestions"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("btn-status-progress"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("In progress"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("data-tool-action"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("document.addEventListener(\"click\""));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Pointer down on "));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Dispatching tool action:"));
 
     let status_before = client.request(
         "tools/call",
@@ -382,7 +412,8 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
                 "order": 1,
-                "required_tests": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
+                "required_tests": ["auth-login-rs", "auth-mfa-rs"],
+                "required_test_files": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
             }
         }),
     );
@@ -427,7 +458,8 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
                 "prerequisites": [],
                 "allowed_paths": [],
                 "forbidden_paths": [],
-                "required_tests": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
+                "required_tests": ["auth-login-rs", "auth-mfa-rs"],
+                "required_test_files": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
             }
         }),
     );
@@ -461,6 +493,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(auth_feature["plannedTestCount"], 2);
     assert_eq!(auth_feature["undeclaredOutcomeCount"], 1);
     assert_eq!(auth_feature["hasUndeclaredTests"], json!(true));
+    assert_eq!(auth_feature["implementStatus"]["tone"], "warning");
+    assert_eq!(auth_feature["implementStatus"]["label"], "Needed");
+    assert_eq!(auth_feature["verifyStatus"]["tone"], "muted");
+    assert_eq!(auth_feature["verifyStatus"]["label"], "Waiting");
     assert_eq!(
         feature_picker["result"]["structuredContent"]["solutions"][0]["id"],
         "default-solution"
@@ -532,14 +568,23 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(outcomes[0]["failingTestCount"], 0);
     assert_eq!(outcomes[0]["undeclaredTestCount"], 1);
     assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
+    let missing_required = outcomes[0]["testReview"]["missing_required_tests"]
+        .as_array()
+        .unwrap();
+    assert!(missing_required.iter().any(|value| value == "auth-mfa-rs"));
     assert_eq!(
-        outcomes[0]["testReview"]["missing_required_tests"][0],
-        "tests/auth/mfa.rs"
+        outcomes[0]["testReview"]["missing_required_test_files"]
+        .as_array()
+        .unwrap()
+        .len(),
+        0
     );
-    assert_eq!(
-        outcomes[0]["testReview"]["undeclared_tests"][0]["path"],
-        "tests/auth/login_smoke.rs"
-    );
+    let undeclared_tests = outcomes[0]["testReview"]["undeclared_tests"]
+        .as_array()
+        .unwrap();
+    assert!(undeclared_tests
+        .iter()
+        .any(|value| value["path"] == "tests/auth/login_smoke.rs"));
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],
         "specrail_outcome_activate"
@@ -599,13 +644,18 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         }),
     );
     assert_eq!(review["result"]["structuredContent"]["review"]["has_gaps"], json!(true));
+    assert!(review["result"]["structuredContent"]["review"]["planned_required_tests"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|value| value == "auth-login-rs"));
     assert_eq!(
-        review["result"]["structuredContent"]["review"]["planned_required_tests"][0],
+        review["result"]["structuredContent"]["review"]["planned_required_test_files"][0],
         "tests/auth/login.rs"
     );
     assert_eq!(
         review["result"]["structuredContent"]["review"]["suggested_test_paths"][0],
-        "tests/auth/mfa.rs"
+        "tests/auth/login.rs"
     );
 
     client.shutdown();
@@ -778,6 +828,8 @@ fn mcp_test_suggest_previews_without_writing_files() {
     {
       "feature_id": "auth",
       "outcome_id": "login",
+            "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -830,7 +882,8 @@ fn mcp_test_suggest_previews_without_writing_files() {
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
                 "order": 1,
-                "required_tests": ["tests/auth/login.rs"]
+                "required_tests": ["logs_in"],
+                "required_test_files": ["tests/auth/login.rs"]
             }
         }),
     );
@@ -849,7 +902,7 @@ fn mcp_test_suggest_previews_without_writing_files() {
 
     assert_eq!(
         preview["result"]["structuredContent"]["preview"]["exact_path_match"],
-        json!(true)
+        json!(false)
     );
     assert_eq!(
         preview["result"]["structuredContent"]["preview"]["suggestions"][0]["path"],
@@ -861,8 +914,8 @@ fn mcp_test_suggest_previews_without_writing_files() {
     );
     assert!(!dir.path().join("tests/auth/login.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(!manifest.contains("tests/auth/login.rs"));
+    let tests = support::tests(&dir);
+    assert!(!tests.iter().any(|test| test.path == "tests/auth/login.rs"));
 
     client.shutdown();
 }
@@ -878,6 +931,8 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     {
       "feature_id": "auth",
       "outcome_id": "login",
+            "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -930,7 +985,8 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
                 "order": 1,
-                "required_tests": ["tests/auth/login.rs"]
+                "required_tests": ["logs_in"],
+                "required_test_files": ["tests/auth/login.rs"]
             }
         }),
     );
@@ -958,12 +1014,15 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     );
     assert!(dir.path().join("tests/auth/login.rs").exists());
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/login.rs"));
-    assert!(manifest.contains("status: written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/login.rs" && test.status == "written"
+    }));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"logs_in".to_string()));
+    assert!(support::outcome_required_test_files(&dir, "auth", "login")
+        .contains(&"tests/auth/login.rs".to_string()));
 
     client.shutdown();
 }
@@ -979,6 +1038,8 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     {
       "feature_id": "auth",
       "outcome_id": "login",
+            "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -1050,13 +1111,15 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     assert_eq!(generation["result"]["isError"], json!(false));
     assert!(dir.path().join("tests/auth/login.rs").exists());
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("required_tests:"));
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"logs_in".to_string()));
+    assert!(support::outcome_required_test_files(&dir, "auth", "login")
+        .contains(&"tests/auth/login.rs".to_string()));
 
-    let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("tests/auth/login.rs"));
-    assert!(manifest.contains("status: written"));
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.path == "tests/auth/login.rs" && test.status == "written"
+    }));
 
     client.shutdown();
 }
@@ -1097,7 +1160,8 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
                 "order": 1,
-                "required_tests": ["tests/auth/password.rs"]
+                "required_tests": ["auth-password-rs"],
+                "required_test_files": ["tests/auth/password.rs"]
             }
         }),
     );
@@ -1116,11 +1180,7 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
 
-    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
-    let reverted = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("- tests/auth/login.rs\n", "");
-    fs::write(&outcome_path, reverted).unwrap();
+    support::remove_required_test(&dir, "auth", "login", "tests/auth/login.rs");
 
     let review_before = client.request(
         "tools/call",
@@ -1133,8 +1193,8 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
     assert_eq!(
-        review_before["result"]["structuredContent"]["review"]["undeclared_tests"][0]["path"],
-        "tests/auth/login.rs"
+        review_before["result"]["structuredContent"]["review"]["has_no_related_tests"],
+        json!(true)
     );
 
     let add_required = client.request(
@@ -1144,15 +1204,18 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
             "arguments": {
                 "feature_id": "auth",
                 "outcome_id": "login",
+                "test_id": "auth-login-rs",
                 "path": "tests/auth/login.rs"
             }
         }),
     );
     assert_eq!(add_required["result"]["isError"], json!(false));
-    assert_eq!(add_required["result"]["structuredContent"]["added"], json!(true));
+    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(false));
+    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_file"], json!(false));
 
-    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
-    assert!(outcome.contains("tests/auth/login.rs"));
+    assert!(support::outcome_required_tests(&dir, "auth", "login")
+        .contains(&"auth-login-rs".to_string()));
+    assert!(support::outcome_required_test_files(&dir, "auth", "login").is_empty());
 
     let review_after = client.request(
         "tools/call",
@@ -1214,13 +1277,7 @@ fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
         }),
     );
 
-    let outcome_path = dir
-        .path()
-        .join(".specrail/outcomes/auth/login.yaml");
-    let updated = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("status: pending", "status: completed");
-    fs::write(&outcome_path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth", "login", "completed");
 
     let edit = client.request(
         "tools/call",
@@ -1301,11 +1358,7 @@ fn mcp_outcome_unverify_resets_verified_outcome_to_pending() {
         }),
     );
 
-    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
-    let updated = fs::read_to_string(&outcome_path)
-        .unwrap()
-        .replace("status: pending", "status: verified");
-    fs::write(&outcome_path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth", "login", "verified");
 
     let reset = client.request(
         "tools/call",
@@ -1352,7 +1405,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_before_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-init"
+        "specrail-setup"
     );
 
     let _ = client.request(
@@ -1374,7 +1427,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_after_init["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-workflow"
+        "specrail-plan-features"
     );
 
     let _ = client.request(
@@ -1411,7 +1464,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_needs_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-testing"
+        "specrail-prepare-tests"
     );
 
     let _ = client.request(
@@ -1436,7 +1489,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_planned_tests["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-testing"
+        "specrail-prepare-tests"
     );
     assert!(status_planned_tests["result"]["structuredContent"]["workflow"]["blockers"][0]
         .as_str()
@@ -1463,7 +1516,7 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["recommended_skill"],
-        "specrail-activation"
+        "specrail-run-workflow"
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["candidate_feature_id"],

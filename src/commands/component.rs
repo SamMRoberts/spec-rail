@@ -22,9 +22,8 @@ pub struct EditArgs {
 pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ComponentSpec> {
     let project = repo.load_project(&args.project_id)?;
 
-    let path = repo.component_path(&args.id);
-    if path.exists() {
-        bail!("component '{}' already exists at {}", args.id, path.display());
+    if repo.component_exists(&args.id)? {
+        bail!("component '{}' already exists", args.id);
     }
 
     let component = ComponentSpec {
@@ -46,6 +45,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ComponentSpec> 
 pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let component = create(repo, args)?;
     println!("✓ Component '{}' created: {}", component.id, component.title);
+    println!("  Stored in .specrail/specrail.db");
     println!("  Next: specrail feature new <feature-id> --component {}", component.id);
     Ok(())
 }

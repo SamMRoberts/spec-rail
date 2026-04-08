@@ -89,7 +89,7 @@ These commands pass in the current repository state and are the baseline validat
 
 - The default agent is configured in `.specrail/project.yaml`; by default it is `generic-shell`.
 - `generic-shell` passes the prompt in `SPECRAIL_PROMPT` and path hints in `SPECRAIL_ALLOWED_PATHS` / `SPECRAIL_FORBIDDEN_PATHS`.
-- `copilot` shells out to `gh copilot suggest -t shell` and returns Copilot's suggestion output.
+- `copilot` shells out to `copilot -p <prompt>` and returns Copilot's suggestion output.
 - `codex` is also available as a third agent option.
 - Allowed and forbidden paths are currently prompt/env hints, not enforced write protections.
 - Shell execution uses `sh -c`, so agent and test commands assume a Unix-like shell environment.
@@ -101,7 +101,8 @@ These commands pass in the current repository state and are the baseline validat
 - `specrail_status` returns `structuredContent.workflow` with the recommended skill, blockers, next tools, and candidate feature/outcome for the TDD loop.
 - `specrail_feature_navigate` returns feature cards with progress bars, outcome counts, and test counts in `structuredContent`. When called with a `feature_id`, it returns outcome cards with per-outcome test counts (`testCount`, `passingTestCount`, `plannedTestCount`).
 - All tools now include a `title` field (e.g. `"title": "Feature & Outcome Navigator"`) for display in MCP-capable hosts.
-- The installable Copilot CLI plugin lives under `.github/plugin/`; `.github/plugin/.mcp.json` launches `specrail mcp-server` as the `specrail` MCP server, and `.github/plugin/skills/` contains workflow skills (`specrail-tdd`, `specrail-init`, `specrail-workflow`, `specrail-testing`, `specrail-activation`, `specrail-resume`).
+- The workspace custom agent lives under `.github/agents/specrail.agent.md` and serves as the repo-aware VS Code entrypoint for SpecRail guidance.
+- The installable Copilot CLI plugin lives under `.github/plugin/`; `.github/plugin/.mcp.json` launches `specrail mcp-server` as the `specrail` MCP server, and `.github/plugin/skills/` contains workflow skills (`specrail-tdd`, `specrail-setup`, `specrail-plan-features`, `specrail-prepare-tests`, `specrail-run-workflow`, `specrail-resume`).
 
 ## Practical pitfalls
 

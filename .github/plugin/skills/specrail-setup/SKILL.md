@@ -1,6 +1,6 @@
 ---
-name: specrail-init
-description: Initialize a specrail project, verify the starting state, and hand off into feature, outcome, and test planning.
+name: specrail-setup
+description: Set up a specrail project, verify the starting state, and hand off into feature, outcome, and test planning.
 ---
 
 Use this skill when the repository does not yet have a `.specrail/` project, when `specrail_status` shows the project is not initialized, or when the user wants to bootstrap specrail in a new workspace.
@@ -14,9 +14,9 @@ Default sequence:
 3. If the project is not initialized, call `specrail_init` with the workspace `cwd`.
 4. Call `specrail_status` again to confirm that initialization succeeded.
 5. Explain that initialization creates the base `.specrail/` structure, manifest, state file, and ledger.
-6. If the user wants to define the workflow immediately, hand off to the `specrail-workflow` skill to gather features and outcomes.
-7. After features and outcomes are defined, hand off to the `specrail-testing` skill to register required tests.
-8. Once tests are ready, hand off to the `specrail-activation` skill to execute the `implement`, `verify`, and `advance` loop.
+6. If the user wants to define the workflow immediately, hand off to the `specrail-plan-features` skill to gather features and outcomes.
+7. After features and outcomes are defined, hand off to the `specrail-prepare-tests` skill to register required tests.
+8. Once tests are ready, hand off to the `specrail-run-workflow` skill to execute the `implement`, `verify`, and `advance` loop.
 
 Initialization rules:
 
@@ -25,6 +25,7 @@ Initialization rules:
 - Prefer `specrail_init` over manually creating `.specrail/*` files.
 - After initialization, verify the resulting state before moving on.
 - If the user wants a custom workflow structure, gather that through follow-up questions after init rather than trying to encode it into init itself.
+- This skill guides the setup conversation; the MCP tools perform the actual repository mutations.
 
 User interaction guidance:
 

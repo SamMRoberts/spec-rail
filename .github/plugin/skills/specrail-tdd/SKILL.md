@@ -27,14 +27,14 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 1. Call `specrail_status` first. Display the project dashboard.
 2. Read `structuredContent.workflow` from the response.
 3. Use `workflow.recommended_skill`, `workflow.summary`, `workflow.blockers`, and `workflow.next_tools` to choose the next stage.
-4. If the recommended skill is `specrail-init`, initialize the repository and then call `specrail_status` again.
-5. If the recommended skill is `specrail-workflow`, begin an explicit feature and outcome interview before creating anything.
+4. If the recommended skill is `specrail-setup`, initialize the repository and then call `specrail_status` again.
+5. If the recommended skill is `specrail-plan-features`, begin an explicit feature and outcome interview before creating anything.
 6. Ask the user for the first feature if none exists yet, or ask whether to keep or refine the existing feature list if features already exist.
 7. For each feature, ask for the outcomes under that feature and keep asking until the user says that feature is complete.
 8. Expand broad feature and outcome ideas into narrower, clearer slices, then confirm the expanded structure with the user before creating it.
 9. Keep looping on features and outcomes until the user explicitly says they are done.
-10. If the recommended skill is `specrail-testing`, prepare the tests for the current or next outcome until implementation is no longer blocked by missing or `planned` tests.
-11. If the recommended skill is `specrail-activation`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, `specrail_verify`, then `specrail_advance`.
+10. If the recommended skill is `specrail-prepare-tests`, prepare the tests for the current or next outcome until implementation is no longer blocked by missing or `planned` tests.
+11. If the recommended skill is `specrail-run-workflow`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, `specrail_verify`, then `specrail_advance`.
 12. After every mutating step, call `specrail_status` again and keep following the updated guidance until the workflow is complete or the user asks to stop.
 
 ## Feature and outcome interview rules
@@ -47,6 +47,14 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 - Copilot should help expand rough ideas into a cleaner feature and outcome structure, but must confirm that structure with the user before creating it.
 - Continue prompting until the user explicitly says there are no more features or outcomes to add.
 - After collecting the structure, summarize the planned features and outcomes in a compact list before moving to testing.
+
+## Clarification and scoping rules
+
+- If the user appears to be starting from scratch, ask for any missing project context before planning features. At minimum, ask for platform, language, stack/framework, interface type, and deployment/runtime target.
+- If the request is ambiguous, ask targeted follow-up questions instead of guessing which feature, outcome, or stage the user means.
+- If the user references a feature, outcome, or test that may not exist, verify it first with `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list`, then ask whether to create it or correct the reference.
+- If the request is too broad for a single feature or outcome, warn the user and ask whether to refine it into smaller slices before creating anything.
+- Keep reminding the user that strong, well-defined tests are the foundation of the workflow and must be defined before code is written.
 
 ## Response formatting
 
@@ -66,9 +74,12 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 
 - Prefer the MCP tools over editing `.specrail/*` files directly.
 - Keep the user in a test-first flow: define outcomes, define tests, move tests to `written`, then implement.
+- Only create or generate tests that belong to the current outcome's required scope; do not pad the suite with speculative tests for future outcomes.
+- Once tests are defined, only implement the minimum code needed for those current tests to pass.
 - Treat `workflow.blockers` as reasons to stop and resolve the blocking stage before running implementation.
 - If the repository was opened outside the project root, pass the workspace path through `cwd`.
 - When the user only asks for one stage, hand off to the more specific stage skill after the first `specrail_status` check.
+- This skill is the umbrella guide; it should route the user into the more specific skills while relying on MCP tools for the actual state changes.
 
 ## Example
 
