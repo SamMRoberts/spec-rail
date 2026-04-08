@@ -50,176 +50,1032 @@
             --font-mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
             --console-height: 138px;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; }
-        body { font-family: var(--font-ui); font-size: 13px; background: var(--bg); color: var(--fg); line-height: 1.5; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            font-size: 13px;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.5;
+        }
 
         /* App shell */
-        .app { display: flex; flex-direction: column; width: 100%; max-width: 720px; height: 680px; margin: 0 auto; background: var(--bg); overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border); }
-        .app-header { flex-shrink: 0; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 10; }
-        .app-body { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; padding: 12px 14px 16px; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-        .app-body::-webkit-scrollbar { width: 5px; }
-        .app-body::-webkit-scrollbar-track { background: transparent; }
-        .app-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .app-console { flex-shrink: 0; height: var(--console-height); background: var(--console-bg); border-top: 1px solid var(--console-border-top); display: flex; flex-direction: column; }
+        .app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 720px;
+            height: 680px;
+            margin: 0 auto;
+            background: var(--bg);
+            overflow: hidden;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+
+        .app-header {
+            flex-shrink: 0;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+            padding: 10px 12px 14px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .app-body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .app-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .app-body::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .app-console {
+            flex-shrink: 0;
+            height: var(--console-height);
+            background: var(--console-bg);
+            border-top: 1px solid var(--console-border-top);
+            display: flex;
+            flex-direction: column;
+        }
 
         /* Header */
-        .header { display: flex; align-items: center; gap: 8px; padding: 9px 14px 0; }
-        .header-logo { font-size: 17px; line-height: 1; }
-        .header-title { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; }
-        .header-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-focus); }
-        .header-actions { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px 0;
+        }
+
+        .header-logo {
+            font-size: 17px;
+            line-height: 1;
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-tag {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: var(--accent-soft);
+            color: var(--accent);
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border-focus);
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
 
         /* Workflow stepper */
-        .workflow-bar { display: flex; align-items: center; padding: 6px 14px 8px; gap: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .workflow-bar::-webkit-scrollbar { display: none; }
-        .wf-step { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; color: var(--fg-dim); white-space: nowrap; flex-shrink: 0; user-select: none; }
-        .wf-num { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--pending-border); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; background: var(--bg-card); flex-shrink: 0; transition: all 120ms; }
-        .wf-step.wf-done .wf-num { background: var(--verified-border); border-color: var(--verified-border); color: #fff; }
-        .wf-step.wf-active .wf-num { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-        .wf-step.wf-active .wf-label { color: var(--accent); font-weight: 700; }
-        .wf-step.wf-done .wf-label { color: var(--verified-fg); }
-        .wf-sep { width: 14px; height: 1.5px; background: var(--pending-border); flex-shrink: 0; margin: 0 2px; }
-        .wf-sep.wf-done { background: var(--verified-border); }
+        .workflow-bar {
+            display: flex;
+            align-items: center;
+            padding: 6px 14px 8px;
+            gap: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .workflow-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .wf-step {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--fg-dim);
+            white-space: nowrap;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .wf-num {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1.5px solid var(--pending-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            background: var(--bg-card);
+            flex-shrink: 0;
+            transition: all 120ms;
+        }
+
+        .wf-step.wf-done .wf-num {
+            background: var(--verified-border);
+            border-color: var(--verified-border);
+            color: #fff;
+        }
+
+        .wf-step.wf-active .wf-num {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+        }
+
+        .wf-step.wf-active .wf-label {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .wf-step.wf-done .wf-label {
+            color: var(--verified-fg);
+        }
+
+        .wf-sep {
+            width: 14px;
+            height: 1.5px;
+            background: var(--pending-border);
+            flex-shrink: 0;
+            margin: 0 2px;
+        }
+
+        .wf-sep.wf-done {
+            background: var(--verified-border);
+        }
 
         /* Breadcrumb */
-        .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-muted); padding: 5px 14px 7px; border-top: 1px solid var(--border); }
-        .bc-item.clickable { color: var(--accent); cursor: pointer; font-weight: 500; }
-        .bc-item.clickable:hover { text-decoration: underline; }
-        .bc-sep { color: var(--fg-dim); font-size: 12px; }
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--fg-muted);
+            padding: 5px 14px 7px;
+            border-top: 1px solid var(--border);
+        }
+
+        .bc-item.clickable {
+            color: var(--accent);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .bc-item.clickable:hover {
+            text-decoration: underline;
+        }
+
+        .bc-sep {
+            color: var(--fg-dim);
+            font-size: 12px;
+        }
 
         /* Buttons */
-        .btn { appearance: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--fg); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; transition: background 80ms, border-color 80ms, opacity 80ms; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
-        .btn:hover { background: var(--bg-card-hover); border-color: var(--border-focus); }
-        .btn:active { opacity: 0.85; }
-        .btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
-        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn-primary:hover { filter: brightness(1.1); border-color: var(--accent); }
-        .btn-success { background: var(--verified-border); border-color: var(--verified-border); color: #fff; }
-        .btn-success:hover { filter: brightness(1.1); }
-        .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); }
-        .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border); color: var(--fg); }
-        .btn-danger { background: transparent; border-color: transparent; color: var(--failed-fg); }
-        .btn-danger:hover { background: var(--failed-bg); border-color: var(--failed-border); }
-        .btn-sm { padding: 3px 8px; font-size: 11px; }
-        .btn-group { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-card);
+            color: var(--fg);
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            padding: 4px 9px;
+            transition: background 80ms, border-color 80ms, opacity 80ms;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-focus);
+        }
+
+        .btn:active {
+            opacity: 0.85;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            border-color: var(--accent);
+        }
+
+        .btn-success {
+            background: var(--verified-border);
+            border-color: var(--verified-border);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--fg-muted);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border);
+            color: var(--fg);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border-color: transparent;
+            color: var(--failed-fg);
+        }
+
+        .btn-danger:hover {
+            background: var(--failed-bg);
+            border-color: var(--failed-border);
+        }
+
+        .btn-sm {
+            padding: 3px 7px;
+            font-size: 11px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
 
         /* Dashboard */
-        .dashboard { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-        .stat-chip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--fg-muted); white-space: nowrap; }
-        .stat-chip strong { color: var(--fg); font-weight: 600; }
+        .dashboard {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 11px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+        }
+
+        .stat-chip strong {
+            color: var(--fg);
+            font-weight: 600;
+        }
 
         /* Next step banner */
-        .next-banner { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border-radius: var(--radius-lg); border: 1px solid var(--accent); background: var(--accent-soft); margin-bottom: 12px; }
-        .next-banner-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
-        .next-banner-body { flex: 1; min-width: 0; }
-        .next-banner-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 2px; }
-        .next-banner-title { font-size: 12px; font-weight: 600; color: var(--fg); margin-bottom: 3px; }
-        .next-banner-desc { font-size: 11px; color: var(--fg-muted); line-height: 1.5; }
-        .next-banner-actions { margin-top: 8px; }
+        .next-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 10px 12px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--accent);
+            background: var(--accent-soft);
+            margin-bottom: 12px;
+        }
+
+        .next-banner-icon {
+            font-size: 17px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .next-banner-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .next-banner-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .next-banner-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+        }
+
+        .next-banner-desc {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.5;
+        }
+
+        .next-banner-actions {
+            margin-top: 8px;
+        }
 
         /* Section */
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
 
         /* Cards */
-        .feature-grid { display: grid; gap: 7px; margin-bottom: 8px; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); transition: border-color 100ms, box-shadow 100ms; }
-        .card:hover { border-color: var(--border-focus); box-shadow: 0 1px 6px light-dark(rgba(0,0,0,0.06), rgba(0,0,0,0.35)); }
-        .card.active-card { border-color: var(--active-border); background: var(--active-bg); box-shadow: 0 0 0 2px color-mix(in srgb, var(--active-border) 18%, transparent); }
-        .card-collapsible, .outcome-item-collapsible { overflow: hidden; }
-        .card-summary, .outcome-summary { list-style: none; cursor: pointer; padding: 11px 14px; user-select: none; }
-        .card-summary::-webkit-details-marker, .outcome-summary::-webkit-details-marker { display: none; }
-        .card-summary:hover, .outcome-summary:hover { background: color-mix(in srgb, var(--bg-card-hover) 75%, transparent); }
-        .card-content, .outcome-content { padding: 0 14px 11px; }
-        .card-toggle, .outcome-toggle { font-size: 10px; color: var(--fg-muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
-        .card-toggle::before, .outcome-toggle::before { content: "\25B8"; font-size: 10px; transition: transform 120ms ease; display: inline-block; }
-        .card-collapsible[open] .card-toggle::before, .outcome-item-collapsible[open] .outcome-toggle::before { transform: rotate(90deg); }
-        .card-row { display: flex; align-items: flex-start; gap: 10px; }
-        .card-body { flex: 1; min-width: 0; }
-        .card-id { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); margin-bottom: 1px; }
-        .card-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-meta { font-size: 11px; color: var(--fg-muted); margin-top: 3px; }
-        .card-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+        .feature-grid {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            transition: border-color 100ms, box-shadow 100ms;
+        }
+
+        .card:hover {
+            border-color: var(--border-focus);
+            box-shadow: 0 1px 6px light-dark(rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.35));
+        }
+
+        .card.active-card {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--active-border) 18%, transparent);
+        }
+
+        .card-collapsible,
+        .outcome-item-collapsible {
+            overflow: hidden;
+        }
+
+        .card-summary,
+        .outcome-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 8px 11px;
+            user-select: none;
+        }
+
+        .card-summary::-webkit-details-marker,
+        .outcome-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .card-summary:hover,
+        .outcome-summary:hover {
+            background: color-mix(in srgb, var(--bg-card-hover) 75%, transparent);
+        }
+
+        .card-content,
+        .outcome-content {
+            padding: 0 11px 8px;
+        }
+
+        .card-toggle,
+        .outcome-toggle {
+            font-size: 10px;
+            color: var(--fg-muted);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .card-toggle::before,
+        .outcome-toggle::before {
+            content: "\25B8";
+            font-size: 10px;
+            transition: transform 120ms ease;
+            display: inline-block;
+        }
+
+        .card-collapsible[open] .card-toggle::before,
+        .outcome-item-collapsible[open] .outcome-toggle::before {
+            transform: rotate(90deg);
+        }
+
+        .card-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-id {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-bottom: 1px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .card-note {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 7px;
+        }
 
         /* Progress */
-        .progress-wrap { margin-top: 7px; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-muted); margin-bottom: 3px; }
-        .progress-bar { height: 4px; background: var(--progress-track); border-radius: 2px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--progress-fill); border-radius: 2px; transition: width 400ms ease; }
+        .progress-wrap {
+            margin-top: 4px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--progress-track);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--progress-fill);
+            border-radius: 2px;
+            transition: width 400ms ease;
+        }
 
         /* Badges */
-        .badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
-        .badge-active { background: var(--active-bg); border-color: var(--active-border); color: var(--active-fg); }
-        .badge-verified { background: var(--verified-bg); border-color: var(--verified-border); color: var(--verified-fg); }
-        .badge-failed { background: var(--failed-bg); border-color: var(--failed-border); color: var(--failed-fg); }
-        .badge-pending { background: var(--pending-bg); border-color: var(--pending-border); color: var(--pending-fg); }
-        .badge-skipped { background: var(--pending-bg); border-color: var(--pending-border); color: var(--fg-dim); }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+            border: 1px solid;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge-active {
+            background: var(--active-bg);
+            border-color: var(--active-border);
+            color: var(--active-fg);
+        }
+
+        .badge-verified {
+            background: var(--verified-bg);
+            border-color: var(--verified-border);
+            color: var(--verified-fg);
+        }
+
+        .badge-failed {
+            background: var(--failed-bg);
+            border-color: var(--failed-border);
+            color: var(--failed-fg);
+        }
+
+        .badge-pending {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--pending-fg);
+        }
+
+        .badge-skipped {
+            background: var(--pending-bg);
+            border-color: var(--pending-border);
+            color: var(--fg-dim);
+        }
 
         /* Test chips */
-        .test-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-        .test-chip { font-size: 10px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-section); color: var(--fg-muted); }
-        .test-chip.passing { color: var(--verified-fg); border-color: var(--verified-border); background: var(--verified-bg); }
-        .test-chip.warning { color: var(--active-fg); border-color: var(--active-border); background: var(--active-bg); }
-        .test-chip.danger { color: var(--failed-fg); border-color: var(--failed-border); background: var(--failed-bg); }
+        .test-chips {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            margin-top: 3px;
+        }
+
+        .test-chip {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg-muted);
+        }
+
+        .test-chip.passing {
+            color: var(--verified-fg);
+            border-color: var(--verified-border);
+            background: var(--verified-bg);
+        }
+
+        .test-chip.warning {
+            color: var(--active-fg);
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .test-chip.danger {
+            color: var(--failed-fg);
+            border-color: var(--failed-border);
+            background: var(--failed-bg);
+        }
 
         /* Outcomes */
-        .outcome-list { list-style: none; display: grid; gap: 6px; margin-bottom: 8px; }
-        .outcome-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); transition: border-color 100ms; }
-        .outcome-item:hover { border-color: var(--border-focus); }
-        .outcome-item.active-outcome { border-color: var(--active-border); background: var(--active-bg); }
-        .outcome-item.verified-outcome { border-left: 3px solid var(--verified-border); }
-        .outcome-item.failed-outcome { border-left: 3px solid var(--failed-border); }
-        .outcome-row { display: flex; align-items: flex-start; gap: 8px; }
-        .outcome-body { flex: 1; min-width: 0; }
-        .outcome-num { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); margin-bottom: 1px; }
-        .outcome-title { font-size: 13px; font-weight: 600; }
-        .outcome-id { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); }
+        .outcome-list {
+            list-style: none;
+            display: grid;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .outcome-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            transition: border-color 100ms;
+        }
+
+        .outcome-item:hover {
+            border-color: var(--border-focus);
+        }
+
+        .outcome-item.active-outcome {
+            border-color: var(--active-border);
+            background: var(--active-bg);
+        }
+
+        .outcome-item.verified-outcome {
+            border-left: 3px solid var(--verified-border);
+        }
+
+        .outcome-item.failed-outcome {
+            border-left: 3px solid var(--failed-border);
+        }
+
+        .outcome-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .outcome-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .outcome-num {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--fg-muted);
+            margin-bottom: 1px;
+        }
+
+        .outcome-title {
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .outcome-id {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg-muted);
+        }
+
+        .outcome-goal {
+            font-size: 11px;
+            color: var(--fg-muted);
+            margin-top: 2px;
+        }
+
+        .section-card {
+            margin-top: 8px;
+            padding: 8px 9px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+        }
+
+        .section-card:first-child {
+            margin-top: 0;
+        }
+
+        .section-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .section-card-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .section-card-copy {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.45;
+        }
+
+        .suggestion-list,
+        .path-list,
+        .related-test-list {
+            list-style: none;
+            display: grid;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .suggestion-list li,
+        .path-list li {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+            padding: 4px 6px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .related-test-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 6px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .related-test-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .related-test-id {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--fg-muted);
+        }
+
+        .related-test-path {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .related-test-meta {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
 
         /* Editor */
-        .editor { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
-        .editor-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
-        .field-grid { display: grid; gap: 8px; }
-        label { display: grid; gap: 3px; font-size: 12px; }
-        label span { font-weight: 600; color: var(--fg-muted); font-size: 11px; }
-        input[type="text"], input[type="number"], textarea { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-section); color: var(--fg); padding: 5px 8px; font: inherit; font-size: 12px; transition: border-color 100ms; }
-        input:focus, textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent); }
-        textarea { min-height: 60px; resize: vertical; }
-        .field-hint { font-size: 10px; color: var(--fg-muted); }
+        .editor {
+            margin-top: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+        }
+
+        .editor-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        label {
+            display: grid;
+            gap: 3px;
+            font-size: 12px;
+        }
+
+        label span {
+            font-weight: 600;
+            color: var(--fg-muted);
+            font-size: 11px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-section);
+            color: var(--fg);
+            padding: 5px 8px;
+            font: inherit;
+            font-size: 12px;
+            transition: border-color 100ms;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus) 20%, transparent);
+        }
+
+        textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .field-hint {
+            font-size: 10px;
+            color: var(--fg-muted);
+        }
 
         /* Empty */
-        .empty { text-align: center; padding: 24px 16px; color: var(--fg-muted); border: 1.5px dashed var(--border); border-radius: var(--radius-lg); font-size: 12px; line-height: 1.6; }
-        .empty-icon { font-size: 26px; margin-bottom: 7px; }
-        .empty-title { font-weight: 600; color: var(--fg); margin-bottom: 3px; font-size: 13px; }
+        .empty {
+            text-align: center;
+            padding: 24px 16px;
+            color: var(--fg-muted);
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .empty-icon {
+            font-size: 26px;
+            margin-bottom: 7px;
+        }
+
+        .empty-title {
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
 
         /* Console */
-        .console-toolbar { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--console-toolbar-bg); border-bottom: 1px solid var(--console-border-top); flex-shrink: 0; }
-        .console-dots { display: flex; gap: 4px; }
-        .cdot { width: 8px; height: 8px; border-radius: 50%; }
-        .cdot-r { background: #ff5f57; }
-        .cdot-y { background: #ffbd2e; }
-        .cdot-g { background: #28ca41; }
-        .console-title { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--console-fg-muted); letter-spacing: 0.04em; flex: 1; text-align: center; }
-        .console-btn { appearance: none; background: transparent; border: none; color: var(--console-fg-muted); cursor: pointer; font-family: var(--font-ui); font-size: 10px; padding: 1px 5px; border-radius: 3px; transition: color 80ms, background 80ms; }
-        .console-btn:hover { color: var(--console-fg); background: rgba(255,255,255,0.06); }
-        .console-entries { flex: 1; overflow-y: auto; padding: 3px 0; font-family: var(--font-mono); font-size: 11px; scrollbar-width: thin; scrollbar-color: #2a2a35 transparent; }
-        .console-entries::-webkit-scrollbar { width: 4px; }
-        .console-entries::-webkit-scrollbar-track { background: transparent; }
-        .console-entries::-webkit-scrollbar-thumb { background: #2a2a35; border-radius: 2px; }
-        .console-entry { display: flex; align-items: flex-start; gap: 8px; padding: 1px 10px; line-height: 1.55; }
-        .console-entry:hover { background: rgba(255,255,255,0.025); }
-        .con-ts { color: var(--console-ts); font-size: 9px; flex-shrink: 0; padding-top: 2px; min-width: 38px; }
-        .con-icon { flex-shrink: 0; padding-top: 1px; font-size: 10px; }
-        .con-msg { flex: 1; white-space: pre-wrap; word-break: break-word; }
-        .con-info .con-msg { color: var(--console-info); }
-        .con-success .con-msg { color: var(--console-success); }
-        .con-error .con-msg { color: var(--console-error); }
-        .con-action .con-msg { color: var(--console-action); }
-        .con-warn .con-msg { color: var(--console-warn); }
-        .con-muted .con-msg { color: var(--console-fg-muted); }
-        .con-default .con-msg { color: var(--console-fg); }
+        .console-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: var(--console-toolbar-bg);
+            border-bottom: 1px solid var(--console-border-top);
+            flex-shrink: 0;
+        }
 
-        @media (max-width: 460px) { .wf-label { display: none; } .wf-sep { width: 8px; } }
+        .console-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .cdot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .cdot-r {
+            background: #ff5f57;
+        }
+
+        .cdot-y {
+            background: #ffbd2e;
+        }
+
+        .cdot-g {
+            background: #28ca41;
+        }
+
+        .console-title {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--console-fg-muted);
+            letter-spacing: 0.04em;
+            flex: 1;
+            text-align: center;
+        }
+
+        .console-btn {
+            appearance: none;
+            background: transparent;
+            border: none;
+            color: var(--console-fg-muted);
+            cursor: pointer;
+            font-family: var(--font-ui);
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            transition: color 80ms, background 80ms;
+        }
+
+        .console-btn:hover {
+            color: var(--console-fg);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .console-entries {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3px 0;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            scrollbar-width: thin;
+            scrollbar-color: #2a2a35 transparent;
+        }
+
+        .console-entries::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .console-entries::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .console-entries::-webkit-scrollbar-thumb {
+            background: #2a2a35;
+            border-radius: 2px;
+        }
+
+        .console-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 1px 10px;
+            line-height: 1.55;
+        }
+
+        .console-entry:hover {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .con-ts {
+            color: var(--console-ts);
+            font-size: 9px;
+            flex-shrink: 0;
+            padding-top: 2px;
+            min-width: 38px;
+        }
+
+        .con-icon {
+            flex-shrink: 0;
+            padding-top: 1px;
+            font-size: 10px;
+        }
+
+        .con-msg {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .con-info .con-msg {
+            color: var(--console-info);
+        }
+
+        .con-success .con-msg {
+            color: var(--console-success);
+        }
+
+        .con-error .con-msg {
+            color: var(--console-error);
+        }
+
+        .con-action .con-msg {
+            color: var(--console-action);
+        }
+
+        .con-warn .con-msg {
+            color: var(--console-warn);
+        }
+
+        .con-muted .con-msg {
+            color: var(--console-fg-muted);
+        }
+
+        .con-default .con-msg {
+            color: var(--console-fg);
+        }
+
+        @media (max-width: 460px) {
+            .wf-label {
+                display: none;
+            }
+
+            .wf-sep {
+                width: 8px;
+            }
+        }
     </style>
 </head>
 
@@ -266,6 +1122,7 @@
                 isSaving: false, isActivating: null,
                 runningAction: null,
                 expandedCards: {},
+                expandedPanels: {},
             };
             let nextId = 1;
             const pending = new Map();
@@ -301,7 +1158,7 @@
             function sendRequest(m, p) {
                 var id = nextId++;
                 window.parent.postMessage({ jsonrpc: "2.0", id: id, method: m, params: p }, "*");
-                return new Promise(function(res, rej) { pending.set(id, { resolve: res, reject: rej }); });
+                return new Promise(function (res, rej) { pending.set(id, { resolve: res, reject: rej }); });
             }
             function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
             function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id: id, result: r }, "*"); }
@@ -313,34 +1170,54 @@
                     .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
                     .replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", "&#39;");
             }
-            function toolText(r) { return (r && r.content && r.content.find(function(b) { return b && b.type === "text"; }) || {}).text || ""; }
+            function toolText(r) { return (r && r.content && r.content.find(function (b) { return b && b.type === "text"; }) || {}).text || ""; }
             function merge(t, s) {
                 if (!s || typeof s !== "object") return t;
-                Object.entries(s).forEach(function(kv) {
+                Object.entries(s).forEach(function (kv) {
                     var k = kv[0], v = kv[1];
                     t[k] = (v && typeof v === "object" && !Array.isArray(v))
                         ? merge(t[k] && typeof t[k] === "object" ? t[k] : {}, v) : v;
                 });
                 return t;
             }
-            function linesToArray(v) { return String(v == null ? "" : v).split(/\r?\n/).map(function(s) { return s.trim(); }).filter(Boolean); }
+            function linesToArray(v) { return String(v == null ? "" : v).split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
             function arrayToLines(v) { return Array.isArray(v) ? v.join("\n") : ""; }
             function cardStateKey(kind) {
-                var parts = Array.prototype.slice.call(arguments, 1).map(function(p) { return String(p == null ? "" : p); });
+                var parts = Array.prototype.slice.call(arguments, 1).map(function (p) { return String(p == null ? "" : p); });
                 return [kind].concat(parts).join(":");
             }
-            function isCardExpanded(key) { return state.expandedCards[key] === true; }
-            function setCardExpanded(key, expanded) { state.expandedCards[key] = expanded; }
-            function ensureCardExpanded(key) { if (!isCardExpanded(key)) setCardExpanded(key, true); }
+            function panelStateKey(kind) {
+                var parts = Array.prototype.slice.call(arguments, 1).map(function (p) { return String(p == null ? "" : p); });
+                return [kind].concat(parts).join(":");
+            }
+            function isCardExpanded(key, accordionGroup) {
+                return accordionGroup ? state.expandedCards[accordionGroup] === key : state.expandedCards[key] === true;
+            }
+            function setCardExpanded(key, expanded, accordionGroup) {
+                if (accordionGroup) {
+                    if (expanded) state.expandedCards[accordionGroup] = key;
+                    else if (state.expandedCards[accordionGroup] === key) delete state.expandedCards[accordionGroup];
+                    return;
+                }
+                state.expandedCards[key] = expanded;
+            }
+            function ensureCardExpanded(key, accordionGroup) {
+                if (!isCardExpanded(key, accordionGroup)) setCardExpanded(key, true, accordionGroup);
+            }
+            function isPanelExpanded(key) { return state.expandedPanels[key] === true; }
+            function togglePanelExpanded(key) {
+                state.expandedPanels[key] = !state.expandedPanels[key];
+                render();
+            }
 
             // Workflow steps
             var WORKFLOW_STEPS = [
-                { id: "feature",   label: "Feature",   tip: "Select or create a feature to work on" },
-                { id: "outcome",   label: "Outcome",   tip: "Choose an outcome milestone to target" },
-                { id: "tests",     label: "Tests",     tip: "Write tests that define the outcome" },
+                { id: "feature", label: "Feature", tip: "Select or create a feature to work on" },
+                { id: "outcome", label: "Outcome", tip: "Choose an outcome milestone to target" },
+                { id: "tests", label: "Tests", tip: "Write tests that define the outcome" },
                 { id: "implement", label: "Implement", tip: "Run AI-assisted implementation" },
-                { id: "verify",    label: "Verify",    tip: "Run tests to confirm implementation" },
-                { id: "advance",   label: "Advance",   tip: "Move to the next outcome or complete feature" },
+                { id: "verify", label: "Verify", tip: "Run tests to confirm implementation" },
+                { id: "advance", label: "Advance", tip: "Move to the next outcome or complete feature" },
             ];
 
             function computeWorkflowStep(data) {
@@ -351,7 +1228,7 @@
                 if (mode === "outcome_selection") {
                     var outcomes = Array.isArray(data.outcomes) ? data.outcomes : [];
                     if (!outcomes.length) return "outcome";
-                    var activeOutcome = outcomes.find(function(o) { return o.isActive; });
+                    var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                     if (!activeOutcome) return "outcome";
                     var st = activeOutcome.status;
                     var tc = Number(activeOutcome.testCount || 0);
@@ -372,9 +1249,9 @@
                 if (!bar) return;
                 bar.innerHTML = "";
                 var currentStepId = computeWorkflowStep(data);
-                var currentIdx = WORKFLOW_STEPS.findIndex(function(s) { return s.id === currentStepId; });
+                var currentIdx = WORKFLOW_STEPS.findIndex(function (s) { return s.id === currentStepId; });
 
-                WORKFLOW_STEPS.forEach(function(step, i) {
+                WORKFLOW_STEPS.forEach(function (step, i) {
                     var isDone = i < currentIdx;
                     var isActive = i === currentIdx;
 
@@ -406,7 +1283,7 @@
                 var mode = data && data.mode;
                 var features = Array.isArray(data && data.features) ? data.features : [];
                 var outcomes = Array.isArray(data && data.outcomes) ? data.outcomes : [];
-                var activeOutcome = outcomes.find(function(o) { return o.isActive; });
+                var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                 var icon, label, title, desc, actions = [];
 
                 if (mode === "feature_selection") {
@@ -418,14 +1295,14 @@
                     } else if (!data.activeFeatureId) {
                         icon = "\u{1F4C2}"; label = "Step 1 of 6 \u2014 Feature";
                         title = "Open a feature to get started";
-                        desc = "Click a feature card and then Open to view its outcomes and begin the TDD loop.";
+                        desc = "Open a feature card to inspect its outcomes and start the TDD loop.";
                     } else {
-                        var af = features.find(function(f) { return f.isActive; });
+                        var af = features.find(function (f) { return f.isActive; });
                         if (af) {
                             icon = "\u25B6\uFE0F"; label = "Active Feature";
                             title = "Continue with: " + (af.title || af.id);
-                            desc = "Click Open on the active feature to work on its outcomes.";
-                            actions = [{ text: "Open Active Feature", fn: function() { selectFeature(af.id); }, kind: "primary" }];
+                            desc = "Open the active feature to review outcomes, tests, and the next milestone.";
+                            actions = [{ text: "Open Active Feature", fn: function () { selectFeature(af.id); }, kind: "primary" }];
                         }
                     }
                 } else if (mode === "outcome_selection") {
@@ -436,34 +1313,37 @@
                     } else if (!activeOutcome) {
                         icon = "\u{1F3AF}"; label = "Step 2 of 6 \u2014 Outcome";
                         title = "Activate an outcome to begin";
-                        desc = "Click Activate on an outcome to make it the current TDD target.";
+                        desc = "Activate one outcome so implementation, verification, and test generation target the right milestone.";
                     } else {
                         var tc = Number(activeOutcome.testCount || 0);
                         var pc = Number(activeOutcome.plannedTestCount || 0);
+                        var needsGeneration = !!activeOutcome.needsTestGeneration;
                         var st = activeOutcome.status;
-                        if (tc === 0) {
+                        if (tc === 0 || needsGeneration) {
                             icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
-                            title = "Write tests for this outcome";
-                            desc = "Add tests with \`specrail test add\` or use Generate Tests to scaffold them from the outcome definition.";
-                            actions = [{ text: "Generate Tests", fn: function() { runToolAction("Generate Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
+                            title = tc === 0 ? "Add outcome tests" : "Close the remaining test gaps";
+                            desc = needsGeneration
+                                ? "Generate or register the missing required tests before implementation so the outcome has a complete test target."
+                                : "Register the outcome tests first so implementation has a concrete target to satisfy.";
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
                         } else if (pc > 0) {
                             icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
                             title = pc + " test" + (pc > 1 ? "s" : "") + " still in planned status";
-                            desc = "Mark tests as 'written' with `specrail test set-status <id> written` before implementing.";
-                            actions = [{ text: "Generate Tests", fn: function() { runToolAction("Generate Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
+                            desc = "Move planned tests to written or passing before implementation so the outcome gate can run cleanly.";
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
                         } else if (st === "active" || st === "failed") {
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
                             title = st === "failed" ? "Implementation failed \u2014 try again" : "Ready to implement";
                             desc = "Specrail will use the active agent to write code that satisfies your tests.";
                             actions = [
-                                { text: "\u2699 Implement", fn: function() { runToolAction("Implement", "specrail_implement", {}, { refresh: true }); }, kind: "primary" },
-                                { text: "\u2713 Verify First", fn: function() { runToolAction("Verify", "specrail_verify", {}, { refresh: true }); }, kind: "default" },
+                                { text: "Run Implement", fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); }, kind: "primary" },
+                                { text: "Run Verify", fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); }, kind: "default" },
                             ];
                         } else if (st === "verified") {
                             icon = "\u{1F680}"; label = "Step 6 of 6 \u2014 Advance";
                             title = "Outcome verified! Ready to advance";
                             desc = "All tests pass. Advance to activate the next outcome in sequence.";
-                            actions = [{ text: "\u{1F680} Advance", fn: function() { runToolAction("Advance", "specrail_advance", {}, { refresh: true }); }, kind: "success" }];
+                            actions = [{ text: "Advance To Next Outcome", fn: function () { runToolAction("Advance To Next Outcome", "specrail_advance", {}, { refresh: true }); }, kind: "success" }];
                         }
                     }
                 }
@@ -484,7 +1364,7 @@
                 if (actions.length) {
                     var act = document.createElement("div");
                     act.className = "next-banner-actions btn-group";
-                    actions.forEach(function(a) {
+                    actions.forEach(function (a) {
                         var b = document.createElement("button");
                         b.className = "btn btn-sm btn-" + (a.kind || "default");
                         b.textContent = a.text;
@@ -505,12 +1385,15 @@
                     summaryClass = options.summaryClass, contentClass = options.contentClass,
                     toggleClass = options.toggleClass, collapsedLabel = options.collapsedLabel,
                     expandedLabel = options.expandedLabel, buildSummary = options.buildSummary,
-                    buildContent = options.buildContent;
+                    buildContent = options.buildContent, accordionGroup = options.accordionGroup;
 
                 var details = document.createElement("details");
                 details.className = (baseClass + " " + extraClass).trim();
-                details.open = isCardExpanded(key);
-                details.addEventListener("toggle", function() { setCardExpanded(key, details.open); reportSize(); });
+                details.open = isCardExpanded(key, accordionGroup);
+                details.addEventListener("toggle", function () {
+                    setCardExpanded(key, details.open, accordionGroup);
+                    render();
+                });
 
                 var summary = document.createElement("summary");
                 summary.className = summaryClass;
@@ -532,12 +1415,12 @@
             // Badge
             function badge(status) {
                 var map = {
-                    active:   ["badge-active",   "\u26A1 Active"],
-                    verified: ["badge-verified",  "\u2705 Verified"],
-                    failed:   ["badge-failed",    "\u2717 Failed"],
-                    pending:  ["badge-pending",   "\u25CB Pending"],
-                    skipped:  ["badge-skipped",   "\u2013 Skipped"],
-                    planned:  ["badge-pending",   "\u25CB Planned"],
+                    active: ["badge-active", "\u26A1 Active"],
+                    verified: ["badge-verified", "\u2705 Verified"],
+                    failed: ["badge-failed", "\u2717 Failed"],
+                    pending: ["badge-pending", "\u25CB Pending"],
+                    skipped: ["badge-skipped", "\u2013 Skipped"],
+                    planned: ["badge-pending", "\u25CB Planned"],
                 };
                 var pair = map[status] || ["badge-pending", status];
                 var el = document.createElement("span");
@@ -616,12 +1499,12 @@
                 var button = document.createElement("button");
                 button.className = kind === "primary" ? "btn btn-primary btn-sm"
                     : kind === "ghost" ? "btn btn-ghost btn-sm"
-                    : kind === "success" ? "btn btn-success btn-sm"
-                    : kind === "danger" ? "btn btn-danger btn-sm"
-                    : "btn btn-sm";
+                        : kind === "success" ? "btn btn-success btn-sm"
+                            : kind === "danger" ? "btn btn-danger btn-sm"
+                                : "btn btn-sm";
                 button.disabled = state.isSaving || isActionRunning(tool, args);
                 button.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
-                button.addEventListener("click", function() { runToolAction(title, tool, args, { refresh: refresh }); });
+                button.addEventListener("click", function () { runToolAction(title, tool, args, { refresh: refresh }); });
                 container.appendChild(button);
             }
 
@@ -653,79 +1536,189 @@
                 }
             }
 
-            // Gap check
-            function buildOutcomeGapReview(outcome, tests) {
-                var declaredRequired = Array.isArray(outcome && outcome.required_tests) ? outcome.required_tests : [];
-                var relatedTests = Array.isArray(tests) ? tests : [];
-                var testsByPath = new Map(relatedTests.map(function(t) { return [t.path, t]; }));
-                var missingRequired = declaredRequired.filter(function(p) { return !testsByPath.has(p); });
-                var plannedRequired = declaredRequired.filter(function(p) { var t = testsByPath.get(p); return t && t.status === "planned"; });
-                var undeclaredTests = declaredRequired.length > 0 ? relatedTests.filter(function(t) { return !declaredRequired.includes(t.path); }) : [];
-                var hasNoRequiredTests = declaredRequired.length === 0;
-                var hasNoRelatedTests = relatedTests.length === 0;
-                var needsGeneration = declaredRequired.length > 0 && (missingRequired.length > 0 || plannedRequired.length > 0);
-                var hasGaps = hasNoRequiredTests || hasNoRelatedTests || missingRequired.length > 0 || plannedRequired.length > 0;
-                return { declaredRequired: declaredRequired, relatedTests: relatedTests, missingRequired: missingRequired, plannedRequired: plannedRequired, undeclaredTests: undeclaredTests, hasNoRequiredTests: hasNoRequiredTests, hasNoRelatedTests: hasNoRelatedTests, hasGaps: hasGaps, needsGeneration: needsGeneration };
+            function getOutcomeReview(outcome) {
+                return outcome && outcome.testReview && typeof outcome.testReview === "object" ? outcome.testReview : null;
             }
 
-            function formatOutcomeGapReview(outcome, review) {
-                var lines = [
-                    "Outcome: " + ((outcome && outcome.feature_id) || "?") + ":" + ((outcome && outcome.id) || "?"),
-                    "Goal: " + ((outcome && outcome.goal) || "No goal recorded."),
-                    "",
-                    "Declared required tests: " + review.declaredRequired.length,
-                    "Manifest tests for outcome: " + review.relatedTests.length,
-                ];
-                if (review.hasNoRequiredTests) { lines.push("", "Gap: no required test paths declared."); lines.push("Next: edit the outcome and add required test paths."); }
-                if (review.hasNoRelatedTests && !review.hasNoRequiredTests) lines.push("", "Gap: no tests in manifest yet.");
-                if (review.missingRequired.length > 0) { lines.push("", "Missing required test entries:"); review.missingRequired.forEach(function(p) { lines.push("  - " + p); }); }
-                if (review.plannedRequired.length > 0) { lines.push("", "Required tests still planned:"); review.plannedRequired.forEach(function(p) { lines.push("  - " + p); }); }
-                if (review.undeclaredTests.length > 0) { lines.push("", "Tests not in required_tests:"); review.undeclaredTests.forEach(function(t) { lines.push("  - " + t.path + " (" + t.status + ")"); }); }
-                if (!review.hasGaps) lines.push("", "\u2713 No testing gaps found.");
-                else if (review.needsGeneration) lines.push("", "Run Generate Tests to fill declared required tests.");
-                return lines.join("\n");
+            function reviewSummary(review) {
+                if (!review) return { tone: "muted", text: "Test health is not available for this outcome yet." };
+                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test paths to make this outcome verifiable." };
+                if (review.has_no_related_tests) return { tone: "warn", text: "No manifest tests are linked to this outcome yet." };
+                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test path" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.planned_required_tests.length > 0) return { tone: "warn", text: review.planned_required_tests.length + " required test" + (review.planned_required_tests.length !== 1 ? "s remain" : " remains") + " in planned status." };
+                return { tone: "success", text: "Required tests are linked and ready to drive implementation." };
             }
 
-            async function checkOutcomeTestGaps(featureId, outcomeId) {
-                var actionKey = "gap-check:" + featureId + ":" + outcomeId;
-                state.runningAction = actionKey;
-                appendLog("Checking test gaps: " + outcomeId + "\u2026", "action");
-                render();
-                try {
-                    var results = await Promise.all([
-                        callTool("specrail_outcome_show", Object.assign({}, state.toolArguments, { feature_id: featureId, outcome_id: outcomeId })),
-                        callTool("specrail_test_list", Object.assign({}, state.toolArguments, { feature_id: featureId, outcome_id: outcomeId })),
-                    ]);
-                    var outcomeResult = results[0], testsResult = results[1];
-                    var outcome = (outcomeResult && outcomeResult.structuredContent && outcomeResult.structuredContent.outcome) || {};
-                    var tests = (testsResult && testsResult.structuredContent && testsResult.structuredContent.tests) || [];
-                    var review = buildOutcomeGapReview(outcome, tests);
-                    var report = formatOutcomeGapReview(outcome, review);
+            function testStatusChipClass(status) {
+                return status === "passing" ? "passing"
+                    : status === "planned" ? "warning"
+                        : status === "failing" ? "danger"
+                            : "";
+            }
 
-                    if (review.hasGaps) appendLog("Gap check: " + outcomeId + " has testing gaps", "warn");
-                    else appendLog("Gap check: " + outcomeId + " \u2014 no gaps found \u2713", "success");
-                    appendLog(report, review.hasGaps ? "warn" : "muted");
+            function appendTestChip(container, label, tone) {
+                var chip = document.createElement("span");
+                chip.className = "test-chip" + (tone ? " " + tone : "");
+                chip.textContent = label;
+                container.appendChild(chip);
+            }
 
-                    if (review.needsGeneration) {
-                        appendLog("Running test generation\u2026", "action");
-                        var genResult = await callTool("specrail_test_generate", Object.assign({}, state.toolArguments));
-                        var genText = toolText(genResult) || "Test generation completed.";
-                        if (genResult && genResult.isError) appendLog("Generation failed: " + genText, "error");
-                        else { appendLog("Tests generated: " + genText, "success"); await refreshView(); }
-                    }
-                    state.runningAction = null; render();
-                } catch (e) {
-                    appendLog("Error: " + (e && e.message ? e.message : String(e)), "error");
-                    state.runningAction = null; render();
+            function renderPathList(paths, className) {
+                var list = document.createElement("ul");
+                list.className = className || "path-list";
+                paths.forEach(function (path) {
+                    var item = document.createElement("li");
+                    item.textContent = path;
+                    list.appendChild(item);
+                });
+                return list;
+            }
+
+            function requestOpenRelatedTest(path) {
+                sendNotification("ui/notifications/open-file", {
+                    path: path,
+                    cwd: state.toolArguments && state.toolArguments.cwd ? state.toolArguments.cwd : null,
+                });
+                appendLog("Requested editor open for: " + path + ". If your host ignores the request, use the inline path list.", "info");
+            }
+
+            function renderTestHealthSection(outcome, isActiveOutcome) {
+                var review = getOutcomeReview(outcome);
+                if (!review) return null;
+
+                var summary = reviewSummary(review);
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Test health</span>';
+                var healthBadge = badge(review.has_gaps ? "failed" : "verified");
+                healthBadge.textContent = review.has_gaps ? "\u26A0 Gaps" : "\u2713 Ready";
+                head.appendChild(healthBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = summary.text;
+                section.appendChild(copy);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                appendTestChip(chips, review.related_test_count + " linked", "");
+                appendTestChip(chips, review.required_test_count + " required", "");
+                if (review.missing_required_tests.length > 0) appendTestChip(chips, review.missing_required_tests.length + " missing", "danger");
+                if (review.planned_required_tests.length > 0) appendTestChip(chips, review.planned_required_tests.length + " planned", "warning");
+                if (review.undeclared_tests.length > 0) appendTestChip(chips, review.undeclared_tests.length + " undeclared", "warning");
+                section.appendChild(chips);
+
+                if (review.suggested_test_paths.length > 0) {
+                    var suggestionTitle = document.createElement("div");
+                    suggestionTitle.className = "card-note";
+                    suggestionTitle.textContent = "Suggested next tests";
+                    section.appendChild(suggestionTitle);
+                    section.appendChild(renderPathList(review.suggested_test_paths, "suggestion-list"));
                 }
+
+                if (review.required_test_paths.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                    var requiredTitle = document.createElement("div");
+                    requiredTitle.className = "card-note";
+                    requiredTitle.textContent = "Required test paths";
+                    section.appendChild(requiredTitle);
+                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                }
+
+                if (isActiveOutcome && review.needs_generation) {
+                    var actions = document.createElement("div");
+                    actions.className = "inline-actions";
+                    appendActionButton(actions, { title: "Generate Missing Tests", tool: "specrail_test_generate", kind: "primary", refresh: true });
+                    section.appendChild(actions);
+                }
+
+                return section;
+            }
+
+            function renderRelatedTestsSection(featureId, outcome) {
+                var review = getOutcomeReview(outcome);
+                if (!review) return null;
+
+                var panelKey = panelStateKey("related-tests", featureId, outcome.id);
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Related tests</span>';
+                var toggle = document.createElement("button");
+                toggle.className = "btn btn-sm";
+                toggle.textContent = isPanelExpanded(panelKey) ? "Hide Related Tests" : "Open Related Tests";
+                toggle.addEventListener("click", function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    togglePanelExpanded(panelKey);
+                });
+                head.appendChild(toggle);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = review.related_test_count > 0
+                    ? review.related_test_count + " manifest test" + (review.related_test_count !== 1 ? "s are" : " is") + " linked to this outcome."
+                    : "No manifest tests are linked yet. Use the required test paths below to register or generate them.";
+                section.appendChild(copy);
+
+                if (!isPanelExpanded(panelKey)) return section;
+
+                if (review.related_tests.length > 0) {
+                    var list = document.createElement("ul");
+                    list.className = "related-test-list";
+                    review.related_tests.forEach(function (test) {
+                        var item = document.createElement("li");
+                        item.className = "related-test-item";
+
+                        var main = document.createElement("div");
+                        main.className = "related-test-main";
+                        main.innerHTML =
+                            '<div class="related-test-id">' + esc(test.id) + '</div>' +
+                            '<div class="related-test-path">' + esc(test.path) + '</div>';
+                        var meta = document.createElement("div");
+                        meta.className = "related-test-meta";
+                        appendTestChip(meta, String(test.kind || "unit"), "");
+                        appendTestChip(meta, String(test.status || "planned"), testStatusChipClass(String(test.status || "planned")));
+                        main.appendChild(meta);
+                        item.appendChild(main);
+
+                        var openButton = document.createElement("button");
+                        openButton.className = "btn btn-sm";
+                        openButton.textContent = "Open File";
+                        openButton.addEventListener("click", function (ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            requestOpenRelatedTest(test.path);
+                        });
+                        item.appendChild(openButton);
+                        list.appendChild(item);
+                    });
+                    section.appendChild(list);
+                }
+
+                if (review.required_test_paths.length > 0) {
+                    var requiredTitle = document.createElement("div");
+                    requiredTitle.className = "card-note";
+                    requiredTitle.textContent = "Expected required test paths";
+                    section.appendChild(requiredTitle);
+                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                }
+
+                return section;
             }
 
             function appendUtilityActions(container, context) {
                 context = context || {};
                 var refreshArgs = context.featureId ? { feature_id: context.featureId } : {};
                 appendActionButton(container, { title: "\u21BA Refresh", tool: "specrail_feature_navigate", args: refreshArgs, refresh: true });
-                appendActionButton(container, { title: "Status", tool: "specrail_status" });
-                appendActionButton(container, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
+                appendActionButton(container, { title: "Project Status", tool: "specrail_status" });
+                appendActionButton(container, { title: "Audit Trace", tool: "specrail_trace", args: { limit: 12 } });
             }
 
             // Editors
@@ -734,7 +1727,12 @@
                 try {
                     var res = await callTool("specrail_feature_show", Object.assign({}, state.toolArguments, { id: featureId }));
                     var f = (res && res.structuredContent && res.structuredContent.feature) || {};
-                    ensureCardExpanded(cardStateKey("feature", featureId));
+                    var sc = state.toolResult && state.toolResult.structuredContent;
+                    var featureKey = sc && sc.mode === "outcome_selection"
+                        ? cardStateKey("selected-feature", featureId)
+                        : cardStateKey("feature", featureId);
+                    var accordionGroup = sc && sc.mode === "outcome_selection" ? null : "feature-selection";
+                    ensureCardExpanded(featureKey, accordionGroup);
                     state.editingFeatureId = featureId;
                     state.featureDraft = {
                         id: f.id || featureId, title: f.title || "", purpose: f.purpose || "",
@@ -767,7 +1765,7 @@
                 try {
                     var res = await callTool("specrail_outcome_show", Object.assign({}, state.toolArguments, { feature_id: featureId, outcome_id: outcomeId }));
                     var o = (res && res.structuredContent && res.structuredContent.outcome) || {};
-                    ensureCardExpanded(cardStateKey("outcome", featureId, outcomeId));
+                    ensureCardExpanded(cardStateKey("outcome", featureId, outcomeId), "outcome-selection:" + featureId);
                     state.editingOutcomeId = outcomeId;
                     state.outcomeDraft = {
                         feature_id: featureId, outcome_id: o.id || outcomeId, title: o.title || "",
@@ -853,7 +1851,7 @@
                 if (!multiline) inp.type = key === "order" ? "number" : "text";
                 if (key === "order") inp.min = "1";
                 inp.value = value || "";
-                inp.addEventListener("input", function(ev) {
+                inp.addEventListener("input", function (ev) {
                     var v = ev.target.value;
                     if (target === "feature" && state.featureDraft) state.featureDraft[key] = v;
                     if (target === "outcome" && state.outcomeDraft) state.outcomeDraft[key] = v;
@@ -870,7 +1868,7 @@
                 var h = document.createElement("div"); h.className = "editor-title"; h.textContent = title; wrap.appendChild(h);
                 var form = document.createElement("form"); form.addEventListener("submit", onSubmit);
                 var grid = document.createElement("div"); grid.className = "field-grid";
-                fields.forEach(function(f) { grid.appendChild(f); }); form.appendChild(grid);
+                fields.forEach(function (f) { grid.appendChild(f); }); form.appendChild(grid);
                 var actions = document.createElement("div"); actions.className = "btn-group"; actions.style.marginTop = "10px";
                 var save = document.createElement("button"); save.className = "btn btn-primary btn-sm"; save.type = "submit";
                 save.disabled = state.isSaving; save.textContent = state.isSaving ? "Saving\u2026" : "Save";
@@ -909,9 +1907,9 @@
                 if (features.length > 0) {
                     var dash = document.createElement("div"); dash.className = "dashboard";
                     var total = features.length;
-                    var verified = features.reduce(function(n, f) { return n + Number(f.verifiedOutcomeCount || 0); }, 0);
-                    var totalOutcomes = features.reduce(function(n, f) { return n + Number(f.outcomeCount || 0); }, 0);
-                    var activeFeature = features.find(function(f) { return f.isActive; });
+                    var verified = features.reduce(function (n, f) { return n + Number(f.verifiedOutcomeCount || 0); }, 0);
+                    var totalOutcomes = features.reduce(function (n, f) { return n + Number(f.outcomeCount || 0); }, 0);
+                    var activeFeature = features.find(function (f) { return f.isActive; });
                     dash.innerHTML =
                         '<span class="stat-chip"><strong>' + total + '</strong> feature' + (total !== 1 ? "s" : "") + '</span>' +
                         '<span class="stat-chip"><strong>' + totalOutcomes + '</strong> outcome' + (totalOutcomes !== 1 ? "s" : "") + '</span>' +
@@ -945,7 +1943,7 @@
                 sec.innerHTML = '<span class="section-label">Features</span>'; root.appendChild(sec);
 
                 var grid = document.createElement("div"); grid.className = "feature-grid";
-                features.forEach(function(feature) {
+                features.forEach(function (feature) {
                     var isActive = !!feature.isActive;
                     var outcomeCount = Number(feature.outcomeCount || 0);
                     var verifiedCount = Number(feature.verifiedOutcomeCount || 0);
@@ -958,9 +1956,10 @@
                         summaryClass: "card-summary",
                         contentClass: "card-content",
                         toggleClass: "card-toggle",
-                        collapsedLabel: "Details",
-                        expandedLabel: "Collapse",
-                        buildSummary: function(summary) {
+                        collapsedLabel: "Quick actions",
+                        expandedLabel: "Hide actions",
+                        accordionGroup: "feature-selection",
+                        buildSummary: function (summary) {
                             var row = document.createElement("div"); row.className = "card-row";
                             var body = document.createElement("div"); body.className = "card-body";
                             body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div>';
@@ -969,34 +1968,39 @@
                             summary.appendChild(row);
                             appendFeatureProgress(summary, outcomeCount, verifiedCount);
                         },
-                        buildContent: function(content) {
+                        buildContent: function (content) {
                             var actions = document.createElement("div"); actions.className = "card-actions";
                             var openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
                             openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
-                            openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open";
-                            (function(fid) {
-                                openBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); selectFeature(fid); });
+                            openBtn.textContent = state.pendingFeatureId === feature.id ? "Loading\u2026" : "Open Outcomes";
+                            (function (fid) {
+                                openBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); selectFeature(fid); });
                             })(feature.id);
                             actions.appendChild(openBtn);
 
                             if (!isActive) {
                                 var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
                                 actBtn.disabled = state.isActivating === feature.id || state.isSaving;
-                                actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Set Active";
-                                (function(fid) {
-                                    actBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
+                                actBtn.textContent = state.isActivating === feature.id ? "Activating\u2026" : "Activate Feature";
+                                (function (fid) {
+                                    actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
                                 })(feature.id);
                                 actions.appendChild(actBtn);
                             }
                             var editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                            editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                            (function(fid) {
-                                editBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
+                            editBtn.disabled = state.isSaving; editBtn.textContent = "Edit Feature";
+                            (function (fid) {
+                                editBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
                             })(feature.id);
                             actions.appendChild(editBtn);
-                            appendActionButton(actions, { title: "Status", tool: "specrail_status" });
-                            appendActionButton(actions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
                             content.appendChild(actions);
+
+                            var note = document.createElement("div");
+                            note.className = "card-note";
+                            note.textContent = outcomeCount > 0
+                                ? verifiedCount + " of " + outcomeCount + " outcomes verified. Open the feature to inspect milestones and tests."
+                                : "No outcomes yet. Open the feature to add the first verifiable milestone.";
+                            content.appendChild(note);
 
                             if (state.editingFeatureId === feature.id && state.featureDraft) {
                                 var d = state.featureDraft;
@@ -1030,8 +2034,8 @@
                 if (!state.creatingOutcome) {
                     var newBtn = document.createElement("button"); newBtn.className = "btn btn-primary btn-sm";
                     newBtn.textContent = "+ Outcome"; newBtn.disabled = state.isSaving;
-                    (function(fid, ord) {
-                        newBtn.addEventListener("click", function() { startNewOutcome(fid, ord); });
+                    (function (fid, ord) {
+                        newBtn.addEventListener("click", function () { startNewOutcome(fid, ord); });
                     })(featureId, suggestedOrder);
                     ha.appendChild(newBtn);
                 }
@@ -1047,7 +2051,7 @@
 
                 var isActiveF = data.activeFeatureId === featureId;
                 var featureOutcomeCount = outcomes.length;
-                var featureVerifiedCount = outcomes.filter(function(o) { return o.status === "verified"; }).length;
+                var featureVerifiedCount = outcomes.filter(function (o) { return o.status === "verified"; }).length;
                 var selectedFeatureKey = cardStateKey("selected-feature", featureId);
 
                 var fCard = makeCollapsibleCard({
@@ -1059,7 +2063,7 @@
                     toggleClass: "card-toggle",
                     collapsedLabel: "Feature details",
                     expandedLabel: "Hide details",
-                    buildSummary: function(summary) {
+                    buildSummary: function (summary) {
                         var fRow = document.createElement("div"); fRow.className = "card-row";
                         var fBody = document.createElement("div"); fBody.className = "card-body";
                         fBody.innerHTML = '<div class="card-id">' + esc(featureId) + '</div><div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
@@ -1068,28 +2072,32 @@
                         summary.appendChild(fRow);
                         appendFeatureProgress(summary, featureOutcomeCount, featureVerifiedCount);
                     },
-                    buildContent: function(content) {
+                    buildContent: function (content) {
                         var fActions = document.createElement("div"); fActions.className = "card-actions";
                         if (!isActiveF) {
                             var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
                             actBtn.disabled = state.isActivating === featureId || state.isSaving;
-                            actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Set Active";
-                            (function(fid) {
-                                actBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
+                            actBtn.textContent = state.isActivating === featureId ? "Activating\u2026" : "Activate Feature";
+                            (function (fid) {
+                                actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateFeature(fid); });
                             })(featureId);
                             fActions.appendChild(actBtn);
                         }
                         var feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
                         feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
-                        (function(fid, fkey) {
-                            feEditBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); ensureCardExpanded(fkey); startFeatureEdit(fid); });
-                        })(featureId, selectedFeatureKey);
+                        (function (fid) {
+                            feEditBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
+                        })(featureId);
                         fActions.appendChild(feEditBtn);
-                        appendActionButton(fActions, { title: "Feature Details", tool: "specrail_feature_show", args: { id: featureId } });
-                        appendActionButton(fActions, { title: "All Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
-                        appendActionButton(fActions, { title: "Status", tool: "specrail_status" });
-                        appendActionButton(fActions, { title: "Trace", tool: "specrail_trace", args: { limit: 12 } });
+                        appendActionButton(fActions, { title: "Feature Spec", tool: "specrail_feature_show", args: { id: featureId } });
+                        appendActionButton(fActions, { title: "All Feature Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
                         content.appendChild(fActions);
+
+                        var featureNote = document.createElement("div");
+                        featureNote.className = "card-note";
+                        featureNote.textContent = featureVerifiedCount + " of " + featureOutcomeCount + " outcomes are verified for this feature.";
+                        content.appendChild(featureNote);
+
                         if (state.editingFeatureId === featureId && state.featureDraft) {
                             var d = state.featureDraft;
                             content.appendChild(renderEditor("Edit: " + featureId, [
@@ -1133,7 +2141,7 @@
                     root.appendChild(sec);
 
                     var list = document.createElement("ul"); list.className = "outcome-list";
-                    outcomes.forEach(function(outcome) {
+                    outcomes.forEach(function (outcome) {
                         var isActiveOutcome = !!outcome.isActive;
                         var cls = "outcome-item";
                         if (isActiveOutcome) cls += " active-outcome";
@@ -1147,15 +2155,18 @@
                             summaryClass: "outcome-summary",
                             contentClass: "outcome-content",
                             toggleClass: "outcome-toggle",
-                            collapsedLabel: "Actions",
-                            expandedLabel: "Collapse",
-                            buildSummary: function(summary) {
+                            collapsedLabel: "Inspect outcome",
+                            expandedLabel: "Hide outcome",
+                            accordionGroup: "outcome-selection:" + featureId,
+                            buildSummary: function (summary) {
                                 var row = document.createElement("div"); row.className = "outcome-row";
                                 var body = document.createElement("div"); body.className = "outcome-body";
+                                var review = getOutcomeReview(outcome);
                                 body.innerHTML =
                                     '<div class="outcome-num">Outcome ' + esc(outcome.order != null ? outcome.order : "?") + '</div>' +
                                     '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>' +
-                                    '<div class="outcome-id">' + esc(outcome.id) + '</div>';
+                                    '<div class="outcome-id">' + esc(outcome.id) + '</div>' +
+                                    '<div class="outcome-goal">' + esc(outcome.goal || "") + '</div>';
 
                                 var tc = Number(outcome.testCount || 0);
                                 var passingCount = Number(outcome.passingTestCount || 0);
@@ -1168,63 +2179,71 @@
                                 } else if (outcome.status !== "verified" && outcome.status !== "skipped") {
                                     var noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
                                 }
+                                if (review && review.missing_required_tests && review.missing_required_tests.length > 0) {
+                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " missing"; chips.appendChild(missing);
+                                }
+                                if (review && review.has_no_required_tests) {
+                                    var unscoped = document.createElement("span"); unscoped.className = "test-chip danger"; unscoped.textContent = "add required tests"; chips.appendChild(unscoped);
+                                }
                                 if (chips.childNodes.length > 0) body.appendChild(chips);
                                 row.appendChild(body);
                                 row.appendChild(badge(String(outcome.status || "pending")));
                                 summary.appendChild(row);
                             },
-                            buildContent: function(content) {
+                            buildContent: function (content) {
+                                var review = getOutcomeReview(outcome);
                                 var actions = document.createElement("div"); actions.className = "card-actions";
 
                                 if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
                                     var actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
                                     actBtn.disabled = state.isActivating === outcome.id || state.isSaving;
-                                    actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "\u25B6 Activate";
-                                    (function(fid, oid) {
-                                        actBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); activateOutcome(fid, oid); });
+                                    actBtn.textContent = state.isActivating === outcome.id ? "Activating\u2026" : "Activate Outcome";
+                                    (function (fid, oid) {
+                                        actBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); activateOutcome(fid, oid); });
                                     })(featureId, outcome.id);
                                     actions.appendChild(actBtn);
                                 }
 
                                 if (isActiveOutcome) {
                                     if (outcome.status !== "verified" && outcome.status !== "skipped") {
-                                        appendActionButton(actions, { title: "\u2699 Implement", tool: "specrail_implement", kind: "primary", refresh: true });
-                                        appendActionButton(actions, { title: "\u2713 Verify", tool: "specrail_verify", kind: "success", refresh: true });
-                                        appendActionButton(actions, { title: "Gen Tests", tool: "specrail_test_generate", refresh: true });
+                                        appendActionButton(actions, { title: "Run Implement", tool: "specrail_implement", kind: "primary", refresh: true });
+                                        appendActionButton(actions, { title: "Run Verify", tool: "specrail_verify", kind: "success", refresh: true });
+                                        if (review && review.needs_generation) appendActionButton(actions, { title: "Generate Missing Tests", tool: "specrail_test_generate", refresh: true });
                                     }
                                     if (outcome.status === "verified") {
-                                        appendActionButton(actions, { title: "\u{1F680} Advance", tool: "specrail_advance", kind: "success", refresh: true });
+                                        appendActionButton(actions, { title: "Advance To Next Outcome", tool: "specrail_advance", kind: "success", refresh: true });
                                     }
                                 }
 
                                 if (["verified", "failed", "skipped"].indexOf(String(outcome.status || "")) >= 0) {
                                     appendActionButton(actions, {
-                                        title: "\u21A9 Reset",
+                                        title: "Reset Status",
                                         tool: "specrail_outcome_unverify",
                                         args: { feature_id: featureId, outcome_id: outcome.id },
                                         kind: "danger",
                                         refresh: true,
                                     });
                                 }
-
-                                var gapBtn = document.createElement("button"); gapBtn.className = "btn btn-sm";
-                                gapBtn.disabled = state.isSaving || state.runningAction === ("gap-check:" + featureId + ":" + outcome.id);
-                                gapBtn.textContent = state.runningAction === ("gap-check:" + featureId + ":" + outcome.id) ? "Checking\u2026" : "Test Gaps";
-                                (function(fid, oid) {
-                                    gapBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); checkOutcomeTestGaps(fid, oid); });
-                                })(featureId, outcome.id);
-                                actions.appendChild(gapBtn);
-
-                                appendActionButton(actions, { title: "Tests", tool: "specrail_test_list", args: { feature_id: featureId, outcome_id: outcome.id } });
-                                appendActionButton(actions, { title: "Details", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
+                                appendActionButton(actions, { title: "Outcome Spec", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
 
                                 var editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
-                                editBtn.disabled = state.isSaving; editBtn.textContent = "Edit";
-                                (function(fid, oid) {
-                                    editBtn.addEventListener("click", function(ev) { ev.preventDefault(); ev.stopPropagation(); startOutcomeEdit(fid, oid); });
+                                editBtn.disabled = state.isSaving; editBtn.textContent = "Edit Outcome";
+                                (function (fid, oid) {
+                                    editBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startOutcomeEdit(fid, oid); });
                                 })(featureId, outcome.id);
                                 actions.appendChild(editBtn);
                                 content.appendChild(actions);
+
+                                var outcomeMeta = document.createElement("div");
+                                outcomeMeta.className = "card-note";
+                                outcomeMeta.textContent = outcome.goal || "No outcome goal recorded.";
+                                content.appendChild(outcomeMeta);
+
+                                var healthSection = renderTestHealthSection(outcome, isActiveOutcome);
+                                if (healthSection) content.appendChild(healthSection);
+
+                                var relatedTestsSection = renderRelatedTestsSection(featureId, outcome);
+                                if (relatedTestsSection) content.appendChild(relatedTestsSection);
 
                                 if (state.editingOutcomeId === outcome.id && state.outcomeDraft) {
                                     var d = state.outcomeDraft;
@@ -1251,7 +2270,7 @@
                 var root = document.documentElement;
                 var vars = state.hostContext && state.hostContext.styles && state.hostContext.styles.variables;
                 if (vars && typeof vars === "object")
-                    Object.entries(vars).forEach(function(kv) { if (typeof kv[1] === "string") root.style.setProperty(kv[0], kv[1]); });
+                    Object.entries(vars).forEach(function (kv) { if (typeof kv[1] === "string") root.style.setProperty(kv[0], kv[1]); });
                 var theme = state.hostContext && state.hostContext.theme;
                 if (theme === "dark" || theme === "light") root.style.colorScheme = theme;
             }
@@ -1286,7 +2305,7 @@
                 sendNotification("ui/notifications/size-changed", { width: 680, height: 680 });
             }
 
-            window.addEventListener("message", function(event) {
+            window.addEventListener("message", function (event) {
                 var msg = event.data;
                 if (!msg || msg.jsonrpc !== "2.0") return;
                 if (typeof msg.id !== "undefined" && pending.has(msg.id)) {
@@ -1305,9 +2324,9 @@
                 if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
             });
 
-            new ResizeObserver(function() { reportSize(); }).observe(document.body);
+            new ResizeObserver(function () { reportSize(); }).observe(document.body);
 
-            (async function() {
+            (async function () {
                 appendLog("Specrail Navigator initializing\u2026", "muted");
                 try {
                     var init = await sendRequest("ui/initialize", {
@@ -1325,4 +2344,5 @@
         })();
     </script>
 </body>
+
 </html>

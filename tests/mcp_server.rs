@@ -125,6 +125,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
     assert!(tool_names.contains(&"specrail_outcome_unverify"));
+    assert!(tool_names.contains(&"specrail_outcome_test_review"));
     let feature_navigate = tools["result"]["tools"]
         .as_array()
         .unwrap()
@@ -170,7 +171,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("Test Gaps"));
+        .contains("Open Related Tests"));
 
     let status_before = client.request(
         "tools/call",
@@ -325,7 +326,22 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
                 "outcome_id": "login",
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
-                "order": 1
+                "order": 1,
+                "required_tests": ["tests/auth/login.rs", "tests/auth/mfa.rs"]
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_add",
+            "arguments": {
+                "id": "auth-login-rs",
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login.rs",
+                "kind": "unit",
+                "purpose_refs": []
             }
         }),
     );
@@ -385,6 +401,15 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         .unwrap();
     assert_eq!(outcomes.len(), 1);
     assert_eq!(outcomes[0]["id"], "login");
+    assert_eq!(outcomes[0]["goal"], "Let a user sign in with valid credentials.");
+    assert_eq!(outcomes[0]["requiredTestCount"], 2);
+    assert_eq!(outcomes[0]["missingRequiredTestCount"], 1);
+    assert_eq!(outcomes[0]["plannedTestCount"], 1);
+    assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
+    assert_eq!(
+        outcomes[0]["testReview"]["missing_required_tests"][0],
+        "tests/auth/mfa.rs"
+    );
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],
         "specrail_outcome_activate"
@@ -402,6 +427,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         "specrail_outcome_unverify"
     );
     assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["testReviewTool"],
+        "specrail_outcome_test_review"
+    );
+    assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["implementTool"],
         "specrail_implement"
     );
@@ -414,6 +443,31 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         .unwrap()
         .iter()
         .any(|value| value == "activate"));
+    assert!(outcomes[0]["availableActions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|value| value == "tests"));
+
+    let review = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_test_review",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login"
+            }
+        }),
+    );
+    assert_eq!(review["result"]["structuredContent"]["review"]["has_gaps"], json!(true));
+    assert_eq!(
+        review["result"]["structuredContent"]["review"]["planned_required_tests"][0],
+        "tests/auth/login.rs"
+    );
+    assert_eq!(
+        review["result"]["structuredContent"]["review"]["suggested_test_paths"][0],
+        "tests/auth/mfa.rs"
+    );
 
     client.shutdown();
 }

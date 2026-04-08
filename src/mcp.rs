@@ -11,7 +11,7 @@ use serde_json::{json, Map, Value};
 
 use crate::core::{
     ledger::Ledger,
-    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestStatus},
+    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
     repository::Repository,
 };
 
@@ -254,6 +254,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_feature_show" => tool_feature_show(arguments),
         "specrail_outcome_list" => tool_outcome_list(arguments),
         "specrail_outcome_show" => tool_outcome_show(arguments),
+        "specrail_outcome_test_review" => tool_outcome_test_review(arguments),
         "specrail_test_list" => tool_test_list(arguments),
         "specrail_trace" => tool_trace(arguments),
         "specrail_init" => tool_init(arguments),
@@ -292,6 +293,97 @@ struct OutcomeWorkflowSnapshot {
     outcome: OutcomeSpec,
     test_count: usize,
     planned_test_ids: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct OutcomeTestReview {
+    feature_id: String,
+    outcome_id: String,
+    required_test_paths: Vec<String>,
+    related_tests: Vec<TestSpec>,
+    missing_required_tests: Vec<String>,
+    planned_required_tests: Vec<String>,
+    undeclared_tests: Vec<TestSpec>,
+    suggested_test_paths: Vec<String>,
+    openable_test_paths: Vec<String>,
+    required_test_count: usize,
+    related_test_count: usize,
+    has_no_required_tests: bool,
+    has_no_related_tests: bool,
+    has_gaps: bool,
+    needs_generation: bool,
+}
+
+fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> OutcomeTestReview {
+    let required_test_paths = outcome.required_tests.clone();
+    let related_tests: Vec<TestSpec> = manifest
+        .tests
+        .iter()
+        .filter(|test| test.feature_id == outcome.feature_id && test.outcome_id == outcome.id)
+        .cloned()
+        .collect();
+
+    let missing_required_tests: Vec<String> = required_test_paths
+        .iter()
+        .filter(|path| !related_tests.iter().any(|test| test.path == **path))
+        .cloned()
+        .collect();
+
+    let planned_required_tests: Vec<String> = required_test_paths
+        .iter()
+        .filter(|path| {
+            related_tests
+                .iter()
+                .any(|test| test.path == **path && test.status == TestStatus::Planned)
+        })
+        .cloned()
+        .collect();
+
+    let undeclared_tests: Vec<TestSpec> = if required_test_paths.is_empty() {
+        Vec::new()
+    } else {
+        related_tests
+            .iter()
+            .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
+            .cloned()
+            .collect()
+    };
+
+    let mut suggested_test_paths = missing_required_tests.clone();
+    for path in &planned_required_tests {
+        if !suggested_test_paths.contains(path) {
+            suggested_test_paths.push(path.clone());
+        }
+    }
+
+    let openable_test_paths = related_tests
+        .iter()
+        .map(|test| test.path.clone())
+        .collect();
+    let has_no_required_tests = required_test_paths.is_empty();
+    let has_no_related_tests = related_tests.is_empty();
+    let has_gaps = has_no_required_tests
+        || has_no_related_tests
+        || !missing_required_tests.is_empty()
+        || !planned_required_tests.is_empty();
+
+    OutcomeTestReview {
+        feature_id: outcome.feature_id.clone(),
+        outcome_id: outcome.id.clone(),
+        required_test_count: required_test_paths.len(),
+        related_test_count: related_tests.len(),
+        required_test_paths,
+        related_tests,
+        missing_required_tests,
+        planned_required_tests,
+        undeclared_tests,
+        suggested_test_paths: suggested_test_paths.clone(),
+        openable_test_paths,
+        has_no_required_tests,
+        has_no_related_tests,
+        has_gaps,
+        needs_generation: !suggested_test_paths.is_empty(),
+    }
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -465,38 +557,30 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         let outcome_summaries: Vec<Value> = outcomes
             .iter()
             .map(|outcome| {
-                let test_count = manifest
-                    .tests
+                let review = build_outcome_test_review(outcome, &manifest);
+                let test_count = review.related_test_count;
+                let planned_test_count = review.planned_required_tests.len();
+                let passing_test_count = review
+                    .related_tests
                     .iter()
-                    .filter(|t| t.feature_id == feature_id && t.outcome_id == outcome.id)
-                    .count();
-                let planned_test_count = manifest
-                    .tests
-                    .iter()
-                    .filter(|t| {
-                        t.feature_id == feature_id
-                            && t.outcome_id == outcome.id
-                            && t.status == TestStatus::Planned
-                    })
-                    .count();
-                let passing_test_count = manifest
-                    .tests
-                    .iter()
-                    .filter(|t| {
-                        t.feature_id == feature_id
-                            && t.outcome_id == outcome.id
-                            && t.status == TestStatus::Passing
-                    })
+                    .filter(|test| test.status == TestStatus::Passing)
                     .count();
                 json!({
                     "id": outcome.id,
                     "title": outcome.title,
+                    "goal": outcome.goal,
                     "status": outcome.status,
                     "order": outcome.order,
                     "isActive": active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                     "testCount": test_count,
                     "plannedTestCount": planned_test_count,
                     "passingTestCount": passing_test_count,
+                    "requiredTestCount": review.required_test_count,
+                    "missingRequiredTestCount": review.missing_required_tests.len(),
+                    "undeclaredTestCount": review.undeclared_tests.len(),
+                    "hasTestGaps": review.has_gaps,
+                    "needsTestGeneration": review.needs_generation,
+                    "testReview": review,
                     "availableActions": outcome_available_actions(
                         &outcome.status,
                         active_outcome_id.as_deref() == Some(outcome.id.as_str()),
@@ -528,6 +612,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "verifyTool": "specrail_verify",
                     "advanceTool": "specrail_advance",
                     "testListTool": "specrail_test_list",
+                    "testReviewTool": "specrail_outcome_test_review",
                     "testGenerateTool": "specrail_test_generate",
                     "featureShowTool": "specrail_feature_show",
                     "outcomeShowTool": "specrail_outcome_show",
@@ -669,6 +754,22 @@ fn tool_outcome_show(arguments: &Map<String, Value>) -> Result<Value> {
     Ok(tool_success_payload(
         format!("Loaded outcome '{outcome_id}' for feature '{feature_id}'."),
         Some(json!({ "outcome": outcome })),
+    ))
+}
+
+fn tool_outcome_test_review(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let outcome = repo.load_outcome(&feature_id, &outcome_id)?;
+    let manifest = repo.load_manifest()?;
+    let review = build_outcome_test_review(&outcome, &manifest);
+
+    Ok(tool_success_payload(
+        format!(
+            "Reviewed tests for outcome '{outcome_id}' in feature '{feature_id}'."
+        ),
+        Some(json!({ "outcome": outcome, "review": review })),
     ))
 }
 
@@ -1511,6 +1612,20 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_outcome_show",
             "title": "Show Outcome",
             "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, and required tests.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Feature identifier." },
+                    "outcome_id": { "type": "string", "description": "Outcome identifier." }
+                },
+                "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_test_review",
+            "title": "Review Outcome Tests",
+            "description": "Review one outcome's test health. Returns related manifest tests, missing required_tests paths, planned required tests, undeclared tests, and suggested test paths to add or generate.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
