@@ -18,7 +18,16 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
     specrail(&dir)
         .arg("init")
         .write_stdin(
-            "auth\n\
+            "platform\n\
+             Platform\n\
+             Overall product solution.\n\
+             api\n\
+             API\n\
+             Core API project.\n\
+             auth-core\n\
+             Authentication\n\
+             Authentication domain component.\n\
+             auth\n\
              Authentication\n\
              Authenticate users before protected actions.\n\
              Users can sign in\n\
@@ -85,6 +94,9 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
         .stdout(contains("src/auth/persistence/**"));
 
     let state = support::current_state(&dir);
+    assert_eq!(state.active_solution.as_deref(), Some("platform"));
+    assert_eq!(state.active_project.as_deref(), Some("api"));
+    assert_eq!(state.active_component.as_deref(), Some("auth-core"));
     assert_eq!(state.active_feature.as_deref(), Some("auth"));
     assert_eq!(state.active_outcome.as_deref(), Some("outcome-2"));
 
@@ -102,7 +114,16 @@ fn init_walkthrough_can_repeat_features() {
     specrail(&dir)
         .arg("init")
         .write_stdin(
-            "auth\n\
+            "platform\n\
+             Platform\n\
+             Overall product solution.\n\
+             api\n\
+             API\n\
+             Core API project.\n\
+             auth-core\n\
+             Authentication\n\
+             Authentication domain component.\n\
+             auth\n\
              Authentication\n\
              Authenticate users.\n\
              \n\
@@ -151,6 +172,9 @@ fn init_walkthrough_can_repeat_features() {
         .stdout(contains("billing"));
 
     let state = support::current_state(&dir);
+    assert_eq!(state.active_solution.as_deref(), Some("platform"));
+    assert_eq!(state.active_project.as_deref(), Some("api"));
+    assert_eq!(state.active_component.as_deref(), Some("auth-core"));
     assert_eq!(state.active_feature.as_deref(), Some("billing"));
     assert_eq!(state.active_outcome.as_deref(), Some("outcome-1"));
 }

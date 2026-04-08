@@ -3,7 +3,7 @@ use std::io::{self, BufRead, Write};
 use anyhow::{bail, Result};
 
 use crate::{
-    commands::{feature, outcome, test},
+    commands::{component, feature, outcome, project, solution, test},
     core::repository::Repository,
 };
 
@@ -21,10 +21,19 @@ fn run_with_io<R: BufRead, W: Write>(
     reader: &mut R,
     writer: &mut W,
 ) -> Result<()> {
-    writeln!(writer, "\nWalkthrough: add features and outcomes to get started.")?;
+    writeln!(writer, "\nWalkthrough: create hierarchy, then add features and outcomes.")?;
     writeln!(
         writer,
         "Press Enter on an empty list prompt to move to the next section."
+    )?;
+    writer.flush()?;
+
+    let hierarchy = prompt_hierarchy(repo, reader, writer)?;
+    component::activate(repo, &hierarchy.component_id)?;
+    writeln!(
+        writer,
+        "Activated hierarchy: {}/{}/{}.",
+        hierarchy.solution_id, hierarchy.project_id, hierarchy.component_id
     )?;
     writer.flush()?;
 
@@ -121,6 +130,68 @@ fn prompt_feature<R: BufRead, W: Write>(
         non_goals,
         dependencies,
     }))
+}
+
+struct WizardHierarchy {
+    solution_id: String,
+    project_id: String,
+    component_id: String,
+}
+
+fn prompt_hierarchy<R: BufRead, W: Write>(
+    repo: &Repository,
+    reader: &mut R,
+    writer: &mut W,
+) -> Result<WizardHierarchy> {
+    writeln!(writer, "\nStep 1/4: Create Solution")?;
+    let solution_id = prompt_required(reader, writer, "Solution ID: ")?;
+    let solution_title = prompt_required(reader, writer, "Solution title: ")?;
+    let solution_purpose = prompt_required(reader, writer, "Solution purpose: ")?;
+    solution::create(
+        repo,
+        solution::NewArgs {
+            id: solution_id.clone(),
+            title: solution_title,
+            purpose: solution_purpose,
+        },
+    )?;
+
+    writeln!(writer, "\nStep 2/4: Create Project")?;
+    let project_id = prompt_required(reader, writer, "Project ID: ")?;
+    let project_title = prompt_required(reader, writer, "Project title: ")?;
+    let project_purpose = prompt_required(reader, writer, "Project purpose: ")?;
+    project::create(
+        repo,
+        project::NewArgs {
+            solution_id: solution_id.clone(),
+            id: project_id.clone(),
+            title: project_title,
+            purpose: project_purpose,
+        },
+    )?;
+
+    writeln!(writer, "\nStep 3/4: Create Component")?;
+    let component_id = prompt_required(reader, writer, "Component ID: ")?;
+    let component_title = prompt_required(reader, writer, "Component title: ")?;
+    let component_purpose = prompt_required(reader, writer, "Component purpose: ")?;
+    component::create(
+        repo,
+        component::NewArgs {
+            project_id: project_id.clone(),
+            id: component_id.clone(),
+            title: component_title,
+            purpose: component_purpose,
+        },
+    )?;
+
+    writeln!(writer, "\nStep 4/4: Add Features")?;
+    writer.flush()?;
+
+    Ok(WizardHierarchy {
+        solution_id,
+        project_id,
+        component_id,
+    })
 }
 
 fn prompt_outcomes<R: BufRead, W: Write>(

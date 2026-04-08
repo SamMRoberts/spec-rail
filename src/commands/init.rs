@@ -14,7 +14,7 @@ pub struct InitOutcome {
     pub should_start_wizard: bool,
 }
 
-pub fn run(repo: &Repository) -> Result<InitOutcome> {
+pub fn run(repo: &Repository, no_wizard: bool) -> Result<InitOutcome> {
     let specrail = repo.specrail_dir();
     let already_initialized = specrail.is_dir();
 
@@ -54,7 +54,9 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
         println!("  created  .specrail/state/ledger.jsonl");
     }
 
-    repo.ensure_hierarchy()?;
+    if no_wizard {
+        repo.ensure_hierarchy()?;
+    }
 
     // Record the init event
     let event = LedgerEvent::new(LedgerEventType::ProjectInitialized)
@@ -64,10 +66,13 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     let should_start_wizard = repo.list_features()?.is_empty();
 
     println!("\n✓ specrail project ready.");
-    if should_start_wizard {
-        println!("  Starting setup walkthrough...");
+    if should_start_wizard && !no_wizard {
+        println!("  Starting setup walkthrough (solution → project → component → feature)...");
     } else {
         println!("  Next steps:");
+        println!("    specrail solution new <id> --title <title> --purpose <purpose>");
+        println!("    specrail project new <solution-id> <id> --title <title> --purpose <purpose>");
+        println!("    specrail component new <project-id> <id> --title <title> --purpose <purpose>");
         println!("    specrail feature new <id> --title <title> --purpose <purpose>");
     }
 

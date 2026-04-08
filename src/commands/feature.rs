@@ -214,5 +214,7 @@ fn resolve_component_id(repo: &Repository, requested: Option<&str>) -> Result<St
         return Ok(component_id);
     }
 
-    Ok(crate::core::repository::DEFAULT_COMPONENT_ID.to_string())
+    bail!(
+        "no active component selected — run `specrail component activate <id>` or pass `--component <id>`"
+    )
 }

@@ -49,7 +49,7 @@ fn run(cli: Cli) -> Result<()> {
     if let Commands::Init { no_wizard } = &cli.command {
         let cwd = std::env::current_dir()?;
         let repo = Repository::new(&cwd);
-        let outcome = commands::init::run(&repo)?;
+        let outcome = commands::init::run(&repo, *no_wizard)?;
         if !*no_wizard && outcome.should_start_wizard {
             commands::wizard::run(&repo)?;
         }
@@ -60,7 +60,6 @@ fn run(cli: Cli) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let repo = Repository::discover(&cwd)
         .context("could not find a specrail project — run `specrail init` first")?;
-    repo.ensure_hierarchy()?;
 
     match cli.command {
         Commands::Init { .. } => unreachable!(),

@@ -1444,7 +1444,7 @@ fn tool_init(arguments: &Map<String, Value>) -> Result<Value> {
     let no_wizard = arguments
         .get("no_wizard")
         .and_then(Value::as_bool)
-        .unwrap_or(true);
+        .unwrap_or(false);
 
     let mut args = vec!["init".to_string()];
     if no_wizard {
@@ -2638,12 +2638,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_init",
             "title": "Initialize Project",
-            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure with project.yaml, default solution/project/component hierarchy, test manifest, and state files. Safe to run on an existing project (only adds missing files).",
+            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure and project config, then (unless no_wizard=true) starts the interactive setup walkthrough to create solution/project/component hierarchy and first feature outcomes.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string", "description": "Directory to initialize. Defaults to the server working directory." },
-                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard. Defaults to true for MCP usage." }
+                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard." }
                 }
             }
         }),
