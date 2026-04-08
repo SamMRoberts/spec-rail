@@ -736,6 +736,92 @@
             margin-top: 8px;
         }
 
+        .hierarchy-panel {
+            margin-bottom: 14px;
+            padding: 12px 13px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .hierarchy-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .hierarchy-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .hierarchy-copy {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.45;
+            margin-top: 2px;
+        }
+
+        .hierarchy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .hierarchy-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .hierarchy-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+
+        .hierarchy-select {
+            width: 100%;
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+            color: var(--fg);
+            font: inherit;
+            font-size: 12px;
+            line-height: 1.3;
+            padding: 9px 11px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        }
+
+        .hierarchy-select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+        }
+
+        .hierarchy-select:disabled {
+            opacity: 0.6;
+        }
+
+        .hierarchy-meta {
+            font-size: 10px;
+            color: var(--fg-muted);
+            min-height: 15px;
+        }
+
+        @media (max-width: 680px) {
+            .hierarchy-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* Section */
         .section-header {
             display: flex;
@@ -1510,6 +1596,8 @@
                 creatingFeature: false, creatingOutcome: false,
                 featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
                 isSaving: false, isActivating: null,
+                hierarchySelection: { solutionId: "", projectId: "", componentId: "" },
+                runningHierarchyAction: null,
                 runningAction: null,
                 expandedCards: {},
                 expandedPanels: {},
@@ -1969,6 +2057,225 @@
                     appendLog("Error: " + (e && e.message ? e.message : String(e)), "error");
                     state.isActivating = null; render();
                 }
+            }
+
+            function hierarchyOptionLabel(item) {
+                if (!item) return "";
+                return (item.title && item.title !== item.id)
+                    ? (item.title + " (" + item.id + ")")
+                    : String(item.id || item.title || "");
+            }
+
+            function projectsForSolution(data, solutionId) {
+                var projects = Array.isArray(data.projects) ? data.projects : [];
+                return solutionId
+                    ? projects.filter(function (project) { return project.solution_id === solutionId; })
+                    : projects.slice();
+            }
+
+            function componentsForProject(data, projectId) {
+                var components = Array.isArray(data.components) ? data.components : [];
+                return projectId
+                    ? components.filter(function (component) { return component.project_id === projectId; })
+                    : components.slice();
+            }
+
+            function ensureHierarchySelection(data) {
+                var solutions = Array.isArray(data.solutions) ? data.solutions : [];
+                var activeSolutionId = data.activeSolutionId || (solutions[0] && solutions[0].id) || "";
+                var nextSolutionId = state.hierarchySelection.solutionId || activeSolutionId;
+                if (nextSolutionId && !solutions.some(function (solution) { return solution.id === nextSolutionId; })) {
+                    nextSolutionId = activeSolutionId;
+                }
+
+                var availableProjects = projectsForSolution(data, nextSolutionId);
+                var activeProjectId = data.activeProjectId || (availableProjects[0] && availableProjects[0].id) || "";
+                var nextProjectId = state.hierarchySelection.projectId || activeProjectId;
+                if (nextProjectId && !availableProjects.some(function (project) { return project.id === nextProjectId; })) {
+                    nextProjectId = activeProjectId;
+                }
+
+                var availableComponents = componentsForProject(data, nextProjectId);
+                var activeComponentId = data.activeComponentId || (availableComponents[0] && availableComponents[0].id) || "";
+                var nextComponentId = state.hierarchySelection.componentId || activeComponentId;
+                if (nextComponentId && !availableComponents.some(function (component) { return component.id === nextComponentId; })) {
+                    nextComponentId = activeComponentId;
+                }
+
+                state.hierarchySelection = {
+                    solutionId: nextSolutionId || "",
+                    projectId: nextProjectId || "",
+                    componentId: nextComponentId || "",
+                };
+
+                return {
+                    solutions: solutions,
+                    projects: availableProjects,
+                    components: availableComponents,
+                };
+            }
+
+            function setHierarchySelection(level, value, data) {
+                var normalized = String(value || "");
+                if (level === "solution") {
+                    state.hierarchySelection.solutionId = normalized;
+                    var availableProjects = projectsForSolution(data, normalized);
+                    state.hierarchySelection.projectId = (availableProjects[0] && availableProjects[0].id) || "";
+                    var availableComponents = componentsForProject(data, state.hierarchySelection.projectId);
+                    state.hierarchySelection.componentId = (availableComponents[0] && availableComponents[0].id) || "";
+                    render();
+                    return;
+                }
+
+                if (level === "project") {
+                    state.hierarchySelection.projectId = normalized;
+                    var availableComponents = componentsForProject(data, normalized);
+                    state.hierarchySelection.componentId = (availableComponents[0] && availableComponents[0].id) || "";
+                    render();
+                    return;
+                }
+
+                state.hierarchySelection.componentId = normalized;
+                render();
+            }
+
+            async function activateHierarchy(level) {
+                var selection = state.hierarchySelection || {};
+                var id = level === "solution"
+                    ? selection.solutionId
+                    : level === "project"
+                        ? selection.projectId
+                        : selection.componentId;
+                if (!id) return;
+
+                var tool = level === "solution"
+                    ? "specrail_solution_activate"
+                    : level === "project"
+                        ? "specrail_project_activate"
+                        : "specrail_component_activate";
+                var label = level.charAt(0).toUpperCase() + level.slice(1);
+                state.runningHierarchyAction = level + ":" + id;
+                appendLog("Switching active " + level + ": " + id, "action");
+                render();
+                try {
+                    await callTool(tool, Object.assign({}, state.toolArguments, { id: id }));
+                    state.editingFeatureId = null;
+                    state.editingOutcomeId = null;
+                    state.featureDraft = null;
+                    state.outcomeDraft = null;
+                    state.creatingFeature = false;
+                    state.creatingOutcome = false;
+                    state.newFeatureDraft = null;
+                    state.newOutcomeDraft = null;
+                    state.toolResult = await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments));
+                    appendLog(label + " activated: " + id, "success");
+                } catch (e) {
+                    appendLog(label + " activation failed: " + (e && e.message ? e.message : String(e)), "error");
+                }
+                state.runningHierarchyAction = null;
+                render();
+            }
+
+            function renderHierarchySwitcher(data) {
+                var options = ensureHierarchySelection(data);
+                var panel = document.createElement("section");
+                panel.className = "hierarchy-panel";
+
+                var activeBits = [data.activeSolutionId, data.activeProjectId, data.activeComponentId].filter(Boolean);
+                var header = document.createElement("div");
+                header.className = "hierarchy-head";
+                header.innerHTML =
+                    '<div><div class="hierarchy-title">Active hierarchy path</div><div class="hierarchy-copy">Switch the active solution, project, or component to change the feature scope in this navigator.</div></div>' +
+                    '<span class="stat-chip"><strong>' + esc(activeBits.join(" / ") || "none") + '</strong></span>';
+                panel.appendChild(header);
+
+                var grid = document.createElement("div");
+                grid.className = "hierarchy-grid";
+
+                [
+                    {
+                        level: "solution",
+                        label: "Solution",
+                        items: options.solutions,
+                        value: state.hierarchySelection.solutionId,
+                        activeValue: data.activeSolutionId || "",
+                        meta: options.solutions.length + " total",
+                    },
+                    {
+                        level: "project",
+                        label: "Project",
+                        items: options.projects,
+                        value: state.hierarchySelection.projectId,
+                        activeValue: data.activeProjectId || "",
+                        meta: options.projects.length + " in solution",
+                        disabled: !state.hierarchySelection.solutionId,
+                    },
+                    {
+                        level: "component",
+                        label: "Component",
+                        items: options.components,
+                        value: state.hierarchySelection.componentId,
+                        activeValue: data.activeComponentId || "",
+                        meta: options.components.length + " in project",
+                        disabled: !state.hierarchySelection.projectId,
+                    }
+                ].forEach(function (field) {
+                    var wrap = document.createElement("div");
+                    wrap.className = "hierarchy-field";
+
+                    var label = document.createElement("div");
+                    label.className = "hierarchy-label";
+                    label.textContent = field.label;
+                    wrap.appendChild(label);
+
+                    var select = document.createElement("select");
+                    select.className = "hierarchy-select";
+                    select.disabled = !!field.disabled || state.isSaving || !!state.runningHierarchyAction;
+                    var placeholder = document.createElement("option");
+                    placeholder.value = "";
+                    placeholder.textContent = field.items.length ? ("Choose " + field.label.toLowerCase()) : ("No " + field.label.toLowerCase() + "s");
+                    select.appendChild(placeholder);
+                    field.items.forEach(function (item) {
+                        var option = document.createElement("option");
+                        option.value = item.id;
+                        option.textContent = hierarchyOptionLabel(item);
+                        option.selected = item.id === field.value;
+                        select.appendChild(option);
+                    });
+                    select.value = field.value || "";
+                    select.addEventListener("change", function (ev) {
+                        setHierarchySelection(field.level, ev.target.value, data);
+                    });
+                    wrap.appendChild(select);
+
+                    var actions = document.createElement("div");
+                    actions.className = "btn-group";
+                    var switchBtn = document.createElement("button");
+                    switchBtn.className = field.value && field.value !== field.activeValue ? "btn btn-primary btn-sm" : "btn btn-sm";
+                    switchBtn.disabled = !field.value || field.value === field.activeValue || state.isSaving || !!state.runningHierarchyAction;
+                    switchBtn.textContent = state.runningHierarchyAction === (field.level + ":" + field.value)
+                        ? "Switching…"
+                        : (field.value === field.activeValue ? "Active" : "Switch");
+                    (function (level) {
+                        switchBtn.addEventListener("click", function () {
+                            activateHierarchy(level);
+                        });
+                    })(field.level);
+                    actions.appendChild(switchBtn);
+                    wrap.appendChild(actions);
+
+                    var meta = document.createElement("div");
+                    meta.className = "hierarchy-meta";
+                    meta.textContent = field.value === field.activeValue
+                        ? (field.value ? ("Currently active • " + field.meta) : field.meta)
+                        : (field.value ? ("Selected: " + field.value + " • " + field.meta) : field.meta);
+                    wrap.appendChild(meta);
+
+                    grid.appendChild(wrap);
+                });
+
+                panel.appendChild(grid);
+                return panel;
             }
 
             function getOutcomeReview(outcome) {
@@ -2630,6 +2937,8 @@
                     icon: features.length ? "\u{1F6E4}\uFE0F" : "\u{1F682}",
                 }));
 
+                root.appendChild(renderHierarchySwitcher(data));
+
                 buildNextStepBanner(data, root);
 
                 if (state.creatingFeature && state.newFeatureDraft) {
@@ -2793,6 +3102,8 @@
                     ],
                     icon: activeOutcome && activeOutcome.status === "verified" ? "\u{1F680}" : "\u{1F3AF}",
                 }));
+
+                root.appendChild(renderHierarchySwitcher(data));
 
                 var fCard = makeCollapsibleCard({
                     key: selectedFeatureKey,

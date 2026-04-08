@@ -427,8 +427,32 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         "default-solution"
     );
     assert_eq!(
+        feature_picker["result"]["structuredContent"]["activeSolutionId"],
+        "default-solution"
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["activeProjectId"],
+        "default-project"
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["activeComponentId"],
+        "default-component"
+    );
+    assert_eq!(
         feature_picker["result"]["structuredContent"]["nextActions"]["selectFeatureTool"],
         "specrail_feature_navigate"
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["nextActions"]["activateSolutionTool"],
+        "specrail_solution_activate"
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["nextActions"]["activateProjectTool"],
+        "specrail_project_activate"
+    );
+    assert_eq!(
+        feature_picker["result"]["structuredContent"]["nextActions"]["activateComponentTool"],
+        "specrail_component_activate"
     );
     assert_eq!(
         feature_picker["result"]["structuredContent"]["nextActions"]["editFeatureTool"],
@@ -537,6 +561,162 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         review["result"]["structuredContent"]["review"]["suggested_test_paths"][0],
         "tests/auth/mfa.rs"
     );
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_feature_navigate_scopes_features_to_active_hierarchy() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_solution_new",
+            "arguments": {
+                "id": "platform",
+                "title": "Platform",
+                "purpose": "Shared delivery surface."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_project_new",
+            "arguments": {
+                "solution_id": "platform",
+                "id": "api",
+                "title": "API",
+                "purpose": "Backend services."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_component_new",
+            "arguments": {
+                "project_id": "api",
+                "id": "billing",
+                "title": "Billing",
+                "purpose": "Charge subscriptions."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_component_new",
+            "arguments": {
+                "project_id": "api",
+                "id": "identity",
+                "title": "Identity",
+                "purpose": "Authenticate requests."
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "invoice-retries",
+                "component_id": "billing",
+                "title": "Invoice retries",
+                "purpose": "Retry failed invoice collection."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "token-refresh",
+                "component_id": "identity",
+                "title": "Token refresh",
+                "purpose": "Refresh expired access tokens."
+            }
+        }),
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_component_activate",
+            "arguments": {
+                "id": "billing"
+            }
+        }),
+    );
+
+    let billing_picker = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {}
+        }),
+    );
+    let billing_features = billing_picker["result"]["structuredContent"]["features"]
+        .as_array()
+        .unwrap();
+    assert_eq!(billing_picker["result"]["structuredContent"]["activeSolutionId"], "platform");
+    assert_eq!(billing_picker["result"]["structuredContent"]["activeProjectId"], "api");
+    assert_eq!(billing_picker["result"]["structuredContent"]["activeComponentId"], "billing");
+    assert_eq!(billing_features.len(), 1);
+    assert_eq!(billing_features[0]["id"], "invoice-retries");
+    assert_eq!(
+        billing_picker["result"]["structuredContent"]["visibleProjects"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        billing_picker["result"]["structuredContent"]["visibleComponents"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_component_activate",
+            "arguments": {
+                "id": "identity"
+            }
+        }),
+    );
+
+    let identity_picker = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_navigate",
+            "arguments": {}
+        }),
+    );
+    let identity_features = identity_picker["result"]["structuredContent"]["features"]
+        .as_array()
+        .unwrap();
+    assert_eq!(identity_picker["result"]["structuredContent"]["activeComponentId"], "identity");
+    assert_eq!(identity_features.len(), 1);
+    assert_eq!(identity_features[0]["id"], "token-refresh");
 
     client.shutdown();
 }

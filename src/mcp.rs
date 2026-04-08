@@ -638,8 +638,95 @@ fn tool_component_show(arguments: &Map<String, Value>) -> Result<Value> {
     ))
 }
 
+fn feature_matches_active_hierarchy(
+    feature: &FeatureSpec,
+    active_solution_id: Option<&str>,
+    active_project_id: Option<&str>,
+    active_component_id: Option<&str>,
+) -> bool {
+    if let Some(component_id) = active_component_id {
+        return feature.component_id == component_id;
+    }
+
+    if let Some(project_id) = active_project_id {
+        return feature.project_id == project_id;
+    }
+
+    if let Some(solution_id) = active_solution_id {
+        return feature.solution_id == solution_id;
+    }
+
+    true
+}
+
+fn feature_navigate_hierarchy_payload(
+    active_solution_id: Option<String>,
+    active_project_id: Option<String>,
+    active_component_id: Option<String>,
+    active_solution: Option<crate::core::models::SolutionSpec>,
+    active_project: Option<crate::core::models::ProjectSpec>,
+    active_component: Option<crate::core::models::ComponentSpec>,
+) -> Value {
+    json!({
+        "activeSolutionId": active_solution_id,
+        "activeProjectId": active_project_id,
+        "activeComponentId": active_component_id,
+        "activeSolution": active_solution,
+        "activeProject": active_project,
+        "activeComponent": active_component,
+    })
+}
+
+fn feature_navigate_feature_actions() -> Value {
+    json!({
+        "solutionListTool": "specrail_solution_list",
+        "projectListTool": "specrail_project_list",
+        "componentListTool": "specrail_component_list",
+        "activateSolutionTool": "specrail_solution_activate",
+        "activateProjectTool": "specrail_project_activate",
+        "activateComponentTool": "specrail_component_activate",
+        "createSolutionTool": "specrail_solution_new",
+        "createProjectTool": "specrail_project_new",
+        "createComponentTool": "specrail_component_new",
+        "selectFeatureTool": "specrail_feature_navigate",
+        "createFeatureTool": "specrail_feature_new",
+        "editFeatureTool": "specrail_feature_edit",
+        "activateFeatureTool": "specrail_feature_activate",
+        "statusTool": "specrail_status",
+        "traceTool": "specrail_trace"
+    })
+}
+
+fn feature_navigate_outcome_actions() -> Value {
+    json!({
+        "solutionListTool": "specrail_solution_list",
+        "projectListTool": "specrail_project_list",
+        "componentListTool": "specrail_component_list",
+        "activateSolutionTool": "specrail_solution_activate",
+        "activateProjectTool": "specrail_project_activate",
+        "activateComponentTool": "specrail_component_activate",
+        "selectOutcomeTool": "specrail_outcome_activate",
+        "createOutcomeTool": "specrail_outcome_new",
+        "editOutcomeTool": "specrail_outcome_edit",
+        "activateOutcomeTool": "specrail_outcome_activate",
+        "unverifyOutcomeTool": "specrail_outcome_unverify",
+        "implementTool": "specrail_implement",
+        "verifyTool": "specrail_verify",
+        "advanceTool": "specrail_advance",
+        "testListTool": "specrail_test_list",
+        "testReviewTool": "specrail_outcome_test_review",
+        "testSuggestTool": "specrail_test_suggest",
+        "testGenerateTool": "specrail_test_generate",
+        "featureShowTool": "specrail_feature_show",
+        "outcomeShowTool": "specrail_outcome_show",
+        "statusTool": "specrail_status",
+        "traceTool": "specrail_trace"
+    })
+}
+
 fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
+    repo.ensure_hierarchy()?;
     let state = repo.load_state()?;
     let features = repo.list_features()?;
     let solutions = repo.list_solutions()?;
@@ -652,8 +739,19 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
         .collect();
     let manifest = repo.load_manifest()?;
-    let feature_summaries: Vec<Value> = features
+    let active_solution_id = state.active_solution.clone();
+    let active_project_id = state.active_project.clone();
+    let active_component_id = state.active_component.clone();
+    let scoped_feature_summaries: Vec<Value> = features
         .iter()
+        .filter(|feature| {
+            feature_matches_active_hierarchy(
+                feature,
+                active_solution_id.as_deref(),
+                active_project_id.as_deref(),
+                active_component_id.as_deref(),
+            )
+        })
         .map(|feature| {
             let outcomes = repo.list_outcomes(&feature.id).unwrap_or_default();
             let verified_outcome_count = outcomes
@@ -682,6 +780,44 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
 
     let active_feature_id = state.active_feature.clone();
     let active_outcome_id = state.active_outcome.clone();
+
+    let active_solution = active_solution_id
+        .as_ref()
+        .and_then(|id| solutions.iter().find(|solution| solution.id == *id))
+        .cloned();
+    let active_project = active_project_id
+        .as_ref()
+        .and_then(|id| projects.iter().find(|project| project.id == *id))
+        .cloned();
+    let active_component = active_component_id
+        .as_ref()
+        .and_then(|id| components.iter().find(|component| component.id == *id))
+        .cloned();
+
+    let visible_projects: Vec<_> = match active_solution_id.as_deref() {
+        Some(solution_id) => projects
+            .iter()
+            .filter(|project| project.solution_id == solution_id)
+            .cloned()
+            .collect(),
+        None => projects.clone(),
+    };
+    let visible_components: Vec<_> = match active_project_id.as_deref() {
+        Some(project_id) => components
+            .iter()
+            .filter(|component| component.project_id == project_id)
+            .cloned()
+            .collect(),
+        None => components.clone(),
+    };
+    let hierarchy_payload = feature_navigate_hierarchy_payload(
+        active_solution_id.clone(),
+        active_project_id.clone(),
+        active_component_id.clone(),
+        active_solution.clone(),
+        active_project.clone(),
+        active_component.clone(),
+    );
 
     if let Some(feature_id) = optional_string(arguments, "feature_id") {
         let feature = repo.load_feature(&feature_id)?;
@@ -729,72 +865,45 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
             })
             .collect();
 
-        return Ok(feature_navigate_payload(
-            String::new(),
-            Some(json!({
-                "mode": "outcome_selection",
-                "activeFeatureId": active_feature_id,
-                "activeOutcomeId": active_outcome_id,
-                "selectedFeatureId": feature_id,
-                "selectedFeature": feature,
-                "solutions": solutions,
-                "projects": projects,
-                "components": components,
-                "features": feature_summaries,
-                "outcomes": outcome_summaries,
-                "suggestedNewOutcomeOrder": next_order,
-                "nextActions": {
-                    "solutionListTool": "specrail_solution_list",
-                    "projectListTool": "specrail_project_list",
-                    "componentListTool": "specrail_component_list",
-                    "selectOutcomeTool": "specrail_outcome_activate",
-                    "createOutcomeTool": "specrail_outcome_new",
-                    "editOutcomeTool": "specrail_outcome_edit",
-                    "activateOutcomeTool": "specrail_outcome_activate",
-                    "unverifyOutcomeTool": "specrail_outcome_unverify",
-                    "implementTool": "specrail_implement",
-                    "verifyTool": "specrail_verify",
-                    "advanceTool": "specrail_advance",
-                    "testListTool": "specrail_test_list",
-                    "testReviewTool": "specrail_outcome_test_review",
-                    "testSuggestTool": "specrail_test_suggest",
-                    "testGenerateTool": "specrail_test_generate",
-                    "featureShowTool": "specrail_feature_show",
-                    "outcomeShowTool": "specrail_outcome_show",
-                    "statusTool": "specrail_status",
-                    "traceTool": "specrail_trace"
-                }
-            })),
-        ));
+        let mut payload = Map::new();
+        payload.insert("mode".to_string(), json!("outcome_selection"));
+        payload.insert("activeFeatureId".to_string(), json!(active_feature_id));
+        payload.insert("activeOutcomeId".to_string(), json!(active_outcome_id));
+        if let Value::Object(map) = hierarchy_payload.clone() {
+            payload.extend(map);
+        }
+        payload.insert("selectedFeatureId".to_string(), json!(feature_id));
+        payload.insert("selectedFeature".to_string(), json!(feature));
+        payload.insert("solutions".to_string(), json!(solutions));
+        payload.insert("projects".to_string(), json!(projects));
+        payload.insert("components".to_string(), json!(components));
+        payload.insert("visibleProjects".to_string(), json!(visible_projects));
+        payload.insert("visibleComponents".to_string(), json!(visible_components));
+        payload.insert("features".to_string(), json!(scoped_feature_summaries));
+        payload.insert("outcomes".to_string(), json!(outcome_summaries));
+        payload.insert("suggestedNewOutcomeOrder".to_string(), json!(next_order));
+        payload.insert("nextActions".to_string(), feature_navigate_outcome_actions());
+
+        return Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))));
     }
 
-    Ok(feature_navigate_payload(
-        String::new(),
-        Some(json!({
-            "mode": "feature_selection",
-            "solutions": solutions,
-            "projects": projects,
-            "components": components,
-            "activeFeatureId": active_feature_id,
-            "activeOutcomeId": active_outcome_id,
-            "selectedFeatureId": Value::Null,
-            "features": feature_summaries,
-            "nextActions": {
-                "solutionListTool": "specrail_solution_list",
-                "projectListTool": "specrail_project_list",
-                "componentListTool": "specrail_component_list",
-                "createSolutionTool": "specrail_solution_new",
-                "createProjectTool": "specrail_project_new",
-                "createComponentTool": "specrail_component_new",
-                "selectFeatureTool": "specrail_feature_navigate",
-                "createFeatureTool": "specrail_feature_new",
-                "editFeatureTool": "specrail_feature_edit",
-                "activateFeatureTool": "specrail_feature_activate",
-                "statusTool": "specrail_status",
-                "traceTool": "specrail_trace"
-            }
-        })),
-    ))
+    let mut payload = Map::new();
+    payload.insert("mode".to_string(), json!("feature_selection"));
+    payload.insert("solutions".to_string(), json!(solutions));
+    payload.insert("projects".to_string(), json!(projects));
+    payload.insert("components".to_string(), json!(components));
+    payload.insert("visibleProjects".to_string(), json!(visible_projects));
+    payload.insert("visibleComponents".to_string(), json!(visible_components));
+    if let Value::Object(map) = hierarchy_payload {
+        payload.extend(map);
+    }
+    payload.insert("activeFeatureId".to_string(), json!(active_feature_id));
+    payload.insert("activeOutcomeId".to_string(), json!(active_outcome_id));
+    payload.insert("selectedFeatureId".to_string(), Value::Null);
+    payload.insert("features".to_string(), json!(scoped_feature_summaries));
+    payload.insert("nextActions".to_string(), feature_navigate_feature_actions());
+
+    Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))))
 }
 
 fn outcome_available_actions(
