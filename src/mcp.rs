@@ -249,7 +249,13 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         None => bail!("missing tool arguments"),
     };
 
-    match name {
+    mcp_debug_log(format!(
+        "tool call start name={} args={}",
+        name,
+        summarize_for_log(&Value::Object(arguments.clone()).to_string())
+    ));
+
+    let result = match name {
         "specrail_status" => tool_status(arguments),
         "specrail_feature_navigate" => tool_feature_navigate(arguments),
         "specrail_solution_list" => tool_solution_list(arguments),
@@ -291,7 +297,18 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_verify" => tool_verify(arguments),
         "specrail_advance" => tool_advance(arguments),
         other => Ok(tool_error_payload(anyhow!("unknown tool '{other}'"))),
+    };
+
+    match &result {
+        Ok(payload) => mcp_debug_log(format!(
+            "tool call success name={} result={}",
+            name,
+            summarize_for_log(&payload.to_string())
+        )),
+        Err(error) => mcp_debug_log(format!("tool call error name={} error={error:#}", name)),
     }
+
+    result
 }
 
 #[derive(Serialize)]
