@@ -1988,8 +1988,6 @@
                 context = context || {};
                 var refreshArgs = context.featureId ? { feature_id: context.featureId } : {};
                 appendActionButton(container, { title: "\u21BA Refresh", tool: "specrail_feature_navigate", args: refreshArgs, refresh: true });
-                appendActionButton(container, { title: "Project Status", tool: "specrail_status" });
-                appendActionButton(container, { title: "Audit Trace", tool: "specrail_trace", args: { limit: 12 } });
             }
 
             // Editors
@@ -2360,8 +2358,6 @@
                             feEditBtn.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); startFeatureEdit(fid); });
                         })(featureId);
                         fActions.appendChild(feEditBtn);
-                        appendActionButton(fActions, { title: "Feature Spec", tool: "specrail_feature_show", args: { id: featureId } });
-                        appendActionButton(fActions, { title: "All Feature Tests", tool: "specrail_test_list", args: { feature_id: featureId } });
                         content.appendChild(fActions);
 
                         var featureNote = document.createElement("div");
@@ -2495,7 +2491,6 @@
                                         refresh: true,
                                     });
                                 }
-                                appendActionButton(actions, { title: "Outcome Spec", tool: "specrail_outcome_show", args: { feature_id: featureId, outcome_id: outcome.id } });
 
                                 var editBtn = document.createElement("button"); editBtn.className = "btn btn-ghost btn-sm";
                                 editBtn.disabled = state.isSaving; editBtn.textContent = "Edit Outcome";
