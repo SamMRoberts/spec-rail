@@ -343,7 +343,7 @@ pub enum TestCommands {
     Add {
         /// Unique test identifier
         id: String,
-        /// Human-readable or method name for the test (defaults to id)
+        /// Test case or method name (defaults to id)
         #[arg(long)]
         name: Option<String>,
         /// Feature this test belongs to

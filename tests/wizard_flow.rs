@@ -75,7 +75,7 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
         .assert()
         .success()
         .stdout(contains("src/auth/**"))
-        .stdout(contains("tests/auth/validate.rs"));
+        .stdout(contains("No required test file paths set."));
 
     specrail(&dir)
         .args(["outcome", "show", "auth", "outcome-2"])

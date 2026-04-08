@@ -42,18 +42,9 @@ pub fn remove_required_test(
     test_file: &str,
 ) {
     let conn = open_db(dir);
-    let json: String = conn
-        .query_row(
-            "SELECT required_test_files FROM outcomes WHERE feature_id = ?1 AND id = ?2",
-            params![feature_id, outcome_id],
-            |row| row.get(0),
-        )
-        .unwrap();
-    let mut tests: Vec<String> = serde_json::from_str(&json).unwrap();
-    tests.retain(|candidate| candidate != test_file);
     conn.execute(
-        "UPDATE outcomes SET required_test_files = ?1 WHERE feature_id = ?2 AND id = ?3",
-        params![serde_json::to_string(&tests).unwrap(), feature_id, outcome_id],
+        "DELETE FROM tests WHERE feature_id = ?1 AND outcome_id = ?2 AND path = ?3",
+        params![feature_id, outcome_id, test_file],
     )
     .unwrap();
 }
@@ -76,14 +67,16 @@ pub fn outcome_required_test_files(
     outcome_id: &str,
 ) -> Vec<String> {
     let conn = open_db(dir);
-    let json: String = conn
-        .query_row(
-            "SELECT required_test_files FROM outcomes WHERE feature_id = ?1 AND id = ?2",
-            params![feature_id, outcome_id],
-            |row| row.get(0),
+    let mut stmt = conn
+        .prepare(
+            "SELECT path FROM tests WHERE feature_id = ?1 AND outcome_id = ?2 ORDER BY path",
         )
         .unwrap();
-    serde_json::from_str(&json).unwrap()
+    let rows = stmt
+        .query_map(params![feature_id, outcome_id], |row| row.get(0))
+        .unwrap();
+
+    rows.map(|row| row.unwrap()).collect()
 }
 
 pub fn current_state(dir: &TempDir) -> StateSnapshot {

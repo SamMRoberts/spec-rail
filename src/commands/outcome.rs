@@ -234,34 +234,6 @@ pub(crate) fn ensure_required_test(
     Ok(true)
 }
 
-pub(crate) fn ensure_required_test_file(
-    repo: &Repository,
-    feature_id: &str,
-    outcome_id: &str,
-    path: &str,
-) -> Result<bool> {
-    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
-
-    if outcome
-        .required_test_files
-        .iter()
-        .any(|existing| existing == path)
-    {
-        return Ok(false);
-    }
-
-    outcome.required_test_files.push(path.to_string());
-    repo.save_outcome(&outcome)?;
-
-    let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
-        .with_feature(feature_id)
-        .with_outcome(outcome_id)
-        .with_message(format!("required test file '{}' added", path));
-    Ledger::append(&repo.ledger_path(), &event)?;
-
-    Ok(true)
-}
-
 pub(crate) struct RequiredTestReferenceUpdate {
     pub added_test_id: bool,
     pub added_test_file: bool,
@@ -272,13 +244,12 @@ pub(crate) fn ensure_required_test_reference(
     feature_id: &str,
     outcome_id: &str,
     test_id: &str,
-    path: &str,
+    _path: &str,
 ) -> Result<RequiredTestReferenceUpdate> {
     let added_test_id = ensure_required_test(repo, feature_id, outcome_id, test_id)?;
-    let added_test_file = ensure_required_test_file(repo, feature_id, outcome_id, path)?;
     Ok(RequiredTestReferenceUpdate {
         added_test_id,
-        added_test_file,
+        added_test_file: false,
     })
 }
 

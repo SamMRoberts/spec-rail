@@ -47,6 +47,7 @@ fn test_generate_creates_files_and_manifest_entries() {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
             "id": "validates_credentials",
+            "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -145,6 +146,7 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
             "id": "validates_credentials",
+            "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -210,7 +212,7 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         .assert()
         .success()
         .stdout(contains("required_tests updated"))
-        .stdout(contains("required_test_files updated"));
+        .stdout(contains("Status:  planned"));
 
     specrail(&dir)
         .args(["outcome", "show", "auth", "outcome-1"])

@@ -463,11 +463,7 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 }
 
 fn manifest_test_name(test: &TestSpec) -> String {
-    if test.name.trim().is_empty() {
-        test.id.clone()
-    } else {
-        test.name.clone()
-    }
+    test.name.clone()
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -2882,7 +2878,7 @@ fn tool_definitions() -> Vec<Value> {
                 "properties": {
                     "cwd": { "type": "string" },
                     "id": { "type": "string", "description": "Unique test identifier." },
-                    "name": { "type": "string", "description": "Optional test name/fact stored in required_tests (defaults to id)." },
+                    "name": { "type": "string", "description": "Test case/method name stored in required_tests." },
                     "feature_id": { "type": "string", "description": "Feature this test belongs to." },
                     "outcome_id": { "type": "string", "description": "Outcome this test validates." },
                     "path": { "type": "string", "description": "Relative file path of the test (e.g. 'tests/auth_login_test.rs')." },

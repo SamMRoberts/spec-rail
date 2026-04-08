@@ -39,8 +39,7 @@ struct GeneratedTest {
     feature_id: String,
     outcome_id: String,
     id: String,
-    #[serde(default)]
-    name: Option<String>,
+    name: String,
     path: String,
     kind: String,
     #[serde(default)]
@@ -104,11 +103,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 
     add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
     let test = manifest.tests.last().context("manifest missing inserted test")?;
-    let required_test_name = if test.name.trim().is_empty() {
-        test.id.clone()
-    } else {
-        test.name.clone()
-    };
+    let required_test_name = test.name.clone();
     repo.save_manifest(&manifest)?;
     let added_to_outcome = crate::commands::outcome::ensure_required_test_reference(
         repo,
@@ -202,9 +197,10 @@ pub fn generate_scoped(
             })?;
 
         if !prepared.allow_path_discovery
-            && (!outcome.required_tests.iter().any(|test_name| {
-                test_name == &generated.name.clone().unwrap_or_else(|| generated.id.clone())
-            })
+            && (!outcome
+                .required_tests
+                .iter()
+                .any(|test_name| test_name == &generated.name)
                 || !outcome
                     .required_test_files
                     .iter()
@@ -223,10 +219,7 @@ pub fn generate_scoped(
             repo,
             &generated.feature_id,
             &generated.outcome_id,
-            generated
-                .name
-                .as_deref()
-                .unwrap_or(&generated.id),
+            &generated.name,
             &generated.path,
         )?;
 
@@ -239,7 +232,7 @@ pub fn generate_scoped(
             &mut manifest,
             AddArgs {
                 id: id.clone(),
-                name: generated.name.clone(),
+                name: Some(generated.name.clone()),
                 feature_id: generated.feature_id.clone(),
                 outcome_id: generated.outcome_id.clone(),
                 path: generated.path.clone(),
@@ -358,14 +351,13 @@ pub fn preview(
         .tests
         .into_iter()
         .map(|test| {
-            let name = test.name.clone().unwrap_or_else(|| test.id.clone());
             SuggestedTestFile {
                 content_line_count: test.content.lines().count(),
                 content_preview: summarize_content_preview(&test.content),
                 feature_id: test.feature_id,
                 outcome_id: test.outcome_id,
                 id: test.id,
-                name,
+                name: test.name,
                 path: test.path,
                 kind: test.kind,
                 purpose_refs: test.purpose_refs,
@@ -414,20 +406,38 @@ fn prepare_test_generation(
         if let Some(selected_outcome_id) = outcome_filter {
             repo.load_outcome(&feature.id, selected_outcome_id)?;
             outcomes.retain(|outcome| outcome.id == selected_outcome_id);
-            if outcomes.iter().any(|outcome| {
-                outcome.required_tests.is_empty() || outcome.required_test_files.is_empty()
-            }) {
+            if outcomes.iter().any(|outcome| outcome.required_tests.is_empty()) {
                 allow_path_discovery = true;
             }
         } else {
-            outcomes.retain(|outcome| {
-                !outcome.required_tests.is_empty() && !outcome.required_test_files.is_empty()
-            });
+            outcomes.retain(|outcome| !outcome.required_tests.is_empty());
         }
 
         for outcome in &outcomes {
-            for (test_id, path) in required_test_pairs(outcome)? {
-                expected_tests.insert((feature.id.clone(), outcome.id.clone(), test_id, path));
+            let related_tests: Vec<_> = manifest
+                .tests
+                .iter()
+                .filter(|test| test.feature_id == feature.id && test.outcome_id == outcome.id)
+                .collect();
+
+            let mut matched_required_for_outcome = 0usize;
+            for required_name in &outcome.required_tests {
+                if let Some(test) = related_tests
+                    .iter()
+                    .find(|test| test.name == *required_name || test.id == *required_name)
+                {
+                    matched_required_for_outcome = matched_required_for_outcome.saturating_add(1);
+                    expected_tests.insert((
+                        feature.id.clone(),
+                        outcome.id.clone(),
+                        required_name.clone(),
+                        test.path.clone(),
+                    ));
+                }
+            }
+
+            if matched_required_for_outcome < outcome.required_tests.len() {
+                allow_path_discovery = true;
             }
 
             outcome_contexts.push(OutcomeGenerationContext {
@@ -442,7 +452,7 @@ fn prepare_test_generation(
     }
 
     if expected_tests.is_empty() && !allow_path_discovery {
-        bail!("no complete outcome required test declarations found — add required_tests and required_test_files to your outcomes first");
+        bail!("no complete outcome required test declarations found — add required_tests and register test paths in the tests table first");
     }
 
     let prompt = builder::build_test_generation_prompt(
@@ -502,7 +512,7 @@ fn generated_test_specs(response: &GeneratedTestsResponse) -> BTreeSet<(String, 
             (
                 test.feature_id.clone(),
                 test.outcome_id.clone(),
-                test.name.clone().unwrap_or_else(|| test.id.clone()),
+                test.name.clone(),
                 test.path.clone(),
             )
         })
@@ -511,25 +521,6 @@ fn generated_test_specs(response: &GeneratedTestsResponse) -> BTreeSet<(String, 
 
 fn format_generated_test_tuple(value: &(String, String, String, String)) -> String {
     format!("{}:{}:{}:{}", value.0, value.1, value.2, value.3)
-}
-
-fn required_test_pairs(outcome: &OutcomeSpec) -> Result<Vec<(String, String)>> {
-    if outcome.required_tests.len() != outcome.required_test_files.len() {
-        bail!(
-            "outcome '{}:{}' has {} required_tests entries but {} required_test_files entries",
-            outcome.feature_id,
-            outcome.id,
-            outcome.required_tests.len(),
-            outcome.required_test_files.len()
-        );
-    }
-
-    Ok(outcome
-        .required_tests
-        .iter()
-        .cloned()
-        .zip(outcome.required_test_files.iter().cloned())
-        .collect())
 }
 
 fn summarize_content_preview(content: &str) -> String {
@@ -769,7 +760,8 @@ Here are the required tests.
         {
             "feature_id": "auth",
             "outcome_id": "outcome-1",
-                    "id": "validates_credentials",
+            "id": "validates_credentials",
+            "name": "validates_credentials",
             "path": "tests/auth/validate.rs",
             "kind": "unit",
             "purpose_refs": ["goal:Validate credentials."],
@@ -787,7 +779,7 @@ Here are the required tests.
 
     #[test]
     fn parse_generated_tests_accepts_ansi_wrapped_json() {
-        let output = "\u{1b}[32m{\n  \"tests\": [{\n    \"feature_id\": \"auth\",\n    \"outcome_id\": \"outcome-1\",\n    \"id\": \"validates_credentials\",\n    \"path\": \"tests/auth/validate.rs\",\n    \"kind\": \"unit\",\n    \"purpose_refs\": [],\n    \"content\": \"#[test]\\nfn validates_credentials() {\\n    assert!(true);\\n}\\n\"\n  }]\n}\u{1b}[0m";
+        let output = "\u{1b}[32m{\n  \"tests\": [{\n    \"feature_id\": \"auth\",\n    \"outcome_id\": \"outcome-1\",\n    \"id\": \"validates_credentials\",\n    \"name\": \"validates_credentials\",\n    \"path\": \"tests/auth/validate.rs\",\n    \"kind\": \"unit\",\n    \"purpose_refs\": [],\n    \"content\": \"#[test]\\nfn validates_credentials() {\\n    assert!(true);\\n}\\n\"\n  }]\n}\u{1b}[0m";
 
         let parsed = parse_generated_tests(output).expect("expected ANSI-wrapped JSON to parse");
         assert_eq!(parsed.tests.len(), 1);

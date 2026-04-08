@@ -8,7 +8,7 @@ use super::models::{
     TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 pub struct Database {
     conn: Connection,
@@ -93,7 +93,6 @@ impl Database {
                 allowed_paths_json TEXT NOT NULL,
                 forbidden_paths_json TEXT NOT NULL,
                 required_tests TEXT NOT NULL,
-                required_test_files TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL,
                 PRIMARY KEY(feature_id, id),
                 FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE CASCADE
@@ -147,6 +146,15 @@ impl Database {
                 "
             )
             .context("migrating required test columns and test names")?;
+        }
+
+        if version > 0 && version < 5 {
+            conn.execute_batch(
+                "
+                ALTER TABLE outcomes DROP COLUMN required_test_files;
+                "
+            )
+            .context("removing outcomes.required_test_files column")?;
         }
 
         if version < SCHEMA_VERSION {
@@ -438,9 +446,9 @@ impl Database {
                 INSERT INTO outcomes (
                     feature_id, id, title, goal, order_index,
                     prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                    required_tests, required_test_files, status
+                    required_tests, status
                 )
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                 ON CONFLICT(feature_id, id) DO UPDATE SET
                     title = excluded.title,
                     goal = excluded.goal,
@@ -449,7 +457,6 @@ impl Database {
                     allowed_paths_json = excluded.allowed_paths_json,
                     forbidden_paths_json = excluded.forbidden_paths_json,
                     required_tests = excluded.required_tests,
-                    required_test_files = excluded.required_test_files,
                     status = excluded.status
                 ",
                 params![
@@ -462,7 +469,6 @@ impl Database {
                     encode_json(&outcome.allowed_paths)?,
                     encode_json(&outcome.forbidden_paths)?,
                     encode_json(&outcome.required_tests)?,
-                    encode_json(&outcome.required_test_files)?,
                     encode_enum(&outcome.status)?,
                 ],
             )
@@ -517,7 +523,7 @@ impl Database {
                 ",
                 params![
                     test.id,
-                    if test.name.trim().is_empty() { &test.id } else { &test.name },
+                    test.name,
                     test.feature_id,
                     test.outcome_id,
                     test.path,
@@ -593,7 +599,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                      required_tests, required_test_files, status
+                        required_tests, status
                 FROM outcomes
                 WHERE feature_id = ?1
                 ORDER BY order_index, id
@@ -612,12 +618,16 @@ impl Database {
                     allowed_paths_json: row.get(6)?,
                     forbidden_paths_json: row.get(7)?,
                     required_tests: row.get(8)?,
-                    required_test_files: row.get(9)?,
-                    status: row.get(10)?,
+                    status: row.get(9)?,
                 })
             })
             .with_context(|| format!("querying outcomes for feature '{feature_id}'"))?;
-        collect_outcome_rows(rows)
+        let mut outcomes = collect_outcome_rows(rows)?;
+        for outcome in &mut outcomes {
+            outcome.required_test_files =
+                self.required_test_files_for_outcome(&outcome.feature_id, &outcome.id)?;
+        }
+        Ok(outcomes)
     }
 
     fn load_solution_opt(&self, id: &str) -> Result<Option<SolutionSpec>> {
@@ -716,7 +726,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                      required_tests, required_test_files, status
+                        required_tests, status
                 FROM outcomes
                 WHERE feature_id = ?1 AND id = ?2
                 ",
@@ -732,15 +742,49 @@ impl Database {
                         allowed_paths_json: row.get(6)?,
                         forbidden_paths_json: row.get(7)?,
                         required_tests: row.get(8)?,
-                        required_test_files: row.get(9)?,
-                        status: row.get(10)?,
+                        status: row.get(9)?,
                     })
                 },
             )
             .optional()
             .with_context(|| format!("loading outcome '{feature_id}:{outcome_id}'"))?;
+        row.map(TryInto::try_into)
+            .transpose()?
+            .map(|mut outcome: OutcomeSpec| {
+                outcome.required_test_files =
+                    self.required_test_files_for_outcome(&outcome.feature_id, &outcome.id)?;
+                Ok(outcome)
+            })
+            .transpose()
+    }
 
-        row.map(TryInto::try_into).transpose()
+    fn required_test_files_for_outcome(
+        &self,
+        feature_id: &str,
+        outcome_id: &str,
+    ) -> Result<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "
+                SELECT path
+                FROM tests
+                WHERE feature_id = ?1 AND outcome_id = ?2
+                ORDER BY path
+                ",
+            )
+            .context("preparing required test files query")?;
+
+        let rows = stmt
+            .query_map(params![feature_id, outcome_id], |row| row.get(0))
+            .with_context(|| {
+                format!(
+                    "querying test paths for outcome '{}:{}'",
+                    feature_id, outcome_id
+                )
+            })?;
+
+        collect_rows(rows)
     }
 
     fn exists<P>(&self, sql: &str, params: P) -> Result<bool>
@@ -802,7 +846,6 @@ struct OutcomeRow {
     allowed_paths_json: String,
     forbidden_paths_json: String,
     required_tests: String,
-    required_test_files: String,
     status: String,
 }
 
@@ -821,15 +864,9 @@ impl TryFrom<TestRow> for TestSpec {
     type Error = anyhow::Error;
 
     fn try_from(value: TestRow) -> Result<Self> {
-        let name = if value.name.trim().is_empty() {
-            value.id.clone()
-        } else {
-            value.name.clone()
-        };
-
         Ok(Self {
             id: value.id,
-            name,
+            name: value.name,
             feature_id: value.feature_id,
             outcome_id: value.outcome_id,
             path: value.path,
@@ -854,7 +891,7 @@ impl TryFrom<OutcomeRow> for OutcomeSpec {
             allowed_paths: decode_json(&value.allowed_paths_json)?,
             forbidden_paths: decode_json(&value.forbidden_paths_json)?,
             required_tests: decode_json(&value.required_tests)?,
-            required_test_files: decode_json(&value.required_test_files)?,
+            required_test_files: Vec::new(),
             status: decode_enum(&value.status)?,
         })
     }

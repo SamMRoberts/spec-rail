@@ -572,10 +572,10 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         outcomes[0]["testReview"]["missing_required_tests"][0],
         "auth-mfa-rs"
     );
-    assert_eq!(
-        outcomes[0]["testReview"]["missing_required_test_files"][0],
-        "tests/auth/mfa.rs"
-    );
+    assert!(outcomes[0]["testReview"]["missing_required_test_files"]
+        .as_array()
+        .unwrap()
+        .is_empty());
     assert_eq!(
         outcomes[0]["testReview"]["undeclared_tests"][0]["path"],
         "tests/auth/login_smoke.rs"
@@ -649,7 +649,7 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     );
     assert_eq!(
         review["result"]["structuredContent"]["review"]["suggested_test_paths"][0],
-        "tests/auth/mfa.rs"
+        "tests/auth/login.rs"
     );
 
     client.shutdown();
@@ -823,6 +823,7 @@ fn mcp_test_suggest_previews_without_writing_files() {
       "feature_id": "auth",
       "outcome_id": "login",
             "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -895,7 +896,7 @@ fn mcp_test_suggest_previews_without_writing_files() {
 
     assert_eq!(
         preview["result"]["structuredContent"]["preview"]["exact_path_match"],
-        json!(true)
+        json!(false)
     );
     assert_eq!(
         preview["result"]["structuredContent"]["preview"]["suggestions"][0]["path"],
@@ -925,6 +926,7 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
       "feature_id": "auth",
       "outcome_id": "login",
             "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -1031,6 +1033,7 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
       "feature_id": "auth",
       "outcome_id": "login",
             "id": "logs_in",
+            "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Let a user sign in with valid credentials."],
@@ -1184,8 +1187,8 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
     assert_eq!(
-        review_before["result"]["structuredContent"]["review"]["undeclared_tests"][0]["path"],
-        "tests/auth/login.rs"
+        review_before["result"]["structuredContent"]["review"]["has_no_related_tests"],
+        json!(true)
     );
 
     let add_required = client.request(
@@ -1202,12 +1205,11 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
     );
     assert_eq!(add_required["result"]["isError"], json!(false));
     assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(false));
-    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_file"], json!(true));
+    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_file"], json!(false));
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")
         .contains(&"auth-login-rs".to_string()));
-    assert!(support::outcome_required_test_files(&dir, "auth", "login")
-        .contains(&"tests/auth/login.rs".to_string()));
+    assert!(support::outcome_required_test_files(&dir, "auth", "login").is_empty());
 
     let review_after = client.request(
         "tools/call",

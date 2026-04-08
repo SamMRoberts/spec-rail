@@ -172,7 +172,7 @@ fn outcome_show_prints_contextual_labels() {
         .stdout(contains("AI agent may only modify"))
         .stdout(contains("AI agent must NOT touch"))
         .stdout(contains("Required test names / facts:"))
-        .stdout(contains("Required test files (used by `specrail test generate` to create test files):"))
+        .stdout(contains("No required test file paths set."))
         .stdout(contains("add individual tests with `specrail test add`"));
 }
 
@@ -279,7 +279,7 @@ fn outcome_edit_updates_existing_record() {
         .stdout(contains("Updated goal."))
         .stdout(contains("Outcome: outcome-1-domain (order 2)"))
         .stdout(contains("src/auth/**"))
-        .stdout(contains("tests/auth_login.rs"));
+        .stdout(contains("No required test file paths set."));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("outcome_edited"));
