@@ -33,7 +33,7 @@ Generated project state lives under `.specrail/`:
 - `.specrail/specrail.db` — SQLite database (solutions, projects, components, features, outcomes, tests, active state)
 - `.specrail/state/ledger.jsonl` — append-only audit log
 
-Treat `src/core/repository.rs` as the source of truth for where project files belong and `src/core/database.rs` for the SQLite schema.
+Treat `src/core/repository.rs` as the source of truth for where project files belong, and `src/core/database.rs` for the SQLite schema.
 
 ## Normal workflow
 
