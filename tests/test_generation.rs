@@ -32,7 +32,8 @@ fn test_generate_creates_files_and_manifest_entries() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -45,6 +46,7 @@ fn test_generate_creates_files_and_manifest_entries() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
+            "id": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -104,7 +106,7 @@ fn test_generate_requires_declared_required_tests() {
         .args(["test", "generate", "--agent", "generic-shell"])
         .assert()
         .failure()
-        .stderr(contains("no outcome.required_tests entries found"));
+        .stderr(contains("no complete outcome required test declarations found"));
 }
 
 #[test]
@@ -128,7 +130,8 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -141,6 +144,7 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
+            "id": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
       "purpose_refs": ["goal:Validate credentials."],
@@ -205,11 +209,13 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         ])
         .assert()
         .success()
-        .stdout(contains("required_tests updated"));
+        .stdout(contains("required_tests updated"))
+        .stdout(contains("required_test_files updated"));
 
     specrail(&dir)
         .args(["outcome", "show", "auth", "outcome-1"])
         .assert()
         .success()
+        .stdout(contains("auth-outcome-1-validate"))
         .stdout(contains("tests/auth/validate.rs"));
 }

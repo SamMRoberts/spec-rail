@@ -39,20 +39,20 @@ pub fn remove_required_test(
     dir: &TempDir,
     feature_id: &str,
     outcome_id: &str,
-    path: &str,
+    test_file: &str,
 ) {
     let conn = open_db(dir);
     let json: String = conn
         .query_row(
-            "SELECT required_tests_json FROM outcomes WHERE feature_id = ?1 AND id = ?2",
+            "SELECT required_test_files_json FROM outcomes WHERE feature_id = ?1 AND id = ?2",
             params![feature_id, outcome_id],
             |row| row.get(0),
         )
         .unwrap();
     let mut tests: Vec<String> = serde_json::from_str(&json).unwrap();
-    tests.retain(|candidate| candidate != path);
+    tests.retain(|candidate| candidate != test_file);
     conn.execute(
-        "UPDATE outcomes SET required_tests_json = ?1 WHERE feature_id = ?2 AND id = ?3",
+        "UPDATE outcomes SET required_test_files_json = ?1 WHERE feature_id = ?2 AND id = ?3",
         params![serde_json::to_string(&tests).unwrap(), feature_id, outcome_id],
     )
     .unwrap();
@@ -63,6 +63,22 @@ pub fn outcome_required_tests(dir: &TempDir, feature_id: &str, outcome_id: &str)
     let json: String = conn
         .query_row(
             "SELECT required_tests_json FROM outcomes WHERE feature_id = ?1 AND id = ?2",
+            params![feature_id, outcome_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    serde_json::from_str(&json).unwrap()
+}
+
+pub fn outcome_required_test_files(
+    dir: &TempDir,
+    feature_id: &str,
+    outcome_id: &str,
+) -> Vec<String> {
+    let conn = open_db(dir);
+    let json: String = conn
+        .query_row(
+            "SELECT required_test_files_json FROM outcomes WHERE feature_id = ?1 AND id = ?2",
             params![feature_id, outcome_id],
             |row| row.get(0),
         )

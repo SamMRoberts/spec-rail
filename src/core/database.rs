@@ -8,7 +8,7 @@ use super::models::{
     TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 pub struct Database {
     conn: Connection,
@@ -93,6 +93,7 @@ impl Database {
                 allowed_paths_json TEXT NOT NULL,
                 forbidden_paths_json TEXT NOT NULL,
                 required_tests_json TEXT NOT NULL,
+                required_test_files_json TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL,
                 PRIMARY KEY(feature_id, id),
                 FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE CASCADE
@@ -121,6 +122,19 @@ impl Database {
             ",
         )
         .context("initializing sqlite schema")?;
+
+        if version > 0 && version < 3 {
+            conn.execute_batch(
+                "
+                ALTER TABLE outcomes ADD COLUMN required_test_files_json TEXT NOT NULL DEFAULT '[]';
+                UPDATE outcomes
+                SET required_test_files_json = required_tests_json,
+                    required_tests_json = '[]'
+                WHERE required_test_files_json = '[]';
+                ",
+            )
+            .context("migrating outcomes required test metadata")?;
+        }
 
         if version < SCHEMA_VERSION {
             conn.pragma_update(None, "user_version", SCHEMA_VERSION)
@@ -411,9 +425,9 @@ impl Database {
                 INSERT INTO outcomes (
                     feature_id, id, title, goal, order_index,
                     prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                    required_tests_json, status
+                    required_tests_json, required_test_files_json, status
                 )
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                 ON CONFLICT(feature_id, id) DO UPDATE SET
                     title = excluded.title,
                     goal = excluded.goal,
@@ -422,6 +436,7 @@ impl Database {
                     allowed_paths_json = excluded.allowed_paths_json,
                     forbidden_paths_json = excluded.forbidden_paths_json,
                     required_tests_json = excluded.required_tests_json,
+                    required_test_files_json = excluded.required_test_files_json,
                     status = excluded.status
                 ",
                 params![
@@ -434,6 +449,7 @@ impl Database {
                     encode_json(&outcome.allowed_paths)?,
                     encode_json(&outcome.forbidden_paths)?,
                     encode_json(&outcome.required_tests)?,
+                    encode_json(&outcome.required_test_files)?,
                     encode_enum(&outcome.status)?,
                 ],
             )
@@ -562,7 +578,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                       required_tests_json, status
+                      required_tests_json, required_test_files_json, status
                 FROM outcomes
                 WHERE feature_id = ?1
                 ORDER BY order_index, id
@@ -581,7 +597,8 @@ impl Database {
                     allowed_paths_json: row.get(6)?,
                     forbidden_paths_json: row.get(7)?,
                     required_tests_json: row.get(8)?,
-                    status: row.get(9)?,
+                    required_test_files_json: row.get(9)?,
+                    status: row.get(10)?,
                 })
             })
             .with_context(|| format!("querying outcomes for feature '{feature_id}'"))?;
@@ -684,7 +701,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                       required_tests_json, status
+                      required_tests_json, required_test_files_json, status
                 FROM outcomes
                 WHERE feature_id = ?1 AND id = ?2
                 ",
@@ -700,7 +717,8 @@ impl Database {
                         allowed_paths_json: row.get(6)?,
                         forbidden_paths_json: row.get(7)?,
                         required_tests_json: row.get(8)?,
-                        status: row.get(9)?,
+                        required_test_files_json: row.get(9)?,
+                        status: row.get(10)?,
                     })
                 },
             )
@@ -769,6 +787,7 @@ struct OutcomeRow {
     allowed_paths_json: String,
     forbidden_paths_json: String,
     required_tests_json: String,
+    required_test_files_json: String,
     status: String,
 }
 
@@ -812,6 +831,7 @@ impl TryFrom<OutcomeRow> for OutcomeSpec {
             allowed_paths: decode_json(&value.allowed_paths_json)?,
             forbidden_paths: decode_json(&value.forbidden_paths_json)?,
             required_tests: decode_json(&value.required_tests_json)?,
+            required_test_files: decode_json(&value.required_test_files_json)?,
             status: decode_enum(&value.status)?,
         })
     }

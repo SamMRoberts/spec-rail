@@ -137,7 +137,8 @@ fn outcome_new_prints_field_explanations_and_next_steps() {
         .stdout(contains("goal   — acceptance criterion"))
         .stdout(contains("order  — sequence position"))
         .stdout(contains("allow  — glob paths the AI agent may modify"))
-        .stdout(contains("test   — test file paths for AI-assisted generation"))
+        .stdout(contains("test   — required manifest test IDs or method names that must pass"))
+        .stdout(contains("test-file — test file paths used by `specrail test generate`"))
         .stdout(contains("Next steps:"))
         .stdout(contains("specrail test add"))
         .stdout(contains("specrail outcome activate auth-login outcome-1-domain"));
@@ -156,7 +157,8 @@ fn outcome_show_prints_contextual_labels() {
             "--order", "1",
             "--allow", "src/auth/**",
             "--forbid", "src/billing/**",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -169,7 +171,8 @@ fn outcome_show_prints_contextual_labels() {
         .stdout(contains("goal is the acceptance criterion"))
         .stdout(contains("AI agent may only modify"))
         .stdout(contains("AI agent must NOT touch"))
-        .stdout(contains("used by `specrail test generate`"))
+        .stdout(contains("Required test IDs / method names:"))
+        .stdout(contains("Required test files (used by `specrail test generate` to create test files):"))
         .stdout(contains("add individual tests with `specrail test add`"));
 }
 
@@ -192,7 +195,8 @@ fn outcome_show_suggests_test_add_when_no_required_tests() {
         .args(["outcome", "show", "auth-login", "outcome-1-domain"])
         .assert()
         .success()
-        .stdout(contains("No required test paths set."))
+        .stdout(contains("No required test IDs set."))
+        .stdout(contains("No required test file paths set."))
         .stdout(contains("specrail test add"));
 }
 
@@ -260,7 +264,8 @@ fn outcome_edit_updates_existing_record() {
             "--order", "2",
             "--allow", "src/auth/**",
             "--forbid", "src/http/**",
-            "--test", "tests/auth_login.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth_login.rs",
         ])
         .assert()
         .success()

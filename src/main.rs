@@ -187,6 +187,7 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
+                required_test_files,
             } => commands::outcome::new(
                 &repo,
                 commands::outcome::NewArgs {
@@ -199,6 +200,7 @@ fn run(cli: Cli) -> Result<()> {
                     allowed_paths,
                     forbidden_paths,
                     required_tests,
+                    required_test_files,
                 },
             ),
             OutcomeCommands::List { feature_id } => commands::outcome::list(&repo, &feature_id),
@@ -216,6 +218,7 @@ fn run(cli: Cli) -> Result<()> {
                 allowed_paths,
                 forbidden_paths,
                 required_tests,
+                required_test_files,
             } => commands::outcome::edit(
                 &repo,
                 commands::outcome::EditArgs {
@@ -228,6 +231,7 @@ fn run(cli: Cli) -> Result<()> {
                     allowed_paths,
                     forbidden_paths,
                     required_tests,
+                    required_test_files,
                 },
             ),
             OutcomeCommands::Activate {

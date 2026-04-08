@@ -318,23 +318,29 @@ struct OutcomeWorkflowSnapshot {
 struct OutcomeTestReview {
     feature_id: String,
     outcome_id: String,
-    required_test_paths: Vec<String>,
+    required_test_ids: Vec<String>,
+    required_test_files: Vec<String>,
     related_tests: Vec<TestSpec>,
     missing_required_tests: Vec<String>,
+    missing_required_test_files: Vec<String>,
     planned_required_tests: Vec<String>,
+    planned_required_test_files: Vec<String>,
     undeclared_tests: Vec<TestSpec>,
     suggested_test_paths: Vec<String>,
     openable_test_paths: Vec<String>,
     required_test_count: usize,
+    required_test_file_count: usize,
     related_test_count: usize,
     has_no_required_tests: bool,
+    has_no_required_test_files: bool,
     has_no_related_tests: bool,
     has_gaps: bool,
     needs_generation: bool,
 }
 
 fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> OutcomeTestReview {
-    let required_test_paths = outcome.required_tests.clone();
+    let required_test_ids = outcome.required_tests.clone();
+    let required_test_files = outcome.required_test_files.clone();
     let related_tests: Vec<TestSpec> = manifest
         .tests
         .iter()
@@ -342,13 +348,29 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
         .cloned()
         .collect();
 
-    let missing_required_tests: Vec<String> = required_test_paths
+    let missing_required_tests: Vec<String> = required_test_ids
+        .iter()
+        .filter(|test_id| !related_tests.iter().any(|test| test.id == **test_id))
+        .cloned()
+        .collect();
+
+    let missing_required_test_files: Vec<String> = required_test_files
         .iter()
         .filter(|path| !related_tests.iter().any(|test| test.path == **path))
         .cloned()
         .collect();
 
-    let planned_required_tests: Vec<String> = required_test_paths
+    let planned_required_tests: Vec<String> = required_test_ids
+        .iter()
+        .filter(|test_id| {
+            related_tests
+                .iter()
+                .any(|test| test.id == **test_id && test.status == TestStatus::Planned)
+        })
+        .cloned()
+        .collect();
+
+    let planned_required_test_files: Vec<String> = required_test_files
         .iter()
         .filter(|path| {
             related_tests
@@ -360,12 +382,15 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 
     let undeclared_tests: Vec<TestSpec> = related_tests
         .iter()
-        .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
+        .filter(|test| {
+            !required_test_ids.iter().any(|test_id| test_id == &test.id)
+                || !required_test_files.iter().any(|path| path == &test.path)
+        })
         .cloned()
         .collect();
 
-    let mut suggested_test_paths = missing_required_tests.clone();
-    for path in &planned_required_tests {
+    let mut suggested_test_paths = missing_required_test_files.clone();
+    for path in &planned_required_test_files {
         if !suggested_test_paths.contains(path) {
             suggested_test_paths.push(path.clone());
         }
@@ -375,29 +400,40 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
         .iter()
         .map(|test| test.path.clone())
         .collect();
-    let has_no_required_tests = required_test_paths.is_empty();
+    let has_no_required_tests = required_test_ids.is_empty();
+    let has_no_required_test_files = required_test_files.is_empty();
     let has_no_related_tests = related_tests.is_empty();
     let has_gaps = has_no_required_tests
+        || has_no_required_test_files
         || has_no_related_tests
         || !missing_required_tests.is_empty()
-        || !planned_required_tests.is_empty();
+        || !missing_required_test_files.is_empty()
+        || !planned_required_tests.is_empty()
+        || !planned_required_test_files.is_empty();
 
     OutcomeTestReview {
         feature_id: outcome.feature_id.clone(),
         outcome_id: outcome.id.clone(),
-        required_test_count: required_test_paths.len(),
+        required_test_count: required_test_ids.len(),
+        required_test_file_count: required_test_files.len(),
         related_test_count: related_tests.len(),
-        required_test_paths,
+        required_test_ids,
+        required_test_files,
         related_tests,
         missing_required_tests,
+        missing_required_test_files,
         planned_required_tests,
+        planned_required_test_files,
         undeclared_tests,
         suggested_test_paths: suggested_test_paths.clone(),
         openable_test_paths,
         has_no_required_tests,
+        has_no_required_test_files,
         has_no_related_tests,
         has_gaps,
-        needs_generation: !suggested_test_paths.is_empty(),
+        needs_generation: !suggested_test_paths.is_empty()
+            || has_no_required_tests
+            || has_no_required_test_files,
     }
 }
 
@@ -784,16 +820,28 @@ fn feature_implement_status_payload(
         .iter()
         .filter(|outcome| build_outcome_test_review(outcome, manifest).required_test_count == 0)
         .count();
+    let outcomes_without_required_test_files = outcomes
+        .iter()
+        .filter(|outcome| build_outcome_test_review(outcome, manifest).required_test_file_count == 0)
+        .count();
     let outcomes_missing_required_test_links = outcomes
         .iter()
         .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_tests.is_empty())
         .count();
+    let outcomes_missing_required_test_file_links = outcomes
+        .iter()
+        .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_test_files.is_empty())
+        .count();
 
-    if outcomes_without_required_tests > 0 || outcomes_missing_required_test_links > 0 {
+    if outcomes_without_required_tests > 0
+        || outcomes_without_required_test_files > 0
+        || outcomes_missing_required_test_links > 0
+        || outcomes_missing_required_test_file_links > 0
+    {
         let mut blockers: Vec<String> = Vec::new();
         if outcomes_without_required_tests > 0 {
             blockers.push(format!(
-                "{} outcome{} missing required test path references",
+                "{} outcome{} missing required test ids",
                 outcomes_without_required_tests,
                 if outcomes_without_required_tests == 1 {
                     " is"
@@ -802,11 +850,33 @@ fn feature_implement_status_payload(
                 }
             ));
         }
+        if outcomes_without_required_test_files > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing required test file paths",
+                outcomes_without_required_test_files,
+                if outcomes_without_required_test_files == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
         if outcomes_missing_required_test_links > 0 {
             blockers.push(format!(
-                "{} outcome{} missing registered test entries for one or more required test paths",
+                "{} outcome{} missing registered manifest tests for one or more required test ids",
                 outcomes_missing_required_test_links,
                 if outcomes_missing_required_test_links == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+        if outcomes_missing_required_test_file_links > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing registered manifest tests for one or more required test file paths",
+                outcomes_missing_required_test_file_links,
+                if outcomes_missing_required_test_file_links == 1 {
                     " is"
                 } else {
                     "s are"
@@ -827,7 +897,7 @@ fn feature_implement_status_payload(
     status_indicator_payload(
         "success",
         "Ready",
-        "Every outcome has required test paths linked to registered manifest tests.",
+        "Every outcome has required test ids and required test files linked to registered manifest tests.",
     )
 }
 
@@ -1071,7 +1141,9 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "writtenTestCount": written_test_count,
                     "failingTestCount": failing_test_count,
                     "requiredTestCount": review.required_test_count,
+                    "requiredTestFileCount": review.required_test_file_count,
                     "missingRequiredTestCount": review.missing_required_tests.len(),
+                    "missingRequiredTestFileCount": review.missing_required_test_files.len(),
                     "undeclaredTestCount": review.undeclared_tests.len(),
                     "hasTestGaps": review.has_gaps,
                     "needsTestGeneration": review.needs_generation,
@@ -1080,7 +1152,9 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                         &outcome.status,
                         active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                         test_count,
-                        review.needs_generation || review.has_no_required_tests,
+                        review.needs_generation
+                            || review.has_no_required_tests
+                            || review.has_no_required_test_files,
                     )
                 })
             })
@@ -1534,6 +1608,7 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
@@ -1552,6 +1627,7 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
     push_repeated_flag(&mut args, "--test", required_tests);
+    push_repeated_flag(&mut args, "--test-file", required_test_files);
 
     run_cli_tool(&cwd, args)
 }
@@ -1582,6 +1658,7 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
@@ -1600,6 +1677,7 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
     push_repeated_flag(&mut args, "--test", required_tests);
+    push_repeated_flag(&mut args, "--test-file", required_test_files);
 
     run_cli_tool(&cwd, args)
 }
@@ -1622,26 +1700,37 @@ fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Valu
     let repo = discover_repo(arguments)?;
     let feature_id = require_string(arguments, "feature_id")?;
     let outcome_id = require_string(arguments, "outcome_id")?;
+    let test_id = require_string(arguments, "test_id")?;
     let path = require_string(arguments, "path")?;
-    let added = crate::commands::outcome::ensure_required_test(&repo, &feature_id, &outcome_id, &path)?;
+    let added = crate::commands::outcome::ensure_required_test_reference(
+        &repo,
+        &feature_id,
+        &outcome_id,
+        &test_id,
+        &path,
+    )?;
 
     Ok(tool_success_payload(
-        if added {
+        if added.added_test_id || added.added_test_file {
             format!(
-                "Added '{}' to required_tests for outcome '{}:{}'.",
-                path, feature_id, outcome_id
+                "Added required test '{}' and file '{}' for outcome '{}:{}'.",
+                test_id, path, feature_id, outcome_id
             )
         } else {
             format!(
-                "'{}' is already listed in required_tests for outcome '{}:{}'.",
-                path, feature_id, outcome_id
+                "Required test '{}' and file '{}' are already listed for outcome '{}:{}'.",
+                test_id, path, feature_id, outcome_id
             )
         },
         Some(json!({
             "feature_id": feature_id,
             "outcome_id": outcome_id,
+            "test_id": test_id,
             "path": path,
-            "added": added,
+            "added": {
+                "test_id": added.added_test_id,
+                "test_file": added.added_test_file
+            },
         })),
     ))
 }
@@ -2665,7 +2754,8 @@ fn tool_definitions() -> Vec<Value> {
                     "prerequisites": { "type": "array", "items": { "type": "string" }, "description": "Outcome IDs that must be verified first." },
                     "allowed_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent is allowed to modify." },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent must not modify." },
-                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Test IDs or paths that must pass." }
+                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Required manifest test IDs or method names that must pass." },
+                    "required_test_files": { "type": "array", "items": { "type": "string" }, "description": "Required test file paths used for generation and manifest alignment." }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
@@ -2687,7 +2777,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_edit",
             "title": "Edit Outcome",
-            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, or required tests. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
+            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, required test IDs, or required test files. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2700,7 +2790,8 @@ fn tool_definitions() -> Vec<Value> {
                     "prerequisites": { "type": "array", "items": { "type": "string" } },
                     "allowed_paths": { "type": "array", "items": { "type": "string" } },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" } },
-                    "required_tests": { "type": "array", "items": { "type": "string" } }
+                    "required_tests": { "type": "array", "items": { "type": "string" } },
+                    "required_test_files": { "type": "array", "items": { "type": "string" } }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
@@ -2722,16 +2813,17 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_add_required_test",
             "title": "Add Required Test",
-            "description": "Add an existing related test path into the outcome's required_tests list so the outcome YAML and manifest stay aligned.",
+            "description": "Add an existing related test id and file path into the outcome's required test metadata so the outcome YAML and manifest stay aligned.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
                     "feature_id": { "type": "string" },
                     "outcome_id": { "type": "string" },
-                    "path": { "type": "string", "description": "Related test path to add into required_tests." }
+                    "test_id": { "type": "string", "description": "Related manifest test id to add into required_tests." },
+                    "path": { "type": "string", "description": "Related test path to add into required_test_files." }
                 },
-                "required": ["feature_id", "outcome_id", "path"]
+                "required": ["feature_id", "outcome_id", "test_id", "path"]
             }
         }),
         json!({
@@ -2755,7 +2847,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with no required_tests yet, the agent can bootstrap an initial test path and specrail will persist it back into the outcome YAML.",
+            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete required test metadata, the agent can bootstrap an initial test id and path and specrail will persist them back into the outcome YAML.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3078,6 +3170,7 @@ mod tests {
             allowed_paths: vec![],
             forbidden_paths: vec![],
             required_tests: vec![],
+            required_test_files: vec![],
             status: OutcomeStatus::Verified,
         }];
 
@@ -3102,13 +3195,14 @@ mod tests {
             prerequisites: vec![],
             allowed_paths: vec![],
             forbidden_paths: vec![],
-            required_tests: vec!["tests/feature_a/outcome_1.rs".to_string()],
+            required_tests: vec!["validates_credentials".to_string()],
+            required_test_files: vec!["tests/feature_a/outcome_1.rs".to_string()],
             status: OutcomeStatus::Pending,
         }];
 
         let manifest = TestManifest {
             tests: vec![TestSpec {
-                id: "feature-a-outcome-1-has-required-test".to_string(),
+                id: "validates_credentials".to_string(),
                 feature_id: "feature-a".to_string(),
                 outcome_id: "outcome-1".to_string(),
                 path: "tests/feature_a/outcome_1.rs".to_string(),

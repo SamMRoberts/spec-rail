@@ -2268,10 +2268,13 @@
 
             function reviewSummary(review) {
                 if (!review) return { tone: "muted", text: "Test health is not available for this outcome yet." };
-                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test paths to make this outcome verifiable." };
+                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test ids to make this outcome verifiable." };
+                if (review.has_no_required_test_files) return { tone: "warn", text: "Add required test file paths to make this outcome verifiable." };
                 if (review.has_no_related_tests) return { tone: "warn", text: "No manifest tests are linked to this outcome yet." };
-                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test path" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test id" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.missing_required_test_files.length > 0) return { tone: "warn", text: review.missing_required_test_files.length + " required test file path" + (review.missing_required_test_files.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
                 if (review.planned_required_tests.length > 0) return { tone: "warn", text: review.planned_required_tests.length + " required test" + (review.planned_required_tests.length !== 1 ? "s remain" : " remains") + " in planned status." };
+                if (review.planned_required_test_files.length > 0) return { tone: "warn", text: review.planned_required_test_files.length + " required test file" + (review.planned_required_test_files.length !== 1 ? "s remain" : " remains") + " in planned status." };
                 return { tone: "success", text: "Required tests are linked and ready to drive implementation." };
             }
 
@@ -2494,9 +2497,12 @@
                 var chips = document.createElement("div");
                 chips.className = "test-chips";
                 appendTestChip(chips, review.related_test_count + " linked", "");
-                appendTestChip(chips, review.required_test_count + " required", "");
+                appendTestChip(chips, review.required_test_count + " required ids", "");
+                appendTestChip(chips, review.required_test_file_count + " required files", "");
                 if (review.missing_required_tests.length > 0) appendTestChip(chips, review.missing_required_tests.length + " missing", "danger");
+                if (review.missing_required_test_files.length > 0) appendTestChip(chips, review.missing_required_test_files.length + " file missing", "danger");
                 if (review.planned_required_tests.length > 0) appendTestChip(chips, review.planned_required_tests.length + " planned", "warning");
+                if (review.planned_required_test_files.length > 0) appendTestChip(chips, review.planned_required_test_files.length + " file planned", "warning");
                 if (review.undeclared_tests.length > 0) appendTestChip(chips, review.undeclared_tests.length + " undeclared", "warning");
                 section.appendChild(chips);
 
@@ -2508,12 +2514,20 @@
                     section.appendChild(renderPathList(review.suggested_test_paths, "suggestion-list"));
                 }
 
-                if (review.required_test_paths.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                if (review.required_test_ids.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Required test paths";
+                    requiredTitle.textContent = "Required test ids";
                     section.appendChild(requiredTitle);
-                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                    section.appendChild(renderPathList(review.required_test_ids, "path-list"));
+                }
+
+                if (review.required_test_files.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                    var requiredFilesTitle = document.createElement("div");
+                    requiredFilesTitle.className = "card-note";
+                    requiredFilesTitle.textContent = "Required test files";
+                    section.appendChild(requiredFilesTitle);
+                    section.appendChild(renderPathList(review.required_test_files, "path-list"));
                 }
 
                 var actionRow = document.createElement("div");
@@ -2534,7 +2548,7 @@
                     actionRow.appendChild(previewBtn);
                 }
 
-                if (review.has_no_required_tests) {
+                if (review.has_no_required_tests || review.has_no_required_test_files) {
                     appendActionButton(actionRow, {
                         title: "Generate Initial Test",
                         tool: "specrail_test_generate",
@@ -2592,7 +2606,7 @@
                 copy.className = "section-card-copy";
                 copy.textContent = review.related_test_count > 0
                     ? review.related_test_count + " manifest test" + (review.related_test_count !== 1 ? "s are" : " is") + " linked to this outcome."
-                    : "No manifest tests are linked yet. Use the required test paths below to register or generate them.";
+                    : "No manifest tests are linked yet. Use the required test ids and file paths below to register or generate them.";
                 section.appendChild(copy);
 
                 if (review.related_tests.length > 0) {
@@ -2622,7 +2636,7 @@
                             appendActionButton(actions, {
                                 title: "Add As Required",
                                 tool: "specrail_outcome_add_required_test",
-                                args: { feature_id: featureId, outcome_id: outcome.id, path: test.path },
+                                args: { feature_id: featureId, outcome_id: outcome.id, test_id: test.id, path: test.path },
                                 refresh: true,
                             });
                             item.appendChild(actions);
@@ -2634,12 +2648,20 @@
                     section.appendChild(list);
                 }
 
-                if (review.required_test_paths.length > 0) {
+                if (review.required_test_ids.length > 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Expected required test paths";
+                    requiredTitle.textContent = "Expected required test ids";
                     section.appendChild(requiredTitle);
-                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                    section.appendChild(renderPathList(review.required_test_ids, "path-list"));
+                }
+
+                if (review.required_test_files.length > 0) {
+                    var requiredFilesTitle = document.createElement("div");
+                    requiredFilesTitle.className = "card-note";
+                    requiredFilesTitle.textContent = "Expected required test files";
+                    section.appendChild(requiredFilesTitle);
+                    section.appendChild(renderPathList(review.required_test_files, "path-list"));
                 }
 
                 return section;
@@ -2701,7 +2723,8 @@
                         feature_id: featureId, outcome_id: o.id || outcomeId, title: o.title || "",
                         goal: o.goal || "", order: String(o.order || 1),
                         prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
-                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests)
+                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests),
+                        required_test_files: arrayToLines(o.required_test_files)
                     };
                     appendLog("Editing outcome: " + outcomeId, "info"); render();
                 } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); }
@@ -2720,7 +2743,8 @@
                         prerequisites: linesToArray(state.outcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.outcomeDraft.required_tests)
+                        required_tests: linesToArray(state.outcomeDraft.required_tests),
+                        required_test_files: linesToArray(state.outcomeDraft.required_test_files)
                     }));
                     state.editingOutcomeId = null; state.outcomeDraft = null;
                     await refreshView(); appendLog("Outcome saved.", "success"); state.isSaving = false; render();
@@ -2751,7 +2775,7 @@
 
             function startNewOutcome(featureId, suggestedOrder) {
                 state.creatingOutcome = true;
-                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "" };
+                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "", required_test_files: "" };
                 appendLog("Creating new outcome\u2026", "info"); render();
             }
             function cancelNewOutcome() { state.creatingOutcome = false; state.newOutcomeDraft = null; render(); }
@@ -2767,7 +2791,8 @@
                         prerequisites: linesToArray(state.newOutcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.newOutcomeDraft.required_tests)
+                        required_tests: linesToArray(state.newOutcomeDraft.required_tests),
+                        required_test_files: linesToArray(state.newOutcomeDraft.required_test_files)
                     }));
                     state.creatingOutcome = false; state.newOutcomeDraft = null;
                     await refreshView(); appendLog("Outcome created.", "success"); state.isSaving = false; render();
@@ -3260,7 +3285,8 @@
                         mkField("Order", "order", d.order, "newOutcome"),
                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "newOutcome", true),
                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "newOutcome", true),
-                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "newOutcome", true, "Test file paths that must pass"),
+                        mkField("Required tests (one id per line)", "required_tests", d.required_tests, "newOutcome", true, "Manifest test ids or method names that must pass"),
+                        mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "newOutcome", true, "Test file paths used for generation"),
                     ], saveNewOutcome, cancelNewOutcome));
                 }
 
@@ -3313,7 +3339,10 @@
                                     var noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
                                 }
                                 if (review && review.missing_required_tests && review.missing_required_tests.length > 0) {
-                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " missing"; chips.appendChild(missing);
+                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " id missing"; chips.appendChild(missing);
+                                }
+                                if (review && review.missing_required_test_files && review.missing_required_test_files.length > 0) {
+                                    var missingFiles = document.createElement("span"); missingFiles.className = "test-chip danger"; missingFiles.textContent = review.missing_required_test_files.length + " file missing"; chips.appendChild(missingFiles);
                                 }
                                 if (review && review.undeclared_tests && review.undeclared_tests.length > 0) {
                                     var undeclared = document.createElement("span"); undeclared.className = "test-chip warning"; undeclared.textContent = review.undeclared_tests.length + " undeclared"; chips.appendChild(undeclared);
@@ -3337,9 +3366,9 @@
                                     actions.appendChild(actBtn);
                                 }
 
-                                if (review && (review.needs_generation || review.has_no_required_tests)) {
+                                if (review && (review.needs_generation || review.has_no_required_tests || review.has_no_required_test_files)) {
                                     appendActionButton(actions, {
-                                        title: review.has_no_required_tests ? "Generate Initial Test" : "Generate Missing Tests",
+                                        title: (review.has_no_required_tests || review.has_no_required_test_files) ? "Generate Initial Test" : "Generate Missing Tests",
                                         tool: "specrail_test_generate",
                                         args: { feature_id: featureId, outcome_id: outcome.id },
                                         refresh: true,
@@ -3397,7 +3426,8 @@
                                         mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
                                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
                                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
-                                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required tests (one id per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "outcome", true),
                                     ], saveOutcomeEdit, cancelOutcomeEdit));
                                 }
                             },

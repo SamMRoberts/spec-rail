@@ -38,6 +38,7 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
              \n\
              src/billing/**\n\
              \n\
+             \n\
              tests/auth/validate.rs\n\
              \n\
              y\n\
@@ -50,6 +51,7 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
              src/auth/persistence/**\n\
              \n\
              src/http/**\n\
+             \n\
              \n\
              tests/auth/persist.rs\n\
              \n\
@@ -115,6 +117,7 @@ fn init_walkthrough_can_repeat_features() {
              \n\
              \n\
              \n\
+             \n\
              n\n\
              y\n\
              billing\n\
@@ -127,6 +130,7 @@ fn init_walkthrough_can_repeat_features() {
              outcome-1\n\
              Capture\n\
              Capture payment details.\n\
+             \n\
              \n\
              \n\
              \n\

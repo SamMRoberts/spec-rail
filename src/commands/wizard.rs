@@ -207,9 +207,11 @@ fn prompt_outcome<R: BufRead, W: Write>(
     writeln!(writer, "  forbid — glob paths the AI agent must NOT touch (e.g. unrelated modules)")?;
     let forbidden_paths = collect_list(reader, writer, "Forbidden path")?;
 
-    writeln!(writer, "  test   — test file paths for AI generation via `specrail test generate`")?;
-    writeln!(writer, "           (you can also add tests later with `specrail test add`)")?;
-    let required_tests = collect_list(reader, writer, "Required test path")?;
+    writeln!(writer, "  test   — required manifest test IDs or test method names that must pass")?;
+    let required_tests = collect_list(reader, writer, "Required test ID")?;
+    writeln!(writer, "  test-file — test file paths for AI generation via `specrail test generate`")?;
+    writeln!(writer, "              (you can also add tests later with `specrail test add`)")?;
+    let required_test_files = collect_list(reader, writer, "Required test path")?;
 
     Ok(Some(outcome::NewArgs {
         feature_id: feature_id.to_string(),
@@ -221,6 +223,7 @@ fn prompt_outcome<R: BufRead, W: Write>(
         allowed_paths,
         forbidden_paths,
         required_tests,
+        required_test_files,
     }))
 }
 

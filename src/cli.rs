@@ -269,10 +269,12 @@ pub enum OutcomeCommands {
         /// e.g. "src/billing/**" to keep unrelated modules off-limits)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Test file path for AI-assisted generation via `specrail test generate`
-        /// (repeatable; to add individual tests manually use `specrail test add`)
+        /// Required manifest test ID or test method name that must pass
         #[arg(long = "test")]
         required_tests: Vec<String>,
+        /// Test file path for AI-assisted generation via `specrail test generate`
+        #[arg(long = "test-file")]
+        required_test_files: Vec<String>,
     },
 
     /// List outcomes for a feature
@@ -316,10 +318,12 @@ pub enum OutcomeCommands {
         /// Glob path the AI agent must NOT touch (repeatable)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Test file path for AI-assisted generation via `specrail test generate`
-        /// (repeatable; manage individual tests with `specrail test add/list`)
+        /// Required manifest test ID or test method name that must pass
         #[arg(long = "test")]
         required_tests: Vec<String>,
+        /// Test file path for AI-assisted generation via `specrail test generate`
+        #[arg(long = "test-file")]
+        required_test_files: Vec<String>,
     },
 
     /// Mark an outcome as the active outcome

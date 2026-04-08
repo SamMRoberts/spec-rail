@@ -159,6 +159,8 @@ pub struct OutcomeSpec {
     #[serde(default)]
     pub required_tests: Vec<String>,
     #[serde(default)]
+    pub required_test_files: Vec<String>,
+    #[serde(default)]
     pub status: OutcomeStatus,
 }
 
