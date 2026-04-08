@@ -43,22 +43,10 @@
             --hero-figure-c: light-dark(#ffffff, #0f1723);
             --shadow-sm: light-dark(0 10px 24px rgba(15, 23, 42, 0.08), 0 12px 30px rgba(2, 6, 23, 0.45));
             --shadow-lg: light-dark(0 24px 70px rgba(15, 23, 42, 0.12), 0 28px 80px rgba(2, 6, 23, 0.55));
-            --console-bg: #0f1117;
-            --console-border-top: #2a2a35;
-            --console-toolbar-bg: #161620;
-            --console-fg: #c8cdd8;
-            --console-fg-muted: #4a4d5a;
-            --console-ts: #3d4050;
-            --console-info: #60a5fa;
-            --console-success: #4ade80;
-            --console-error: #f87171;
-            --console-action: #c084fc;
-            --console-warn: #fbbf24;
             --radius: 6px;
             --radius-lg: 16px;
             --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             --font-mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
-            --console-height: 126px;
         }
 
         * {
@@ -162,15 +150,6 @@
         .app-body::-webkit-scrollbar-thumb {
             background: var(--border);
             border-radius: 3px;
-        }
-
-        .app-console {
-            flex-shrink: 0;
-            height: var(--console-height);
-            background: var(--console-bg);
-            border-top: 1px solid var(--console-border-top);
-            display: flex;
-            flex-direction: column;
         }
 
         /* Header */
@@ -734,6 +713,94 @@
 
         .next-banner-actions {
             margin-top: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hierarchy-panel {
+            margin-bottom: 14px;
+            padding: 12px 13px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .hierarchy-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .hierarchy-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .hierarchy-copy {
+            font-size: 11px;
+            color: var(--fg-muted);
+            line-height: 1.45;
+            margin-top: 2px;
+        }
+
+        .hierarchy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .hierarchy-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .hierarchy-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--fg-muted);
+        }
+
+        .hierarchy-select {
+            width: 100%;
+            appearance: none;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+            color: var(--fg);
+            font: inherit;
+            font-size: 12px;
+            line-height: 1.3;
+            padding: 9px 11px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        }
+
+        .hierarchy-select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+        }
+
+        .hierarchy-select:disabled {
+            opacity: 0.6;
+        }
+
+        .hierarchy-meta {
+            font-size: 10px;
+            color: var(--fg-muted);
+            min-height: 15px;
+        }
+
+        @media (max-width: 680px) {
+            .hierarchy-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* Section */
@@ -895,6 +962,7 @@
             background: var(--progress-track);
             border-radius: 2px;
             overflow: hidden;
+            display: flex;
         }
 
         .progress-fill {
@@ -902,6 +970,22 @@
             background: var(--progress-fill);
             border-radius: 2px;
             transition: width 400ms ease;
+        }
+
+        .progress-fill.passing {
+            background: var(--verified-border);
+        }
+
+        .progress-fill.written {
+            background: var(--accent);
+        }
+
+        .progress-fill.planned {
+            background: var(--active-border);
+        }
+
+        .progress-fill.failing {
+            background: var(--failed-border);
         }
 
         /* Badges */
@@ -945,6 +1029,50 @@
             background: var(--pending-bg);
             border-color: var(--pending-border);
             color: var(--fg-dim);
+        }
+
+        .btn-status {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--bg-card) 82%, transparent);
+        }
+
+        .btn-status-success {
+            background: var(--verified-border);
+        }
+
+        .btn-status-warning {
+            background: var(--active-border);
+        }
+
+        .btn-status-progress {
+            background: var(--accent);
+            animation: btn-status-pulse 900ms ease-in-out infinite;
+        }
+
+        .btn-status-danger {
+            background: var(--failed-border);
+        }
+
+        .btn-status-muted {
+            background: var(--fg-dim);
+        }
+
+        @keyframes btn-status-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.55;
+                transform: scale(0.84);
+            }
         }
 
         /* Test chips */
@@ -1288,151 +1416,6 @@
             font-size: 13px;
         }
 
-        /* Console */
-        .console-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 10px;
-            background: var(--console-toolbar-bg);
-            border-bottom: 1px solid var(--console-border-top);
-            flex-shrink: 0;
-        }
-
-        .console-dots {
-            display: flex;
-            gap: 4px;
-        }
-
-        .cdot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .cdot-r {
-            background: #ff5f57;
-        }
-
-        .cdot-y {
-            background: #ffbd2e;
-        }
-
-        .cdot-g {
-            background: #28ca41;
-        }
-
-        .console-title {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 500;
-            color: var(--console-fg-muted);
-            letter-spacing: 0.04em;
-            flex: 1;
-            text-align: center;
-        }
-
-        .console-btn {
-            appearance: none;
-            background: transparent;
-            border: none;
-            color: var(--console-fg-muted);
-            cursor: pointer;
-            font-family: var(--font-ui);
-            font-size: 10px;
-            padding: 1px 5px;
-            border-radius: 3px;
-            transition: color 80ms, background 80ms;
-        }
-
-        .console-btn:hover {
-            color: var(--console-fg);
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .console-entries {
-            flex: 1;
-            overflow-y: auto;
-            padding: 3px 0;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            scrollbar-width: thin;
-            scrollbar-color: #2a2a35 transparent;
-        }
-
-        .console-entries::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .console-entries::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .console-entries::-webkit-scrollbar-thumb {
-            background: #2a2a35;
-            border-radius: 2px;
-        }
-
-        .console-entry {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            padding: 1px 10px;
-            line-height: 1.55;
-        }
-
-        .console-entry:hover {
-            background: rgba(255, 255, 255, 0.025);
-        }
-
-        .con-ts {
-            color: var(--console-ts);
-            font-size: 9px;
-            flex-shrink: 0;
-            padding-top: 2px;
-            min-width: 38px;
-        }
-
-        .con-icon {
-            flex-shrink: 0;
-            padding-top: 1px;
-            font-size: 10px;
-        }
-
-        .con-msg {
-            flex: 1;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .con-info .con-msg {
-            color: var(--console-info);
-        }
-
-        .con-success .con-msg {
-            color: var(--console-success);
-        }
-
-        .con-error .con-msg {
-            color: var(--console-error);
-        }
-
-        .con-action .con-msg {
-            color: var(--console-action);
-        }
-
-        .con-warn .con-msg {
-            color: var(--console-warn);
-        }
-
-        .con-muted .con-msg {
-            color: var(--console-fg-muted);
-        }
-
-        .con-default .con-msg {
-            color: var(--console-fg);
-        }
-
         @media (max-width: 460px) {
             body {
                 padding: 0;
@@ -1488,18 +1471,6 @@
                 <div>Connecting&hellip;</div>
             </div>
         </div>
-        <div class="app-console">
-            <div class="console-toolbar">
-                <div class="console-dots">
-                    <div class="cdot cdot-r"></div>
-                    <div class="cdot cdot-y"></div>
-                    <div class="cdot cdot-g"></div>
-                </div>
-                <span class="console-title">specrail &mdash; console</span>
-                <button class="console-btn" id="consoleClear" title="Clear console">&#x232B; clear</button>
-            </div>
-            <div class="console-entries" id="consoleEntries"></div>
-        </div>
     </div>
 
     <script>
@@ -1510,6 +1481,8 @@
                 creatingFeature: false, creatingOutcome: false,
                 featureDraft: null, outcomeDraft: null, newFeatureDraft: null, newOutcomeDraft: null,
                 isSaving: false, isActivating: null,
+                hierarchySelection: { solutionId: "", projectId: "", componentId: "" },
+                runningHierarchyAction: null,
                 runningAction: null,
                 expandedCards: {},
                 expandedPanels: {},
@@ -1520,32 +1493,7 @@
             let nextId = 1;
             const pending = new Map();
 
-            // Console
-            const CON_ICONS = { info: "\u2139", success: "\u2713", error: "\u2717", action: "\u25C6", warn: "\u26A0", muted: "\u00B7", default: "\u203A" };
-
-            function appendLog(msg, type) {
-                type = type || "default";
-                const el = document.getElementById("consoleEntries");
-                if (!el) return;
-                const now = new Date();
-                const ts = now.toTimeString().slice(0, 8);
-                const entry = document.createElement("div");
-                entry.className = "console-entry con-" + type;
-                entry.innerHTML =
-                    '<span class="con-ts">' + ts + '</span>' +
-                    '<span class="con-icon">' + (CON_ICONS[type] || "\u203A") + '</span>' +
-                    '<span class="con-msg">' + esc(msg) + '</span>';
-                el.appendChild(entry);
-                el.scrollTop = el.scrollHeight;
-                while (el.children.length > 200) el.removeChild(el.firstChild);
-            }
-
-            function clearConsole() {
-                var el = document.getElementById("consoleEntries");
-                if (el) el.innerHTML = "";
-            }
-
-            document.getElementById("consoleClear").addEventListener("click", clearConsole);
+            function appendLog() { }
 
             // IPC
             function sendRequest(m, p) {
@@ -1698,6 +1646,7 @@
                 var features = Array.isArray(data && data.features) ? data.features : [];
                 var outcomes = Array.isArray(data && data.outcomes) ? data.outcomes : [];
                 var activeOutcome = outcomes.find(function (o) { return o.isActive; });
+                var selectedFeatureSummary = featureSummaryById(data, data && data.selectedFeatureId);
                 var icon, label, title, desc, actions = [];
 
                 if (mode === "feature_selection") {
@@ -1746,12 +1695,30 @@
                             desc = "Move planned tests to written or passing before implementation so the outcome gate can run cleanly.";
                             actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
                         } else if (st === "active" || st === "failed") {
+                            var implementStatus = featureActionStatus(selectedFeatureSummary, "implementStatus", "Run implement for each outcome in this feature.");
+                            var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
                             title = st === "failed" ? "Implementation failed \u2014 try again" : "Ready to implement";
                             desc = "Specrail will use the active agent to write code that satisfies your tests.";
                             actions = [
-                                { text: "Run Implement", fn: function () { runToolAction("Run Implement", "specrail_implement", {}, { refresh: true }); }, kind: "primary" },
-                                { text: "Run Verify", fn: function () { runToolAction("Run Verify", "specrail_verify", {}, { refresh: true }); }, kind: "default" },
+                                {
+                                    text: "Run Implement",
+                                    tool: "specrail_implement",
+                                    args: {},
+                                    kind: "primary",
+                                    refresh: true,
+                                    status: implementStatus,
+                                    tooltip: implementStatus.detail
+                                },
+                                {
+                                    text: "Run Verify",
+                                    tool: "specrail_verify",
+                                    args: {},
+                                    kind: "default",
+                                    refresh: true,
+                                    status: verifyStatus,
+                                    tooltip: verifyStatus.detail
+                                },
                             ];
                         } else if (st === "verified") {
                             icon = "\u{1F680}"; label = "Step 6 of 6 \u2014 Advance";
@@ -1779,10 +1746,38 @@
                     var act = document.createElement("div");
                     act.className = "next-banner-actions btn-group";
                     actions.forEach(function (a) {
+                        if (a.tool) {
+                            appendActionButton(act, {
+                                title: a.text,
+                                tool: a.tool,
+                                args: a.args || {},
+                                kind: a.kind || "default",
+                                refresh: a.refresh || false,
+                                disabled: !!a.disabled,
+                                tooltip: a.tooltip,
+                                status: a.status || null,
+                            });
+                            return;
+                        }
+
                         var b = document.createElement("button");
+                        b.type = "button";
                         b.className = "btn btn-sm btn-" + (a.kind || "default");
-                        b.textContent = a.text;
+                        if (a.tooltip || (a.status && a.status.detail)) {
+                            b.title = a.tooltip || a.status.detail;
+                        }
                         b.disabled = state.isSaving || !!state.runningAction;
+                        var label = document.createElement("span");
+                        label.textContent = a.text;
+                        b.appendChild(label);
+                        if (a.status) {
+                            var tone = String(a.status.tone || "muted");
+                            var indicator = document.createElement("span");
+                            indicator.className = "btn-status btn-status-" + tone;
+                            indicator.setAttribute("aria-label", String(a.status.label || tone));
+                            indicator.title = String(a.status.detail || a.status.label || "");
+                            b.appendChild(indicator);
+                        }
                         b.addEventListener("click", a.fn);
                         act.appendChild(b);
                     });
@@ -1928,19 +1923,96 @@
                 return state.runningAction === (name + ":" + JSON.stringify(args));
             }
 
+            function buttonStatus(status, tool, args, title) {
+                if (tool && isActionRunning(tool, args)) {
+                    return {
+                        tone: "progress",
+                        label: "In progress",
+                        detail: (title || "Action") + " is currently running."
+                    };
+                }
+                return status || null;
+            }
+
+            function encodeButtonArgs(args) {
+                try {
+                    return JSON.stringify(args || {});
+                } catch (e) {
+                    return "{}";
+                }
+            }
+
+            function decodeButtonArgs(value) {
+                if (!value) return {};
+                try {
+                    var parsed = JSON.parse(value);
+                    return parsed && typeof parsed === "object" ? parsed : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            function buttonLogLabel(button) {
+                if (!button) return "unknown action";
+                var title = button.dataset.toolTitle || button.getAttribute("aria-label") || button.textContent || "unknown action";
+                var source = button.dataset.toolSource || "unknown-source";
+                var tool = button.dataset.toolName || "unknown-tool";
+                return title.trim() + " [" + tool + "] from " + source;
+            }
+
             function appendActionButton(container, config) {
                 var title = config.title, tool = config.tool, args = config.args || {},
-                    kind = config.kind || "default", refresh = config.refresh || false;
+                    kind = config.kind || "default", refresh = config.refresh || false,
+                    status = buttonStatus(config.status || null, tool, args, title), disabled = !!config.disabled;
                 var button = document.createElement("button");
+                button.type = "button";
                 button.className = kind === "primary" ? "btn btn-primary btn-sm"
                     : kind === "ghost" ? "btn btn-ghost btn-sm"
                         : kind === "success" ? "btn btn-success btn-sm"
                             : kind === "danger" ? "btn btn-danger btn-sm"
                                 : "btn btn-sm";
-                button.disabled = state.isSaving || isActionRunning(tool, args);
-                button.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
-                button.addEventListener("click", function () { runToolAction(title, tool, args, { refresh: refresh }); });
+                button.dataset.toolAction = "true";
+                button.dataset.toolName = tool;
+                button.dataset.toolTitle = title;
+                button.dataset.toolArgs = encodeButtonArgs(args);
+                button.dataset.toolRefresh = refresh ? "true" : "false";
+                button.dataset.toolSource = config.source || "action-button";
+                button.disabled = state.isSaving || isActionRunning(tool, args) || disabled;
+                if (config.tooltip || (status && status.detail)) {
+                    button.title = config.tooltip || status.detail;
+                }
+                var label = document.createElement("span");
+                label.textContent = isActionRunning(tool, args) ? (title + "\u2026") : title;
+                button.appendChild(label);
+                if (status) {
+                    var tone = String(status.tone || "muted");
+                    var indicator = document.createElement("span");
+                    indicator.className = "btn-status btn-status-" + tone;
+                    indicator.setAttribute("aria-label", String(status.label || tone));
+                    indicator.title = String(status.detail || status.label || "");
+                    button.appendChild(indicator);
+                }
                 container.appendChild(button);
+            }
+
+            function featureSummaryById(data, featureId) {
+                var features = Array.isArray(data && data.features) ? data.features : [];
+                for (var i = 0; i < features.length; i += 1) {
+                    if (features[i] && features[i].id === featureId) return features[i];
+                }
+                return null;
+            }
+
+            function featureActionStatus(featureSummary, key, fallbackDetail) {
+                var status = featureSummary && featureSummary[key];
+                if (!status || typeof status !== "object") {
+                    return { tone: "muted", label: "Waiting", detail: fallbackDetail || "Status unavailable." };
+                }
+                return {
+                    tone: String(status.tone || "muted"),
+                    label: String(status.label || "Waiting"),
+                    detail: String(status.detail || fallbackDetail || "Status unavailable.")
+                };
             }
 
             async function activateFeature(id) {
@@ -1971,16 +2043,262 @@
                 }
             }
 
+            function hierarchyOptionLabel(item) {
+                if (!item) return "";
+                return (item.title && item.title !== item.id)
+                    ? (item.title + " (" + item.id + ")")
+                    : String(item.id || item.title || "");
+            }
+
+            function projectsForSolution(data, solutionId) {
+                var projects = Array.isArray(data.projects) ? data.projects : [];
+                return solutionId
+                    ? projects.filter(function (project) { return project.solution_id === solutionId; })
+                    : projects.slice();
+            }
+
+            function componentsForProject(data, projectId) {
+                var components = Array.isArray(data.components) ? data.components : [];
+                return projectId
+                    ? components.filter(function (component) { return component.project_id === projectId; })
+                    : components.slice();
+            }
+
+            function ensureHierarchySelection(data) {
+                var solutions = Array.isArray(data.solutions) ? data.solutions : [];
+                var activeSolutionId = data.activeSolutionId || (solutions[0] && solutions[0].id) || "";
+                var nextSolutionId = state.hierarchySelection.solutionId || activeSolutionId;
+                if (nextSolutionId && !solutions.some(function (solution) { return solution.id === nextSolutionId; })) {
+                    nextSolutionId = activeSolutionId;
+                }
+
+                var availableProjects = projectsForSolution(data, nextSolutionId);
+                var activeProjectId = data.activeProjectId || (availableProjects[0] && availableProjects[0].id) || "";
+                var nextProjectId = state.hierarchySelection.projectId || activeProjectId;
+                if (nextProjectId && !availableProjects.some(function (project) { return project.id === nextProjectId; })) {
+                    nextProjectId = activeProjectId;
+                }
+
+                var availableComponents = componentsForProject(data, nextProjectId);
+                var activeComponentId = data.activeComponentId || (availableComponents[0] && availableComponents[0].id) || "";
+                var nextComponentId = state.hierarchySelection.componentId || activeComponentId;
+                if (nextComponentId && !availableComponents.some(function (component) { return component.id === nextComponentId; })) {
+                    nextComponentId = activeComponentId;
+                }
+
+                state.hierarchySelection = {
+                    solutionId: nextSolutionId || "",
+                    projectId: nextProjectId || "",
+                    componentId: nextComponentId || "",
+                };
+
+                return {
+                    solutions: solutions,
+                    projects: availableProjects,
+                    components: availableComponents,
+                };
+            }
+
+            function setHierarchySelection(level, value, data) {
+                var normalized = String(value || "");
+                if (level === "solution") {
+                    state.hierarchySelection.solutionId = normalized;
+                    var availableProjects = projectsForSolution(data, normalized);
+                    state.hierarchySelection.projectId = (availableProjects[0] && availableProjects[0].id) || "";
+                    var availableComponents = componentsForProject(data, state.hierarchySelection.projectId);
+                    state.hierarchySelection.componentId = (availableComponents[0] && availableComponents[0].id) || "";
+                    render();
+                    return;
+                }
+
+                if (level === "project") {
+                    state.hierarchySelection.projectId = normalized;
+                    var availableComponents = componentsForProject(data, normalized);
+                    state.hierarchySelection.componentId = (availableComponents[0] && availableComponents[0].id) || "";
+                    render();
+                    return;
+                }
+
+                state.hierarchySelection.componentId = normalized;
+                render();
+            }
+
+            async function activateHierarchy(level) {
+                var selection = state.hierarchySelection || {};
+                var id = level === "solution"
+                    ? selection.solutionId
+                    : level === "project"
+                        ? selection.projectId
+                        : selection.componentId;
+                if (!id) return;
+
+                var tool = level === "solution"
+                    ? "specrail_solution_activate"
+                    : level === "project"
+                        ? "specrail_project_activate"
+                        : "specrail_component_activate";
+                var label = level.charAt(0).toUpperCase() + level.slice(1);
+                state.runningHierarchyAction = level + ":" + id;
+                appendLog("Switching active " + level + ": " + id, "action");
+                render();
+                try {
+                    await callTool(tool, Object.assign({}, state.toolArguments, { id: id }));
+                    state.editingFeatureId = null;
+                    state.editingOutcomeId = null;
+                    state.featureDraft = null;
+                    state.outcomeDraft = null;
+                    state.creatingFeature = false;
+                    state.creatingOutcome = false;
+                    state.newFeatureDraft = null;
+                    state.newOutcomeDraft = null;
+                    state.toolResult = await callTool("specrail_feature_navigate", Object.assign({}, state.toolArguments));
+                    appendLog(label + " activated: " + id, "success");
+                } catch (e) {
+                    appendLog(label + " activation failed: " + (e && e.message ? e.message : String(e)), "error");
+                }
+                state.runningHierarchyAction = null;
+                render();
+            }
+
+            function renderHierarchySwitcher(data) {
+                var options = ensureHierarchySelection(data);
+                var panel = document.createElement("section");
+                panel.className = "hierarchy-panel";
+
+                var activeBits = [data.activeSolutionId, data.activeProjectId, data.activeComponentId].filter(Boolean);
+                var header = document.createElement("div");
+                header.className = "hierarchy-head";
+                header.innerHTML =
+                    '<div><div class="hierarchy-title">Active hierarchy path</div><div class="hierarchy-copy">Switch the active solution, project, or component to change the feature scope in this navigator.</div></div>' +
+                    '<span class="stat-chip"><strong>' + esc(activeBits.join(" / ") || "none") + '</strong></span>';
+                panel.appendChild(header);
+
+                var grid = document.createElement("div");
+                grid.className = "hierarchy-grid";
+
+                [
+                    {
+                        level: "solution",
+                        label: "Solution",
+                        items: options.solutions,
+                        value: state.hierarchySelection.solutionId,
+                        activeValue: data.activeSolutionId || "",
+                        meta: options.solutions.length + " total",
+                    },
+                    {
+                        level: "project",
+                        label: "Project",
+                        items: options.projects,
+                        value: state.hierarchySelection.projectId,
+                        activeValue: data.activeProjectId || "",
+                        meta: options.projects.length + " in solution",
+                        disabled: !state.hierarchySelection.solutionId,
+                    },
+                    {
+                        level: "component",
+                        label: "Component",
+                        items: options.components,
+                        value: state.hierarchySelection.componentId,
+                        activeValue: data.activeComponentId || "",
+                        meta: options.components.length + " in project",
+                        disabled: !state.hierarchySelection.projectId,
+                    }
+                ].forEach(function (field) {
+                    var wrap = document.createElement("div");
+                    wrap.className = "hierarchy-field";
+
+                    var label = document.createElement("div");
+                    label.className = "hierarchy-label";
+                    label.textContent = field.label;
+                    wrap.appendChild(label);
+
+                    var select = document.createElement("select");
+                    select.className = "hierarchy-select";
+                    select.disabled = !!field.disabled || state.isSaving || !!state.runningHierarchyAction;
+                    var placeholder = document.createElement("option");
+                    placeholder.value = "";
+                    placeholder.textContent = field.items.length ? ("Choose " + field.label.toLowerCase()) : ("No " + field.label.toLowerCase() + "s");
+                    select.appendChild(placeholder);
+                    field.items.forEach(function (item) {
+                        var option = document.createElement("option");
+                        option.value = item.id;
+                        option.textContent = hierarchyOptionLabel(item);
+                        option.selected = item.id === field.value;
+                        select.appendChild(option);
+                    });
+                    select.value = field.value || "";
+                    select.addEventListener("change", function (ev) {
+                        setHierarchySelection(field.level, ev.target.value, data);
+                    });
+                    wrap.appendChild(select);
+
+                    var actions = document.createElement("div");
+                    actions.className = "btn-group";
+                    var switchBtn = document.createElement("button");
+                    switchBtn.className = field.value && field.value !== field.activeValue ? "btn btn-primary btn-sm" : "btn btn-sm";
+                    switchBtn.disabled = !field.value || field.value === field.activeValue || state.isSaving || !!state.runningHierarchyAction;
+                    switchBtn.textContent = state.runningHierarchyAction === (field.level + ":" + field.value)
+                        ? "Switching…"
+                        : (field.value === field.activeValue ? "Active" : "Switch");
+                    (function (level) {
+                        switchBtn.addEventListener("click", function () {
+                            activateHierarchy(level);
+                        });
+                    })(field.level);
+                    actions.appendChild(switchBtn);
+                    wrap.appendChild(actions);
+
+                    var meta = document.createElement("div");
+                    meta.className = "hierarchy-meta";
+                    meta.textContent = field.value === field.activeValue
+                        ? (field.value ? ("Currently active • " + field.meta) : field.meta)
+                        : (field.value ? ("Selected: " + field.value + " • " + field.meta) : field.meta);
+                    wrap.appendChild(meta);
+
+                    grid.appendChild(wrap);
+                });
+
+                panel.appendChild(grid);
+                return panel;
+            }
+
             function getOutcomeReview(outcome) {
                 return outcome && outcome.testReview && typeof outcome.testReview === "object" ? outcome.testReview : null;
             }
 
+            function requiredTestNamesFromReview(requiredIds, review) {
+                var byId = {};
+                if (review && Array.isArray(review.related_tests)) {
+                    review.related_tests.forEach(function (test) {
+                        var id = String((test && test.id) || "").trim();
+                        if (!id) return;
+                        byId[id] = String((test && test.name) || "").trim();
+                    });
+                }
+                return (Array.isArray(requiredIds) ? requiredIds : []).map(function (id) {
+                    return byId[String(id)] || "";
+                });
+            }
+
+            function currentOutcomeReview(featureId, outcomeId) {
+                var sc = state.toolResult && state.toolResult.structuredContent;
+                var outcomes = Array.isArray(sc && sc.outcomes) ? sc.outcomes : [];
+                var found = outcomes.find(function (outcome) {
+                    return String((outcome && outcome.id) || "") === String(outcomeId || "");
+                });
+                if (!found) return null;
+                return getOutcomeReview(found);
+            }
+
             function reviewSummary(review) {
                 if (!review) return { tone: "muted", text: "Test health is not available for this outcome yet." };
-                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test paths to make this outcome verifiable." };
+                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test IDs to make this outcome verifiable." };
+                if (review.has_no_required_test_files) return { tone: "warn", text: "Add required test file paths to make this outcome verifiable." };
                 if (review.has_no_related_tests) return { tone: "warn", text: "No manifest tests are linked to this outcome yet." };
-                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test path" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test ID" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.missing_required_test_files.length > 0) return { tone: "warn", text: review.missing_required_test_files.length + " required test file path" + (review.missing_required_test_files.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
                 if (review.planned_required_tests.length > 0) return { tone: "warn", text: review.planned_required_tests.length + " required test" + (review.planned_required_tests.length !== 1 ? "s remain" : " remains") + " in planned status." };
+                if (review.planned_required_test_files.length > 0) return { tone: "warn", text: review.planned_required_test_files.length + " required test file" + (review.planned_required_test_files.length !== 1 ? "s remain" : " remains") + " in planned status." };
                 return { tone: "success", text: "Required tests are linked and ready to drive implementation." };
             }
 
@@ -2005,7 +2323,7 @@
 
             function testDisplayName(test) {
                 var fileName = testFileName(test && test.path);
-                var methodName = String((test && test.id) || "unnamed-test");
+                var methodName = String((test && test.name) || "").trim() || String((test && test.id) || "unnamed-test");
                 return fileName === methodName ? fileName : (fileName + " :: " + methodName);
             }
 
@@ -2203,9 +2521,12 @@
                 var chips = document.createElement("div");
                 chips.className = "test-chips";
                 appendTestChip(chips, review.related_test_count + " linked", "");
-                appendTestChip(chips, review.required_test_count + " required", "");
+                appendTestChip(chips, review.required_test_count + " required ids", "");
+                appendTestChip(chips, review.required_test_file_count + " required files", "");
                 if (review.missing_required_tests.length > 0) appendTestChip(chips, review.missing_required_tests.length + " missing", "danger");
+                if (review.missing_required_test_files.length > 0) appendTestChip(chips, review.missing_required_test_files.length + " file missing", "danger");
                 if (review.planned_required_tests.length > 0) appendTestChip(chips, review.planned_required_tests.length + " planned", "warning");
+                if (review.planned_required_test_files.length > 0) appendTestChip(chips, review.planned_required_test_files.length + " file planned", "warning");
                 if (review.undeclared_tests.length > 0) appendTestChip(chips, review.undeclared_tests.length + " undeclared", "warning");
                 section.appendChild(chips);
 
@@ -2217,12 +2538,20 @@
                     section.appendChild(renderPathList(review.suggested_test_paths, "suggestion-list"));
                 }
 
-                if (review.required_test_paths.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                if (review.required_test_ids.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Required test paths";
+                    requiredTitle.textContent = "Required test IDs";
                     section.appendChild(requiredTitle);
-                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                    section.appendChild(renderPathList(review.required_test_ids, "path-list"));
+                }
+
+                if (review.required_test_files.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
+                    var requiredFilesTitle = document.createElement("div");
+                    requiredFilesTitle.className = "card-note";
+                    requiredFilesTitle.textContent = "Required test files";
+                    section.appendChild(requiredFilesTitle);
+                    section.appendChild(renderPathList(review.required_test_files, "path-list"));
                 }
 
                 var actionRow = document.createElement("div");
@@ -2243,7 +2572,7 @@
                     actionRow.appendChild(previewBtn);
                 }
 
-                if (review.has_no_required_tests) {
+                if (review.has_no_required_tests || review.has_no_required_test_files) {
                     appendActionButton(actionRow, {
                         title: "Generate Initial Test",
                         tool: "specrail_test_generate",
@@ -2301,7 +2630,7 @@
                 copy.className = "section-card-copy";
                 copy.textContent = review.related_test_count > 0
                     ? review.related_test_count + " manifest test" + (review.related_test_count !== 1 ? "s are" : " is") + " linked to this outcome."
-                    : "No manifest tests are linked yet. Use the required test paths below to register or generate them.";
+                    : "No manifest tests are linked yet. Use required test IDs and file paths below to register or generate them.";
                 section.appendChild(copy);
 
                 if (review.related_tests.length > 0) {
@@ -2331,23 +2660,32 @@
                             appendActionButton(actions, {
                                 title: "Add As Required",
                                 tool: "specrail_outcome_add_required_test",
-                                args: { feature_id: featureId, outcome_id: outcome.id, path: test.path },
+                                args: { feature_id: featureId, outcome_id: outcome.id, test_id: test.id, path: test.path },
                                 refresh: true,
                             });
                             item.appendChild(actions);
                         }
 
-                        list.appendChild(item);
+                        source: "next-banner",
+                            list.appendChild(item);
                     });
                     section.appendChild(list);
                 }
 
-                if (review.required_test_paths.length > 0) {
+                if (review.required_test_ids.length > 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Expected required test paths";
+                    requiredTitle.textContent = "Expected required test IDs";
                     section.appendChild(requiredTitle);
-                    section.appendChild(renderPathList(review.required_test_paths, "path-list"));
+                    section.appendChild(renderPathList(review.required_test_ids, "path-list"));
+                }
+
+                if (review.required_test_files.length > 0) {
+                    var requiredFilesTitle = document.createElement("div");
+                    requiredFilesTitle.className = "card-note";
+                    requiredFilesTitle.textContent = "Expected required test files";
+                    section.appendChild(requiredFilesTitle);
+                    section.appendChild(renderPathList(review.required_test_files, "path-list"));
                 }
 
                 return section;
@@ -2409,7 +2747,9 @@
                         feature_id: featureId, outcome_id: o.id || outcomeId, title: o.title || "",
                         goal: o.goal || "", order: String(o.order || 1),
                         prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
-                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests)
+                        forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests),
+                        required_test_names: arrayToLines(requiredTestNamesFromReview(o.required_tests, currentOutcomeReview(featureId, outcomeId))),
+                        required_test_files: arrayToLines(o.required_test_files)
                     };
                     appendLog("Editing outcome: " + outcomeId, "info"); render();
                 } catch (e) { appendLog("Error: " + (e && e.message ? e.message : String(e)), "error"); }
@@ -2428,7 +2768,9 @@
                         prerequisites: linesToArray(state.outcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.outcomeDraft.required_tests)
+                        required_tests: linesToArray(state.outcomeDraft.required_tests),
+                        required_test_names: linesToArray(state.outcomeDraft.required_test_names),
+                        required_test_files: linesToArray(state.outcomeDraft.required_test_files)
                     }));
                     state.editingOutcomeId = null; state.outcomeDraft = null;
                     await refreshView(); appendLog("Outcome saved.", "success"); state.isSaving = false; render();
@@ -2459,7 +2801,7 @@
 
             function startNewOutcome(featureId, suggestedOrder) {
                 state.creatingOutcome = true;
-                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "" };
+                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "", required_test_names: "", required_test_files: "" };
                 appendLog("Creating new outcome\u2026", "info"); render();
             }
             function cancelNewOutcome() { state.creatingOutcome = false; state.newOutcomeDraft = null; render(); }
@@ -2475,7 +2817,9 @@
                         prerequisites: linesToArray(state.newOutcomeDraft.prerequisites),
                         allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths),
-                        required_tests: linesToArray(state.newOutcomeDraft.required_tests)
+                        required_tests: linesToArray(state.newOutcomeDraft.required_tests),
+                        required_test_names: linesToArray(state.newOutcomeDraft.required_test_names),
+                        required_test_files: linesToArray(state.newOutcomeDraft.required_test_files)
                     }));
                     state.creatingOutcome = false; state.newOutcomeDraft = null;
                     await refreshView(); appendLog("Outcome created.", "success"); state.isSaving = false; render();
@@ -2527,6 +2871,64 @@
                     container.appendChild(prog); return;
                 }
                 var meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; container.appendChild(meta);
+            }
+
+            function appendFeatureTestProgress(container, feature) {
+                var totalTestCount = Number(feature.totalTestCount || 0);
+                var passingTestCount = Number(feature.passingTestCount || 0);
+                var writtenTestCount = Number(feature.writtenTestCount || 0);
+                var plannedTestCount = Number(feature.plannedTestCount || 0);
+                var failingTestCount = Number(feature.failingTestCount || 0);
+                var undeclaredOutcomeCount = Number(feature.undeclaredOutcomeCount || 0);
+
+                if (totalTestCount <= 0 && undeclaredOutcomeCount <= 0) {
+                    return;
+                }
+
+                var wrap = document.createElement("div");
+                wrap.className = "progress-wrap";
+
+                var label = document.createElement("div");
+                label.className = "progress-label";
+                if (totalTestCount > 0) {
+                    label.innerHTML = '<span>' + passingTestCount + '/' + totalTestCount + ' tests passing</span><span>' + Math.round((passingTestCount / totalTestCount) * 100) + '%</span>';
+                } else {
+                    label.innerHTML = '<span>No linked tests yet</span><span>0%</span>';
+                }
+                wrap.appendChild(label);
+
+                var bar = document.createElement("div");
+                bar.className = "progress-bar";
+
+                if (totalTestCount > 0) {
+                    [
+                        { count: passingTestCount, className: "passing" },
+                        { count: writtenTestCount, className: "written" },
+                        { count: plannedTestCount, className: "planned" },
+                        { count: failingTestCount, className: "failing" },
+                    ].forEach(function (segment) {
+                        if (segment.count <= 0) return;
+                        var fill = document.createElement("div");
+                        fill.className = "progress-fill " + segment.className;
+                        fill.style.width = ((segment.count / totalTestCount) * 100) + "%";
+                        bar.appendChild(fill);
+                    });
+                }
+
+                wrap.appendChild(bar);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                if (passingTestCount > 0) appendTestChip(chips, passingTestCount + " passing", "passing");
+                if (writtenTestCount > 0) appendTestChip(chips, writtenTestCount + " written", "");
+                if (plannedTestCount > 0) appendTestChip(chips, plannedTestCount + " planned", "warning");
+                if (failingTestCount > 0) appendTestChip(chips, failingTestCount + " failing", "danger");
+                if (undeclaredOutcomeCount > 0) appendTestChip(chips, undeclaredOutcomeCount + " outcome" + (undeclaredOutcomeCount !== 1 ? "s" : "") + " with undeclared tests", "warning");
+                if (chips.childNodes.length > 0) {
+                    wrap.appendChild(chips);
+                }
+
+                container.appendChild(wrap);
             }
 
             function createHeroStat(value, label, tone) {
@@ -2630,6 +3032,8 @@
                     icon: features.length ? "\u{1F6E4}\uFE0F" : "\u{1F682}",
                 }));
 
+                root.appendChild(renderHierarchySwitcher(data));
+
                 buildNextStepBanner(data, root);
 
                 if (state.creatingFeature && state.newFeatureDraft) {
@@ -2674,11 +3078,12 @@
                         buildSummary: function (summary) {
                             var row = document.createElement("div"); row.className = "card-row";
                             var body = document.createElement("div"); body.className = "card-body";
-                            body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div><div class="card-meta">' + esc(feature.pathLabel || "") + '</div>';
+                            body.innerHTML = '<div class="card-title">' + esc(feature.title || feature.id) + '</div><div class="card-meta">' + esc(feature.pathLabel || "") + '</div>';
                             row.appendChild(body);
                             row.appendChild(badge(isActive ? "active" : String(feature.status || "pending")));
                             summary.appendChild(row);
                             appendFeatureProgress(summary, outcomeCount, verifiedCount);
+                            appendFeatureTestProgress(summary, feature);
                         },
                         buildContent: function (content) {
                             var actions = document.createElement("div"); actions.className = "card-actions";
@@ -2772,6 +3177,16 @@
                 var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                 var plannedTests = outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0);
                 var selectedFeatureKey = cardStateKey("selected-feature", featureId);
+                var selectedFeatureSummary = Object.assign({}, featureSummaryById(data, featureId) || {}, {
+                    totalTestCount: outcomes.reduce(function (n, o) { return n + Number(o.testCount || 0); }, 0),
+                    passingTestCount: outcomes.reduce(function (n, o) { return n + Number(o.passingTestCount || 0); }, 0),
+                    writtenTestCount: outcomes.reduce(function (n, o) { return n + Number(o.writtenTestCount || 0); }, 0),
+                    plannedTestCount: outcomes.reduce(function (n, o) { return n + Number(o.plannedTestCount || 0); }, 0),
+                    failingTestCount: outcomes.reduce(function (n, o) { return n + Number(o.failingTestCount || 0); }, 0),
+                    undeclaredOutcomeCount: outcomes.reduce(function (n, o) {
+                        return n + (Number(o.undeclaredTestCount || 0) > 0 ? 1 : 0);
+                    }, 0),
+                });
 
                 root.appendChild(buildHeroPanel({
                     kicker: "Focused feature",
@@ -2794,6 +3209,8 @@
                     icon: activeOutcome && activeOutcome.status === "verified" ? "\u{1F680}" : "\u{1F3AF}",
                 }));
 
+                root.appendChild(renderHierarchySwitcher(data));
+
                 var fCard = makeCollapsibleCard({
                     key: selectedFeatureKey,
                     baseClass: "card card-collapsible",
@@ -2806,14 +3223,18 @@
                     buildSummary: function (summary) {
                         var fRow = document.createElement("div"); fRow.className = "card-row";
                         var fBody = document.createElement("div"); fBody.className = "card-body";
-                        fBody.innerHTML = '<div class="card-id">' + esc(featureId) + '</div><div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
+                        fBody.innerHTML = '<div class="card-title">' + esc(selectedFeature.title || featureId) + '</div>';
                         fRow.appendChild(fBody);
                         fRow.appendChild(badge(isActiveF ? "active" : String(selectedFeature.status || "pending")));
                         summary.appendChild(fRow);
                         appendFeatureProgress(summary, featureOutcomeCount, featureVerifiedCount);
+                        appendFeatureTestProgress(summary, selectedFeatureSummary);
                     },
                     buildContent: function (content) {
                         var fActions = document.createElement("div"); fActions.className = "card-actions";
+                        var implementStatus = featureActionStatus(selectedFeatureSummary, "implementStatus", "Run implement for each outcome in this feature.");
+                        var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
+                        var featureHasOutcomes = featureOutcomeCount > 0;
                         if (!isActiveF) {
                             var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
                             actBtn.disabled = state.isActivating === featureId || state.isSaving;
@@ -2823,6 +3244,34 @@
                             })(featureId);
                             fActions.appendChild(actBtn);
                         }
+                        appendActionButton(fActions, {
+                            title: "Run Implement",
+                            tool: "specrail_implement",
+                            args: {},
+                            kind: "default",
+                            refresh: true,
+                            disabled: !isActiveF || !featureHasOutcomes,
+                            tooltip: !isActiveF
+                                ? "Activate this feature and one of its outcomes before running implement."
+                                : !featureHasOutcomes
+                                    ? "Create at least one outcome before running implement."
+                                    : implementStatus.detail,
+                            status: implementStatus
+                        });
+                        appendActionButton(fActions, {
+                            title: "Run Verify",
+                            tool: "specrail_verify",
+                            args: {},
+                            kind: "default",
+                            refresh: true,
+                            disabled: !isActiveF || !featureHasOutcomes,
+                            tooltip: !isActiveF
+                                ? "Activate this feature and one of its outcomes before running verify."
+                                : !featureHasOutcomes
+                                    ? "Create at least one outcome before running verify."
+                                    : verifyStatus.detail,
+                            status: verifyStatus
+                        });
                         var feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
                         feEditBtn.disabled = state.isSaving; feEditBtn.textContent = "Edit Feature";
                         (function (fid) {
@@ -2863,7 +3312,9 @@
                         mkField("Order", "order", d.order, "newOutcome"),
                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "newOutcome", true),
                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "newOutcome", true),
-                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "newOutcome", true, "Test file paths that must pass"),
+                        mkField("Required test IDs (one per line)", "required_tests", d.required_tests, "newOutcome", true, "Manifest test IDs that must pass"),
+                        mkField("Required test names (one per line)", "required_test_names", d.required_test_names, "newOutcome", true, "Optional display names saved into matching tests.name rows"),
+                        mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "newOutcome", true, "Test file paths used for generation"),
                     ], saveNewOutcome, cancelNewOutcome));
                 }
 
@@ -2902,9 +3353,7 @@
                                 var review = getOutcomeReview(outcome);
                                 body.innerHTML =
                                     '<div class="outcome-num">Outcome ' + esc(outcome.order != null ? outcome.order : "?") + '</div>' +
-                                    '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>' +
-                                    '<div class="outcome-id">' + esc(outcome.id) + '</div>' +
-                                    '<div class="outcome-goal">' + esc(outcome.goal || "") + '</div>';
+                                    '<div class="outcome-title">' + esc(outcome.title || outcome.id) + '</div>';
 
                                 var tc = Number(outcome.testCount || 0);
                                 var passingCount = Number(outcome.passingTestCount || 0);
@@ -2918,7 +3367,10 @@
                                     var noTest = document.createElement("span"); noTest.className = "test-chip warning"; noTest.textContent = "no tests"; chips.appendChild(noTest);
                                 }
                                 if (review && review.missing_required_tests && review.missing_required_tests.length > 0) {
-                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " missing"; chips.appendChild(missing);
+                                    var missing = document.createElement("span"); missing.className = "test-chip danger"; missing.textContent = review.missing_required_tests.length + " id missing"; chips.appendChild(missing);
+                                }
+                                if (review && review.missing_required_test_files && review.missing_required_test_files.length > 0) {
+                                    var missingFiles = document.createElement("span"); missingFiles.className = "test-chip danger"; missingFiles.textContent = review.missing_required_test_files.length + " file missing"; chips.appendChild(missingFiles);
                                 }
                                 if (review && review.undeclared_tests && review.undeclared_tests.length > 0) {
                                     var undeclared = document.createElement("span"); undeclared.className = "test-chip warning"; undeclared.textContent = review.undeclared_tests.length + " undeclared"; chips.appendChild(undeclared);
@@ -2942,9 +3394,9 @@
                                     actions.appendChild(actBtn);
                                 }
 
-                                if (review && (review.needs_generation || review.has_no_required_tests)) {
+                                if (review && (review.needs_generation || review.has_no_required_tests || review.has_no_required_test_files)) {
                                     appendActionButton(actions, {
-                                        title: review.has_no_required_tests ? "Generate Initial Test" : "Generate Missing Tests",
+                                        title: (review.has_no_required_tests || review.has_no_required_test_files) ? "Generate Initial Test" : "Generate Missing Tests",
                                         tool: "specrail_test_generate",
                                         args: { feature_id: featureId, outcome_id: outcome.id },
                                         refresh: true,
@@ -3002,7 +3454,9 @@
                                         mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
                                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
                                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
-                                        mkField("Required tests (one path per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required test IDs (one per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required test names (one per line)", "required_test_names", d.required_test_names, "outcome", true),
+                                        mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "outcome", true),
                                     ], saveOutcomeEdit, cancelOutcomeEdit));
                                 }
                             },
@@ -3084,6 +3538,36 @@
                     return;
                 }
                 if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
+            });
+
+            document.addEventListener("pointerdown", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                appendLog("Pointer down on " + buttonLogLabel(button), "info");
+            }, true);
+
+            document.addEventListener("click", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                appendLog("Click captured on " + buttonLogLabel(button), button.disabled ? "warn" : "info");
+            }, true);
+
+            document.addEventListener("click", function (event) {
+                var button = event.target && event.target.closest ? event.target.closest("button[data-tool-action='true']") : null;
+                if (!button) return;
+                if (button.disabled) {
+                    appendLog("Click ignored for disabled button: " + buttonLogLabel(button), "warn");
+                    return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                appendLog("Dispatching tool action: " + buttonLogLabel(button), "action");
+                runToolAction(
+                    button.dataset.toolTitle || "Run Action",
+                    button.dataset.toolName || "",
+                    decodeButtonArgs(button.dataset.toolArgs),
+                    { refresh: button.dataset.toolRefresh === "true" }
+                );
             });
 
             new ResizeObserver(function () { reportSize(); }).observe(document.body);

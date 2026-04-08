@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -31,7 +33,7 @@ fn specrail(dir: &TempDir) -> Command {
 }
 
 #[test]
-fn outcome_new_creates_file() {
+fn outcome_new_persists_record() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
@@ -45,10 +47,12 @@ fn outcome_new_creates_file() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    assert!(path.exists(), "outcome file not created");
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Domain Validation"))
+        .stdout(contains("Establish domain invariants."));
 }
 
 #[test]
@@ -110,10 +114,9 @@ fn outcome_activate_updates_state() {
         .assert()
         .success();
 
-    let state =
-        fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("outcome-1-domain"), "state should reference active outcome");
-    assert!(state.contains("auth-login"), "state should reference active feature");
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_outcome.as_deref(), Some("outcome-1-domain"));
+    assert_eq!(state.active_feature.as_deref(), Some("auth-login"));
 }
 
 #[test]
@@ -134,7 +137,8 @@ fn outcome_new_prints_field_explanations_and_next_steps() {
         .stdout(contains("goal   — acceptance criterion"))
         .stdout(contains("order  — sequence position"))
         .stdout(contains("allow  — glob paths the AI agent may modify"))
-        .stdout(contains("test   — test file paths for AI-assisted generation"))
+        .stdout(contains("test   — required test names/facts that must pass"))
+        .stdout(contains("test-file — test file paths used by `specrail test generate`"))
         .stdout(contains("Next steps:"))
         .stdout(contains("specrail test add"))
         .stdout(contains("specrail outcome activate auth-login outcome-1-domain"));
@@ -153,7 +157,8 @@ fn outcome_show_prints_contextual_labels() {
             "--order", "1",
             "--allow", "src/auth/**",
             "--forbid", "src/billing/**",
-            "--test", "tests/auth/validate.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
         .success();
@@ -166,7 +171,8 @@ fn outcome_show_prints_contextual_labels() {
         .stdout(contains("goal is the acceptance criterion"))
         .stdout(contains("AI agent may only modify"))
         .stdout(contains("AI agent must NOT touch"))
-        .stdout(contains("used by `specrail test generate`"))
+        .stdout(contains("Required test names / facts:"))
+        .stdout(contains("No required test file paths set."))
         .stdout(contains("add individual tests with `specrail test add`"));
 }
 
@@ -189,7 +195,8 @@ fn outcome_show_suggests_test_add_when_no_required_tests() {
         .args(["outcome", "show", "auth-login", "outcome-1-domain"])
         .assert()
         .success()
-        .stdout(contains("No required test paths set."))
+        .stdout(contains("No required test names set."))
+        .stdout(contains("No required test file paths set."))
         .stdout(contains("specrail test add"));
 }
 
@@ -234,7 +241,7 @@ fn outcome_show_displays_details() {
 }
 
 #[test]
-fn outcome_edit_updates_existing_file() {
+fn outcome_edit_updates_existing_record() {
     let dir = TempDir::new().unwrap();
     setup(&dir);
 
@@ -257,21 +264,22 @@ fn outcome_edit_updates_existing_file() {
             "--order", "2",
             "--allow", "src/auth/**",
             "--forbid", "src/http/**",
-            "--test", "tests/auth_login.rs",
+            "--test", "validates_credentials",
+            "--test-file", "tests/auth_login.rs",
         ])
         .assert()
         .success()
         .stdout(contains("updated"));
 
-    let outcome = fs::read_to_string(
-        dir.path().join(".specrail/outcomes/auth-login/outcome-1-domain.yaml"),
-    )
-    .unwrap();
-    assert!(outcome.contains("Credential Validation"));
-    assert!(outcome.contains("Updated goal."));
-    assert!(outcome.contains("order: 2"));
-    assert!(outcome.contains("src/auth/**"));
-    assert!(outcome.contains("tests/auth_login.rs"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Credential Validation"))
+        .stdout(contains("Updated goal."))
+        .stdout(contains("Outcome: outcome-1-domain (order 2)"))
+        .stdout(contains("src/auth/**"))
+        .stdout(contains("No required test file paths set."));
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("outcome_edited"));
@@ -292,13 +300,7 @@ fn outcome_edit_resets_verified_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: verified");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "verified");
 
     specrail(&dir)
         .args([
@@ -310,8 +312,11 @@ fn outcome_edit_resets_verified_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }
 
 #[test]
@@ -329,13 +334,7 @@ fn outcome_edit_resets_legacy_complete_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: complete");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "complete");
 
     specrail(&dir)
         .args([
@@ -347,8 +346,11 @@ fn outcome_edit_resets_legacy_complete_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }
 
 #[test]
@@ -366,13 +368,7 @@ fn outcome_edit_resets_legacy_completed_status_to_pending() {
         .assert()
         .success();
 
-    let path = dir
-        .path()
-        .join(".specrail/outcomes/auth-login/outcome-1-domain.yaml");
-    let updated = fs::read_to_string(&path)
-        .unwrap()
-        .replace("status: pending", "status: completed");
-    fs::write(&path, updated).unwrap();
+    support::set_outcome_status(&dir, "auth-login", "outcome-1-domain", "completed");
 
     specrail(&dir)
         .args([
@@ -384,6 +380,9 @@ fn outcome_edit_resets_legacy_completed_status_to_pending() {
         .assert()
         .success();
 
-    let outcome = fs::read_to_string(&path).unwrap();
-    assert!(outcome.contains("status: pending"));
+    specrail(&dir)
+        .args(["outcome", "show", "auth-login", "outcome-1-domain"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Pending"));
 }

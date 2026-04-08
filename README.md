@@ -20,13 +20,15 @@ The tool is designed to help you:
 ```text
 .specrail/
 ├── project.yaml
-├── features/
-├── phases/
-├── tests/manifest.yaml
+├── specrail.db
+├── agents/
 └── state/
-    ├── current.yaml
     └── ledger.jsonl
 ```
+
+The local database stores solutions, projects, components, features, outcomes,
+registered tests, and active workflow state. `project.yaml` remains human-editable,
+and `state/ledger.jsonl` remains the append-only audit trail.
 
 Key rules:
 
@@ -288,7 +290,7 @@ Inside `your-ai-wrapper`, read:
 
 ### GitHub Copilot CLI plugin and MCP server
 
-This repository now ships a first-party Copilot CLI plugin under `.github/plugin/` and a built-in MCP server entrypoint at `specrail mcp-server`.
+This repository now ships a first-party Copilot CLI plugin under `.github/plugin/`, a repo-scoped VS Code custom agent under `.github/agents/specrail.agent.md`, and a built-in MCP server entrypoint at `specrail mcp-server`.
 
 Prerequisites:
 
@@ -313,6 +315,10 @@ The plugin manifest points Copilot CLI at this MCP server command:
 ```bash
 specrail mcp-server
 ```
+
+In VS Code, the `Specrail` workspace agent is the repo-aware entrypoint. It should begin with `specrail_status`, use `structuredContent.workflow.recommended_skill` to decide the next stage, and rely on the `specrail_*` MCP tools instead of editing `.specrail/` files directly.
+
+For troubleshooting in VS Code, the workspace MCP config enables stderr logging for the server. Open `MCP: List Servers`, select `specrail`, then choose `Show Output` to inspect the live MCP log stream.
 
 After installing, verify that the plugin and MCP server are loaded:
 

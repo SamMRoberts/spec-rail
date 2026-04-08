@@ -141,6 +141,8 @@ pub fn build_test_generation_prompt(
     prompt.push_str("    {\n");
     prompt.push_str("      \"feature_id\": \"auth\",\n");
     prompt.push_str("      \"outcome_id\": \"outcome-1\",\n");
+    prompt.push_str("      \"id\": \"validates_credentials\",\n");
+    prompt.push_str("      \"name\": \"validates_credentials\",\n");
     prompt.push_str("      \"path\": \"tests/auth/validate.rs\",\n");
     prompt.push_str("      \"kind\": \"unit\",\n");
     prompt.push_str("      \"purpose_refs\": [\"goal:Validate credentials\"],\n");
@@ -150,20 +152,24 @@ pub fn build_test_generation_prompt(
     prompt.push_str("}\n\n");
 
     prompt.push_str("## Rules\n");
-    prompt.push_str("1. Generate exactly one test object for each required test path declared in outcome.required_tests.\n");
+    prompt.push_str("1. Generate exactly one test object for each required test declared in outcome.required_tests and outcome.required_test_files.\n");
     if allow_path_discovery {
-        prompt.push_str("2. If the scoped outcome has no required_tests yet, generate exactly one focused test object for that outcome and choose a canonical path for it.\n");
-        prompt.push_str("3. Do not invent extra test paths beyond declared required_tests, except for that single bootstrap test when no required_tests exist.\n");
+        prompt.push_str("2. If the scoped outcome has no complete required test metadata yet, generate exactly one focused test object for that outcome and choose a canonical test name and path for it.\n");
+        prompt.push_str("3. Do not invent extra test names or paths beyond the declared required test metadata, except for that single bootstrap test when metadata is incomplete.\n");
         prompt.push_str("4. Use the declared feature_id and outcome_id for each generated test.\n");
-        prompt.push_str("5. The content must be a complete file that can be written directly to disk.\n");
-        prompt.push_str("6. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
-        prompt.push_str("7. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+        prompt.push_str("5. Set the generated test object's name to the required test name/fact for that test.\n");
+        prompt.push_str("6. Set the generated test object's id to a stable unique manifest identifier (it may match name).\n");
+        prompt.push_str("7. The content must be a complete file that can be written directly to disk.\n");
+        prompt.push_str("8. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
+        prompt.push_str("9. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path and id.\n\n");
     } else {
-        prompt.push_str("2. Do not invent extra test paths.\n");
+        prompt.push_str("2. Do not invent extra test names or paths.\n");
         prompt.push_str("3. Use the declared feature_id and outcome_id for each generated test.\n");
-        prompt.push_str("4. The content must be a complete file that can be written directly to disk.\n");
-        prompt.push_str("5. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
-        prompt.push_str("6. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path.\n\n");
+        prompt.push_str("4. Set the generated test object's name to the declared required test name/fact for that test.\n");
+        prompt.push_str("5. Set the generated test object's id to a stable unique manifest identifier (it may match name).\n");
+        prompt.push_str("6. The content must be a complete file that can be written directly to disk.\n");
+        prompt.push_str("7. Prefer minimal, focused tests that align to the feature purpose and outcome goal.\n");
+        prompt.push_str("8. If a required test path already appears in the manifest, regenerate it with updated content but keep the same path and id.\n\n");
     }
 
     prompt.push_str("## Project YAML\n```yaml\n");

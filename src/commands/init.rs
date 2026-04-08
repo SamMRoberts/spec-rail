@@ -4,7 +4,7 @@ use crate::{
     core::{
         config::ProjectConfig,
         ledger::Ledger,
-        models::{LedgerEvent, LedgerEventType, ProjectState, TestManifest},
+        models::{LedgerEvent, LedgerEventType},
         repository::Repository,
     },
     runtime::filesystem::{ensure_dir, write_if_missing},
@@ -14,7 +14,7 @@ pub struct InitOutcome {
     pub should_start_wizard: bool,
 }
 
-pub fn run(repo: &Repository) -> Result<InitOutcome> {
+pub fn run(repo: &Repository, no_wizard: bool) -> Result<InitOutcome> {
     let specrail = repo.specrail_dir();
     let already_initialized = specrail.is_dir();
 
@@ -27,16 +27,16 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     // Create directory structure
     for dir in [
         &specrail,
-        &repo.solutions_dir(),
-        &repo.projects_dir(),
-        &repo.components_dir(),
-        &repo.features_dir(),
-        &repo.outcomes_dir(),
-        &repo.tests_dir(),
         &repo.state_dir(),
         &repo.agents_dir(),
     ] {
         ensure_dir(dir)?;
+    }
+
+    let db_exists = repo.db_path().exists();
+    repo.initialize_database()?;
+    if !db_exists {
+        println!("  created  .specrail/specrail.db");
     }
 
     // project.yaml
@@ -48,31 +48,15 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
         println!("  created  .specrail/project.yaml");
     }
 
-    // tests/manifest.yaml
-    let manifest_path = repo.manifest_path();
-    if write_if_missing(
-        &manifest_path,
-        &serde_yaml::to_string(&TestManifest::default())?,
-    )? {
-        println!("  created  .specrail/tests/manifest.yaml");
-    }
-
-    // state/current.yaml
-    let state_path = repo.state_path();
-    if write_if_missing(
-        &state_path,
-        &serde_yaml::to_string(&ProjectState::default())?,
-    )? {
-        println!("  created  .specrail/state/current.yaml");
-    }
-
     // state/ledger.jsonl
     let ledger_path = repo.ledger_path();
     if write_if_missing(&ledger_path, "")? {
         println!("  created  .specrail/state/ledger.jsonl");
     }
 
-    repo.ensure_hierarchy()?;
+    if no_wizard {
+        repo.ensure_hierarchy()?;
+    }
 
     // Record the init event
     let event = LedgerEvent::new(LedgerEventType::ProjectInitialized)
@@ -82,10 +66,13 @@ pub fn run(repo: &Repository) -> Result<InitOutcome> {
     let should_start_wizard = repo.list_features()?.is_empty();
 
     println!("\n✓ specrail project ready.");
-    if should_start_wizard {
-        println!("  Starting setup walkthrough...");
+    if should_start_wizard && !no_wizard {
+        println!("  Starting setup walkthrough (solution → project → component → feature)...");
     } else {
         println!("  Next steps:");
+        println!("    specrail solution new <id> --title <title> --purpose <purpose>");
+        println!("    specrail project new <solution-id> <id> --title <title> --purpose <purpose>");
+        println!("    specrail component new <project-id> <id> --title <title> --purpose <purpose>");
         println!("    specrail feature new <id> --title <title> --purpose <purpose>");
     }
 

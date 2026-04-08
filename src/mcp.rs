@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
@@ -11,7 +12,7 @@ use serde_json::{json, Map, Value};
 
 use crate::core::{
     ledger::Ledger,
-    models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
+    models::{FeatureSpec, LedgerEvent, LedgerEventType, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
     repository::Repository,
 };
 use crate::commands;
@@ -64,7 +65,7 @@ fn mcp_debug_log(message: impl AsRef<str>) {
 
     if log_to_stderr {
         let mut stderr = std::io::stderr().lock();
-        let _ = writeln!(stderr, "[specrail-mcp] {message}");
+        let _ = writeln!(stderr, "[SpecRail MCP] {message}");
     }
 
     let Some(path) = log_path else {
@@ -248,7 +249,13 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         None => bail!("missing tool arguments"),
     };
 
-    match name {
+    mcp_debug_log(format!(
+        "tool call start name={} args={}",
+        name,
+        summarize_for_log(&Value::Object(arguments.clone()).to_string())
+    ));
+
+    let result = match name {
         "specrail_status" => tool_status(arguments),
         "specrail_feature_navigate" => tool_feature_navigate(arguments),
         "specrail_solution_list" => tool_solution_list(arguments),
@@ -290,7 +297,18 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_verify" => tool_verify(arguments),
         "specrail_advance" => tool_advance(arguments),
         other => Ok(tool_error_payload(anyhow!("unknown tool '{other}'"))),
+    };
+
+    match &result {
+        Ok(payload) => mcp_debug_log(format!(
+            "tool call success name={} result={}",
+            name,
+            summarize_for_log(&payload.to_string())
+        )),
+        Err(error) => mcp_debug_log(format!("tool call error name={} error={error:#}", name)),
     }
+
+    result
 }
 
 #[derive(Serialize)]
@@ -317,23 +335,29 @@ struct OutcomeWorkflowSnapshot {
 struct OutcomeTestReview {
     feature_id: String,
     outcome_id: String,
-    required_test_paths: Vec<String>,
+    required_test_ids: Vec<String>,
+    required_test_files: Vec<String>,
     related_tests: Vec<TestSpec>,
     missing_required_tests: Vec<String>,
+    missing_required_test_files: Vec<String>,
     planned_required_tests: Vec<String>,
+    planned_required_test_files: Vec<String>,
     undeclared_tests: Vec<TestSpec>,
     suggested_test_paths: Vec<String>,
     openable_test_paths: Vec<String>,
     required_test_count: usize,
+    required_test_file_count: usize,
     related_test_count: usize,
     has_no_required_tests: bool,
+    has_no_required_test_files: bool,
     has_no_related_tests: bool,
     has_gaps: bool,
     needs_generation: bool,
 }
 
 fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> OutcomeTestReview {
-    let required_test_paths = outcome.required_tests.clone();
+    let required_test_ids = outcome.required_tests.clone();
+    let required_test_files = outcome.required_test_files.clone();
     let related_tests: Vec<TestSpec> = manifest
         .tests
         .iter()
@@ -341,13 +365,29 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
         .cloned()
         .collect();
 
-    let missing_required_tests: Vec<String> = required_test_paths
+    let missing_required_tests: Vec<String> = required_test_ids
+        .iter()
+        .filter(|test_id| !related_tests.iter().any(|test| test.id == **test_id))
+        .cloned()
+        .collect();
+
+    let missing_required_test_files: Vec<String> = required_test_files
         .iter()
         .filter(|path| !related_tests.iter().any(|test| test.path == **path))
         .cloned()
         .collect();
 
-    let planned_required_tests: Vec<String> = required_test_paths
+    let planned_required_tests: Vec<String> = required_test_ids
+        .iter()
+        .filter(|test_id| {
+            related_tests
+                .iter()
+                .any(|test| test.id == **test_id && test.status == TestStatus::Planned)
+        })
+        .cloned()
+        .collect();
+
+    let planned_required_test_files: Vec<String> = required_test_files
         .iter()
         .filter(|path| {
             related_tests
@@ -359,12 +399,15 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 
     let undeclared_tests: Vec<TestSpec> = related_tests
         .iter()
-        .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
+        .filter(|test| {
+            !required_test_ids.iter().any(|test_id| test_id == &test.id)
+                || !required_test_files.iter().any(|path| path == &test.path)
+        })
         .cloned()
         .collect();
 
-    let mut suggested_test_paths = missing_required_tests.clone();
-    for path in &planned_required_tests {
+    let mut suggested_test_paths = missing_required_test_files.clone();
+    for path in &planned_required_test_files {
         if !suggested_test_paths.contains(path) {
             suggested_test_paths.push(path.clone());
         }
@@ -374,30 +417,86 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
         .iter()
         .map(|test| test.path.clone())
         .collect();
-    let has_no_required_tests = required_test_paths.is_empty();
+    let has_no_required_tests = required_test_ids.is_empty();
+    let has_no_required_test_files = required_test_files.is_empty();
     let has_no_related_tests = related_tests.is_empty();
     let has_gaps = has_no_required_tests
+        || has_no_required_test_files
         || has_no_related_tests
         || !missing_required_tests.is_empty()
-        || !planned_required_tests.is_empty();
+        || !missing_required_test_files.is_empty()
+        || !planned_required_tests.is_empty()
+        || !planned_required_test_files.is_empty();
 
     OutcomeTestReview {
         feature_id: outcome.feature_id.clone(),
         outcome_id: outcome.id.clone(),
-        required_test_count: required_test_paths.len(),
+        required_test_count: required_test_ids.len(),
+        required_test_file_count: required_test_files.len(),
         related_test_count: related_tests.len(),
-        required_test_paths,
+        required_test_ids,
+        required_test_files,
         related_tests,
         missing_required_tests,
+        missing_required_test_files,
         planned_required_tests,
+        planned_required_test_files,
         undeclared_tests,
         suggested_test_paths: suggested_test_paths.clone(),
         openable_test_paths,
         has_no_required_tests,
+        has_no_required_test_files,
         has_no_related_tests,
         has_gaps,
-        needs_generation: !suggested_test_paths.is_empty(),
+        needs_generation: !suggested_test_paths.is_empty()
+            || has_no_required_tests
+            || has_no_required_test_files,
     }
+}
+
+fn sync_required_test_names(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+    required_tests: &[String],
+    required_test_names: &[String],
+) -> Result<usize> {
+    if required_test_names.is_empty() {
+        return Ok(0);
+    }
+
+    if required_tests.len() != required_test_names.len() {
+        return Err(anyhow!(
+            "required_test_names length ({}) must match required_tests length ({})",
+            required_test_names.len(),
+            required_tests.len()
+        ));
+    }
+
+    let mut manifest = repo.load_manifest()?;
+    let mut updated = 0usize;
+
+    for (test_id, test_name_raw) in required_tests.iter().zip(required_test_names.iter()) {
+        let test_name = test_name_raw.trim();
+        if test_name.is_empty() {
+            continue;
+        }
+
+        if let Some(test) = manifest.tests.iter_mut().find(|test| {
+            test.feature_id == feature_id && test.outcome_id == outcome_id && test.id == *test_id
+        }) {
+            if test.name != test_name {
+                test.name = test_name.to_string();
+                updated += 1;
+            }
+        }
+    }
+
+    if updated > 0 {
+        repo.save_manifest(&manifest)?;
+    }
+
+    Ok(updated)
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -412,7 +511,7 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                     "cwd": cwd.display().to_string(),
                     "workflow": WorkflowGuidance {
                         stage: "init".to_string(),
-                        recommended_skill: "specrail-init".to_string(),
+                        recommended_skill: "specrail-setup".to_string(),
                         summary: "Initialize specrail before planning features, tests, or implementation.".to_string(),
                         blockers: vec!["No .specrail project was found from this working directory.".to_string()],
                         next_tools: vec!["specrail_init".to_string()],
@@ -638,8 +737,300 @@ fn tool_component_show(arguments: &Map<String, Value>) -> Result<Value> {
     ))
 }
 
+fn feature_matches_active_hierarchy(
+    feature: &FeatureSpec,
+    active_solution_id: Option<&str>,
+    active_project_id: Option<&str>,
+    active_component_id: Option<&str>,
+) -> bool {
+    if let Some(component_id) = active_component_id {
+        return feature.component_id == component_id;
+    }
+
+    if let Some(project_id) = active_project_id {
+        return feature.project_id == project_id;
+    }
+
+    if let Some(solution_id) = active_solution_id {
+        return feature.solution_id == solution_id;
+    }
+
+    true
+}
+
+fn feature_navigate_hierarchy_payload(
+    active_solution_id: Option<String>,
+    active_project_id: Option<String>,
+    active_component_id: Option<String>,
+    active_solution: Option<crate::core::models::SolutionSpec>,
+    active_project: Option<crate::core::models::ProjectSpec>,
+    active_component: Option<crate::core::models::ComponentSpec>,
+) -> Value {
+    json!({
+        "activeSolutionId": active_solution_id,
+        "activeProjectId": active_project_id,
+        "activeComponentId": active_component_id,
+        "activeSolution": active_solution,
+        "activeProject": active_project,
+        "activeComponent": active_component,
+    })
+}
+
+fn feature_navigate_feature_actions() -> Value {
+    json!({
+        "solutionListTool": "specrail_solution_list",
+        "projectListTool": "specrail_project_list",
+        "componentListTool": "specrail_component_list",
+        "activateSolutionTool": "specrail_solution_activate",
+        "activateProjectTool": "specrail_project_activate",
+        "activateComponentTool": "specrail_component_activate",
+        "createSolutionTool": "specrail_solution_new",
+        "createProjectTool": "specrail_project_new",
+        "createComponentTool": "specrail_component_new",
+        "selectFeatureTool": "specrail_feature_navigate",
+        "createFeatureTool": "specrail_feature_new",
+        "editFeatureTool": "specrail_feature_edit",
+        "activateFeatureTool": "specrail_feature_activate",
+        "statusTool": "specrail_status",
+        "traceTool": "specrail_trace"
+    })
+}
+
+fn feature_navigate_outcome_actions() -> Value {
+    json!({
+        "solutionListTool": "specrail_solution_list",
+        "projectListTool": "specrail_project_list",
+        "componentListTool": "specrail_component_list",
+        "activateSolutionTool": "specrail_solution_activate",
+        "activateProjectTool": "specrail_project_activate",
+        "activateComponentTool": "specrail_component_activate",
+        "selectOutcomeTool": "specrail_outcome_activate",
+        "createOutcomeTool": "specrail_outcome_new",
+        "editOutcomeTool": "specrail_outcome_edit",
+        "activateOutcomeTool": "specrail_outcome_activate",
+        "unverifyOutcomeTool": "specrail_outcome_unverify",
+        "implementTool": "specrail_implement",
+        "verifyTool": "specrail_verify",
+        "advanceTool": "specrail_advance",
+        "testListTool": "specrail_test_list",
+        "testReviewTool": "specrail_outcome_test_review",
+        "testSuggestTool": "specrail_test_suggest",
+        "testGenerateTool": "specrail_test_generate",
+        "featureShowTool": "specrail_feature_show",
+        "outcomeShowTool": "specrail_outcome_show",
+        "statusTool": "specrail_status",
+        "traceTool": "specrail_trace"
+    })
+}
+
+fn latest_implementation_results(events: &[LedgerEvent]) -> HashMap<(String, String), bool> {
+    let mut results = HashMap::new();
+
+    for event in events {
+        if event.event_type != LedgerEventType::ImplementationRun {
+            continue;
+        }
+
+        let Some(feature_id) = event.feature_id.as_ref() else {
+            continue;
+        };
+        let Some(outcome_id) = event.outcome_id.as_ref() else {
+            continue;
+        };
+        let Some(success) = event.success else {
+            continue;
+        };
+
+        results.insert((feature_id.clone(), outcome_id.clone()), success);
+    }
+
+    results
+}
+
+fn status_indicator_payload(tone: &str, label: &str, detail: impl Into<String>) -> Value {
+    json!({
+        "tone": tone,
+        "label": label,
+        "detail": detail.into()
+    })
+}
+
+fn outcome_has_successful_implement(
+    outcome: &OutcomeSpec,
+    implementation_results: &HashMap<(String, String), bool>,
+) -> bool {
+    implementation_results
+        .get(&(outcome.feature_id.clone(), outcome.id.clone()))
+        .copied()
+        == Some(true)
+}
+
+fn feature_implement_status_payload(
+    outcomes: &[OutcomeSpec],
+    manifest: &TestManifest,
+    _implementation_results: &HashMap<(String, String), bool>,
+) -> Value {
+    if outcomes.is_empty() {
+        return status_indicator_payload(
+            "muted",
+            "Waiting",
+            "Add an outcome before implementation can run for this feature.",
+        );
+    }
+
+    let outcomes_without_required_tests = outcomes
+        .iter()
+        .filter(|outcome| build_outcome_test_review(outcome, manifest).required_test_count == 0)
+        .count();
+    let outcomes_without_required_test_files = outcomes
+        .iter()
+        .filter(|outcome| build_outcome_test_review(outcome, manifest).required_test_file_count == 0)
+        .count();
+    let outcomes_missing_required_test_links = outcomes
+        .iter()
+        .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_tests.is_empty())
+        .count();
+    let outcomes_missing_required_test_file_links = outcomes
+        .iter()
+        .filter(|outcome| !build_outcome_test_review(outcome, manifest).missing_required_test_files.is_empty())
+        .count();
+
+    if outcomes_without_required_tests > 0
+        || outcomes_without_required_test_files > 0
+        || outcomes_missing_required_test_links > 0
+        || outcomes_missing_required_test_file_links > 0
+    {
+        let mut blockers: Vec<String> = Vec::new();
+        if outcomes_without_required_tests > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing required test IDs",
+                outcomes_without_required_tests,
+                if outcomes_without_required_tests == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+        if outcomes_without_required_test_files > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing required test file paths",
+                outcomes_without_required_test_files,
+                if outcomes_without_required_test_files == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+        if outcomes_missing_required_test_links > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing registered manifest tests for one or more required test IDs",
+                outcomes_missing_required_test_links,
+                if outcomes_missing_required_test_links == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+        if outcomes_missing_required_test_file_links > 0 {
+            blockers.push(format!(
+                "{} outcome{} missing registered manifest tests for one or more required test file paths",
+                outcomes_missing_required_test_file_links,
+                if outcomes_missing_required_test_file_links == 1 {
+                    " is"
+                } else {
+                    "s are"
+                }
+            ));
+        }
+
+        return status_indicator_payload(
+            "warning",
+            "Needed",
+            format!(
+                "Implement is not fully ready yet: {}.",
+                blockers.join("; ")
+            ),
+        );
+    }
+
+    status_indicator_payload(
+        "success",
+        "Ready",
+        "Every outcome has required test IDs and required test files linked to registered manifest tests.",
+    )
+}
+
+fn feature_verify_status_payload(
+    outcomes: &[OutcomeSpec],
+    implementation_results: &HashMap<(String, String), bool>,
+) -> Value {
+    if outcomes.is_empty() {
+        return status_indicator_payload(
+            "muted",
+            "Waiting",
+            "Add an outcome before verification can run for this feature.",
+        );
+    }
+
+    if outcomes
+        .iter()
+        .all(|outcome| matches!(outcome.status, OutcomeStatus::Verified | OutcomeStatus::Skipped))
+    {
+        return status_indicator_payload(
+            "success",
+            "Done",
+            "Every outcome in this feature is already verified.",
+        );
+    }
+
+    let failed_count = outcomes
+        .iter()
+        .filter(|outcome| outcome.status == OutcomeStatus::Failed)
+        .count();
+    if failed_count > 0 {
+        return status_indicator_payload(
+            "danger",
+            "Failed",
+            format!(
+                "{} outcome{} failed verification. Fix implementation and verify again.",
+                failed_count,
+                if failed_count == 1 { "" } else { "s" }
+            ),
+        );
+    }
+
+    let ready_to_verify_count = outcomes
+        .iter()
+        .filter(|outcome| {
+            outcome.status == OutcomeStatus::Active
+                && outcome_has_successful_implement(outcome, implementation_results)
+        })
+        .count();
+    if ready_to_verify_count > 0 {
+        return status_indicator_payload(
+            "warning",
+            "Needed",
+            format!(
+                "Verify is ready for {} active outcome{} in this feature.",
+                ready_to_verify_count,
+                if ready_to_verify_count == 1 { "" } else { "s" }
+            ),
+        );
+    }
+
+    status_indicator_payload(
+        "muted",
+        "Waiting",
+        "Run implement on the active outcome before verification becomes relevant.",
+    )
+}
+
 fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
+    repo.ensure_hierarchy()?;
     let state = repo.load_state()?;
     let features = repo.list_features()?;
     let solutions = repo.list_solutions()?;
@@ -652,18 +1043,57 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
         .collect();
     let manifest = repo.load_manifest()?;
-    let feature_summaries: Vec<Value> = features
+    let ledger_events = Ledger::read_all(&repo.ledger_path()).unwrap_or_default();
+    let implementation_results = latest_implementation_results(&ledger_events);
+    let active_solution_id = state.active_solution.clone();
+    let active_project_id = state.active_project.clone();
+    let active_component_id = state.active_component.clone();
+    let scoped_feature_summaries: Vec<Value> = features
         .iter()
+        .filter(|feature| {
+            feature_matches_active_hierarchy(
+                feature,
+                active_solution_id.as_deref(),
+                active_project_id.as_deref(),
+                active_component_id.as_deref(),
+            )
+        })
         .map(|feature| {
             let outcomes = repo.list_outcomes(&feature.id).unwrap_or_default();
             let verified_outcome_count = outcomes
                 .iter()
                 .filter(|outcome| outcome.status == OutcomeStatus::Verified)
                 .count();
+            let mut total_test_count = 0usize;
+            let mut passing_test_count = 0usize;
+            let mut written_test_count = 0usize;
+            let mut planned_test_count = 0usize;
+            let mut failing_test_count = 0usize;
+            let mut undeclared_outcome_count = 0usize;
+
+            for outcome in &outcomes {
+                let review = build_outcome_test_review(outcome, &manifest);
+                if !review.undeclared_tests.is_empty() {
+                    undeclared_outcome_count += 1;
+                }
+
+                for test in &review.related_tests {
+                    total_test_count += 1;
+                    match test.status {
+                        TestStatus::Passing => passing_test_count += 1,
+                        TestStatus::Written => written_test_count += 1,
+                        TestStatus::Planned => planned_test_count += 1,
+                        TestStatus::Failing => failing_test_count += 1,
+                    }
+                }
+            }
+
             let active_outcome_count = outcomes
                 .iter()
                 .filter(|outcome| outcome.status == crate::core::models::OutcomeStatus::Active)
                 .count();
+            let implement_status = feature_implement_status_payload(&outcomes, &manifest, &implementation_results);
+            let verify_status = feature_verify_status_payload(&outcomes, &implementation_results);
             json!({
                 "id": feature.id,
                 "title": feature.title,
@@ -675,13 +1105,60 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                 "outcomeCount": outcomes.len(),
                 "verifiedOutcomeCount": verified_outcome_count,
                 "activeOutcomeCount": active_outcome_count,
-                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str())
+                "totalTestCount": total_test_count,
+                "passingTestCount": passing_test_count,
+                "writtenTestCount": written_test_count,
+                "plannedTestCount": planned_test_count,
+                "failingTestCount": failing_test_count,
+                "undeclaredOutcomeCount": undeclared_outcome_count,
+                "hasUndeclaredTests": undeclared_outcome_count > 0,
+                "isActive": state.active_feature.as_deref() == Some(feature.id.as_str()),
+                "implementStatus": implement_status,
+                "verifyStatus": verify_status
             })
         })
         .collect();
 
     let active_feature_id = state.active_feature.clone();
     let active_outcome_id = state.active_outcome.clone();
+
+    let active_solution = active_solution_id
+        .as_ref()
+        .and_then(|id| solutions.iter().find(|solution| solution.id == *id))
+        .cloned();
+    let active_project = active_project_id
+        .as_ref()
+        .and_then(|id| projects.iter().find(|project| project.id == *id))
+        .cloned();
+    let active_component = active_component_id
+        .as_ref()
+        .and_then(|id| components.iter().find(|component| component.id == *id))
+        .cloned();
+
+    let visible_projects: Vec<_> = match active_solution_id.as_deref() {
+        Some(solution_id) => projects
+            .iter()
+            .filter(|project| project.solution_id == solution_id)
+            .cloned()
+            .collect(),
+        None => projects.clone(),
+    };
+    let visible_components: Vec<_> = match active_project_id.as_deref() {
+        Some(project_id) => components
+            .iter()
+            .filter(|component| component.project_id == project_id)
+            .cloned()
+            .collect(),
+        None => components.clone(),
+    };
+    let hierarchy_payload = feature_navigate_hierarchy_payload(
+        active_solution_id.clone(),
+        active_project_id.clone(),
+        active_component_id.clone(),
+        active_solution.clone(),
+        active_project.clone(),
+        active_component.clone(),
+    );
 
     if let Some(feature_id) = optional_string(arguments, "feature_id") {
         let feature = repo.load_feature(&feature_id)?;
@@ -703,6 +1180,16 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     .iter()
                     .filter(|test| test.status == TestStatus::Passing)
                     .count();
+                let written_test_count = review
+                    .related_tests
+                    .iter()
+                    .filter(|test| test.status == TestStatus::Written)
+                    .count();
+                let failing_test_count = review
+                    .related_tests
+                    .iter()
+                    .filter(|test| test.status == TestStatus::Failing)
+                    .count();
                 json!({
                     "id": outcome.id,
                     "title": outcome.title,
@@ -713,8 +1200,12 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "testCount": test_count,
                     "plannedTestCount": planned_test_count,
                     "passingTestCount": passing_test_count,
+                    "writtenTestCount": written_test_count,
+                    "failingTestCount": failing_test_count,
                     "requiredTestCount": review.required_test_count,
+                    "requiredTestFileCount": review.required_test_file_count,
                     "missingRequiredTestCount": review.missing_required_tests.len(),
+                    "missingRequiredTestFileCount": review.missing_required_test_files.len(),
                     "undeclaredTestCount": review.undeclared_tests.len(),
                     "hasTestGaps": review.has_gaps,
                     "needsTestGeneration": review.needs_generation,
@@ -723,78 +1214,53 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                         &outcome.status,
                         active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                         test_count,
-                        review.needs_generation || review.has_no_required_tests,
+                        review.needs_generation
+                            || review.has_no_required_tests
+                            || review.has_no_required_test_files,
                     )
                 })
             })
             .collect();
 
-        return Ok(feature_navigate_payload(
-            String::new(),
-            Some(json!({
-                "mode": "outcome_selection",
-                "activeFeatureId": active_feature_id,
-                "activeOutcomeId": active_outcome_id,
-                "selectedFeatureId": feature_id,
-                "selectedFeature": feature,
-                "solutions": solutions,
-                "projects": projects,
-                "components": components,
-                "features": feature_summaries,
-                "outcomes": outcome_summaries,
-                "suggestedNewOutcomeOrder": next_order,
-                "nextActions": {
-                    "solutionListTool": "specrail_solution_list",
-                    "projectListTool": "specrail_project_list",
-                    "componentListTool": "specrail_component_list",
-                    "selectOutcomeTool": "specrail_outcome_activate",
-                    "createOutcomeTool": "specrail_outcome_new",
-                    "editOutcomeTool": "specrail_outcome_edit",
-                    "activateOutcomeTool": "specrail_outcome_activate",
-                    "unverifyOutcomeTool": "specrail_outcome_unverify",
-                    "implementTool": "specrail_implement",
-                    "verifyTool": "specrail_verify",
-                    "advanceTool": "specrail_advance",
-                    "testListTool": "specrail_test_list",
-                    "testReviewTool": "specrail_outcome_test_review",
-                    "testSuggestTool": "specrail_test_suggest",
-                    "testGenerateTool": "specrail_test_generate",
-                    "featureShowTool": "specrail_feature_show",
-                    "outcomeShowTool": "specrail_outcome_show",
-                    "statusTool": "specrail_status",
-                    "traceTool": "specrail_trace"
-                }
-            })),
-        ));
+        let mut payload = Map::new();
+        payload.insert("mode".to_string(), json!("outcome_selection"));
+        payload.insert("activeFeatureId".to_string(), json!(active_feature_id));
+        payload.insert("activeOutcomeId".to_string(), json!(active_outcome_id));
+        if let Value::Object(map) = hierarchy_payload.clone() {
+            payload.extend(map);
+        }
+        payload.insert("selectedFeatureId".to_string(), json!(feature_id));
+        payload.insert("selectedFeature".to_string(), json!(feature));
+        payload.insert("solutions".to_string(), json!(solutions));
+        payload.insert("projects".to_string(), json!(projects));
+        payload.insert("components".to_string(), json!(components));
+        payload.insert("visibleProjects".to_string(), json!(visible_projects));
+        payload.insert("visibleComponents".to_string(), json!(visible_components));
+        payload.insert("features".to_string(), json!(scoped_feature_summaries));
+        payload.insert("outcomes".to_string(), json!(outcome_summaries));
+        payload.insert("suggestedNewOutcomeOrder".to_string(), json!(next_order));
+        payload.insert("nextActions".to_string(), feature_navigate_outcome_actions());
+
+        return Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))));
     }
 
-    Ok(feature_navigate_payload(
-        String::new(),
-        Some(json!({
-            "mode": "feature_selection",
-            "solutions": solutions,
-            "projects": projects,
-            "components": components,
-            "activeFeatureId": active_feature_id,
-            "activeOutcomeId": active_outcome_id,
-            "selectedFeatureId": Value::Null,
-            "features": feature_summaries,
-            "nextActions": {
-                "solutionListTool": "specrail_solution_list",
-                "projectListTool": "specrail_project_list",
-                "componentListTool": "specrail_component_list",
-                "createSolutionTool": "specrail_solution_new",
-                "createProjectTool": "specrail_project_new",
-                "createComponentTool": "specrail_component_new",
-                "selectFeatureTool": "specrail_feature_navigate",
-                "createFeatureTool": "specrail_feature_new",
-                "editFeatureTool": "specrail_feature_edit",
-                "activateFeatureTool": "specrail_feature_activate",
-                "statusTool": "specrail_status",
-                "traceTool": "specrail_trace"
-            }
-        })),
-    ))
+    let mut payload = Map::new();
+    payload.insert("mode".to_string(), json!("feature_selection"));
+    payload.insert("solutions".to_string(), json!(solutions));
+    payload.insert("projects".to_string(), json!(projects));
+    payload.insert("components".to_string(), json!(components));
+    payload.insert("visibleProjects".to_string(), json!(visible_projects));
+    payload.insert("visibleComponents".to_string(), json!(visible_components));
+    if let Value::Object(map) = hierarchy_payload {
+        payload.extend(map);
+    }
+    payload.insert("activeFeatureId".to_string(), json!(active_feature_id));
+    payload.insert("activeOutcomeId".to_string(), json!(active_outcome_id));
+    payload.insert("selectedFeatureId".to_string(), Value::Null);
+    payload.insert("features".to_string(), json!(scoped_feature_summaries));
+    payload.insert("nextActions".to_string(), feature_navigate_feature_actions());
+
+    Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))))
 }
 
 fn outcome_available_actions(
@@ -978,7 +1444,7 @@ fn tool_init(arguments: &Map<String, Value>) -> Result<Value> {
     let no_wizard = arguments
         .get("no_wizard")
         .and_then(Value::as_bool)
-        .unwrap_or(true);
+        .unwrap_or(false);
 
     let mut args = vec!["init".to_string()];
     if no_wizard {
@@ -1204,12 +1670,14 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_names = string_array(arguments, "required_test_names")?;
+    let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
         "new".to_string(),
-        feature_id,
-        outcome_id,
+        feature_id.clone(),
+        outcome_id.clone(),
         "--title".to_string(),
         title,
         "--goal".to_string(),
@@ -1221,9 +1689,21 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--prereq", prerequisites);
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
-    push_repeated_flag(&mut args, "--test", required_tests);
+    push_repeated_flag(&mut args, "--test", required_tests.clone());
+    push_repeated_flag(&mut args, "--test-file", required_test_files.clone());
 
-    run_cli_tool(&cwd, args)
+    let payload = run_cli_tool(&cwd, args)?;
+    if !required_test_names.is_empty() {
+        let repo = Repository::discover(&cwd)?;
+        let _ = sync_required_test_names(
+            &repo,
+            &feature_id,
+            &outcome_id,
+            &required_tests,
+            &required_test_names,
+        )?;
+    }
+    Ok(payload)
 }
 
 fn tool_outcome_activate(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1252,12 +1732,14 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_names = string_array(arguments, "required_test_names")?;
+    let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
         "edit".to_string(),
-        feature_id,
-        outcome_id,
+        feature_id.clone(),
+        outcome_id.clone(),
         "--title".to_string(),
         title,
         "--goal".to_string(),
@@ -1269,9 +1751,21 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--prereq", prerequisites);
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
-    push_repeated_flag(&mut args, "--test", required_tests);
+    push_repeated_flag(&mut args, "--test", required_tests.clone());
+    push_repeated_flag(&mut args, "--test-file", required_test_files.clone());
 
-    run_cli_tool(&cwd, args)
+    let payload = run_cli_tool(&cwd, args)?;
+    if !required_test_names.is_empty() {
+        let repo = Repository::discover(&cwd)?;
+        let _ = sync_required_test_names(
+            &repo,
+            &feature_id,
+            &outcome_id,
+            &required_tests,
+            &required_test_names,
+        )?;
+    }
+    Ok(payload)
 }
 
 fn tool_outcome_unverify(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1292,26 +1786,37 @@ fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Valu
     let repo = discover_repo(arguments)?;
     let feature_id = require_string(arguments, "feature_id")?;
     let outcome_id = require_string(arguments, "outcome_id")?;
+    let test_id = require_string(arguments, "test_id")?;
     let path = require_string(arguments, "path")?;
-    let added = crate::commands::outcome::ensure_required_test(&repo, &feature_id, &outcome_id, &path)?;
+    let added = crate::commands::outcome::ensure_required_test_reference(
+        &repo,
+        &feature_id,
+        &outcome_id,
+        &test_id,
+        &path,
+    )?;
 
     Ok(tool_success_payload(
-        if added {
+        if added.added_test_id || added.added_test_file {
             format!(
-                "Added '{}' to required_tests for outcome '{}:{}'.",
-                path, feature_id, outcome_id
+                "Added required test '{}' and file '{}' for outcome '{}:{}'.",
+                test_id, path, feature_id, outcome_id
             )
         } else {
             format!(
-                "'{}' is already listed in required_tests for outcome '{}:{}'.",
-                path, feature_id, outcome_id
+                "Required test '{}' and file '{}' are already listed for outcome '{}:{}'.",
+                test_id, path, feature_id, outcome_id
             )
         },
         Some(json!({
             "feature_id": feature_id,
             "outcome_id": outcome_id,
+            "test_id": test_id,
             "path": path,
-            "added": added,
+            "added": {
+                "test_id": added.added_test_id,
+                "test_file": added.added_test_file
+            },
         })),
     ))
 }
@@ -1319,6 +1824,7 @@ fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Valu
 fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let id = require_string(arguments, "id")?;
+    let name = optional_string(arguments, "name");
     let feature_id = require_string(arguments, "feature_id")?;
     let outcome_id = require_string(arguments, "outcome_id")?;
     let path = require_string(arguments, "path")?;
@@ -1338,6 +1844,11 @@ fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
         "--kind".to_string(),
         kind,
     ];
+
+    if let Some(name) = name {
+        args.push("--name".to_string());
+        args.push(name);
+    }
 
     push_repeated_flag(&mut args, "--ref", purpose_refs);
 
@@ -1494,7 +2005,7 @@ fn build_workflow_guidance(
     if features.is_empty() {
         return Ok(WorkflowGuidance {
             stage: "workflow".to_string(),
-            recommended_skill: "specrail-workflow".to_string(),
+            recommended_skill: "specrail-plan-features".to_string(),
             summary: "No features exist yet. Gather the first feature and break it into ordered outcomes before planning tests.".to_string(),
             blockers: vec!["The project has been initialized, but no features are registered yet.".to_string()],
             next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string()],
@@ -1516,7 +2027,7 @@ fn build_workflow_guidance(
     if !any_outcomes {
         return Ok(WorkflowGuidance {
             stage: "workflow".to_string(),
-            recommended_skill: "specrail-workflow".to_string(),
+            recommended_skill: "specrail-plan-features".to_string(),
             summary: "Features exist, but no outcomes are defined yet. Split the next feature into outcome-sized slices before planning tests.".to_string(),
             blockers: vec!["At least one feature is present, but there are no outcomes to drive the TDD loop yet.".to_string()],
             next_tools: vec!["specrail_outcome_new".to_string()],
@@ -1635,7 +2146,7 @@ fn workflow_guidance_for_snapshot(
     let Some(candidate) = candidate else {
         return Ok(WorkflowGuidance {
             stage: "done".to_string(),
-            recommended_skill: "specrail-activation".to_string(),
+            recommended_skill: "specrail-run-workflow".to_string(),
             summary: "All known outcomes are already verified or skipped. The TDD workflow is complete.".to_string(),
             blockers: Vec::new(),
             next_tools: vec!["specrail_status".to_string(), "specrail_trace".to_string()],
@@ -1662,7 +2173,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_test_set_status".to_string(),
             ],
             "testing".to_string(),
-            "specrail-testing".to_string(),
+            "specrail-prepare-tests".to_string(),
         )
     } else if !candidate.planned_test_ids.is_empty() {
         (
@@ -1681,7 +2192,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_test_set_status".to_string(),
             ],
             "testing".to_string(),
-            "specrail-testing".to_string(),
+            "specrail-prepare-tests".to_string(),
         )
     } else {
         (
@@ -1698,7 +2209,7 @@ fn workflow_guidance_for_snapshot(
                 "specrail_advance".to_string(),
             ],
             "activation".to_string(),
-            "specrail-activation".to_string(),
+            "specrail-run-workflow".to_string(),
         )
     };
 
@@ -1730,11 +2241,11 @@ fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
     if snapshot.outcome.status == OutcomeStatus::Verified
         || snapshot.outcome.status == OutcomeStatus::Failed
     {
-        "specrail-activation"
+        "specrail-run-workflow"
     } else if snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty() {
-        "specrail-testing"
+        "specrail-prepare-tests"
     } else {
-        "specrail-activation"
+        "specrail-run-workflow"
     }
 }
 
@@ -1918,7 +2429,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_status",
             "title": "Project Status",
-            "description": "Get the current specrail project status, active workflow state, and recommended next action. Always call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
+            "description": "Direct MCP read action: get current project status, active workflow state, and recommended next action. Call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1929,7 +2440,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_feature_navigate",
             "title": "Workflow Navigator",
-            "description": "Interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with their solution/project/component path. With feature_id returns the selected feature's outcomes with test counts and status.",
+            "description": "Direct MCP read action with UI: interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with hierarchy path. With feature_id returns selected outcomes with test counts and status.",
             "_meta": {
                 "ui": {
                     "resourceUri": FEATURE_NAVIGATE_APP_URI,
@@ -2060,7 +2571,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_show",
             "title": "Show Outcome",
-            "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, and required tests.",
+            "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, required test IDs, and required test files.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2074,7 +2585,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_test_review",
             "title": "Review Outcome Tests",
-            "description": "Review one outcome's test health. Returns related manifest tests, missing required_tests paths, planned required tests, undeclared tests, and suggested test paths to add or generate.",
+            "description": "Review one outcome's test health. Returns related manifest tests, missing required test IDs/files, planned required tests, undeclared tests, and suggested test paths to add or generate.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2127,12 +2638,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_init",
             "title": "Initialize Project",
-            "description": "Initialize a specrail project in the given directory. Creates the .specrail/ directory structure with project.yaml, default solution/project/component hierarchy, test manifest, and state files. Safe to run on an existing project (only adds missing files).",
+            "description": "Direct MCP mutation action: initialize a specrail project in the given directory. Creates the .specrail/ directory structure and project config, then (unless no_wizard=true) starts the interactive setup walkthrough to create solution/project/component hierarchy and first feature outcomes.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string", "description": "Directory to initialize. Defaults to the server working directory." },
-                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard. Defaults to true for MCP usage." }
+                    "no_wizard": { "type": "boolean", "description": "Skip the interactive setup wizard." }
                 }
             }
         }),
@@ -2335,7 +2846,9 @@ fn tool_definitions() -> Vec<Value> {
                     "prerequisites": { "type": "array", "items": { "type": "string" }, "description": "Outcome IDs that must be verified first." },
                     "allowed_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent is allowed to modify." },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent must not modify." },
-                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Test IDs or paths that must pass." }
+                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Required manifest test IDs that must pass." },
+                    "required_test_names": { "type": "array", "items": { "type": "string" }, "description": "Optional display names to persist into related manifest tests in the same order as required_tests." },
+                    "required_test_files": { "type": "array", "items": { "type": "string" }, "description": "Required test file paths used for generation and manifest alignment." }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
@@ -2357,7 +2870,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_edit",
             "title": "Edit Outcome",
-            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, or required tests. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
+            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, required test IDs, optional required test names for manifest records, or required test files. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2370,7 +2883,9 @@ fn tool_definitions() -> Vec<Value> {
                     "prerequisites": { "type": "array", "items": { "type": "string" } },
                     "allowed_paths": { "type": "array", "items": { "type": "string" } },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" } },
-                    "required_tests": { "type": "array", "items": { "type": "string" } }
+                    "required_tests": { "type": "array", "items": { "type": "string" } },
+                    "required_test_names": { "type": "array", "items": { "type": "string" } },
+                    "required_test_files": { "type": "array", "items": { "type": "string" } }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
             }
@@ -2392,27 +2907,29 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_add_required_test",
             "title": "Add Required Test",
-            "description": "Add an existing related test path into the outcome's required_tests list so the outcome YAML and manifest stay aligned.",
+            "description": "Add an existing related test and file path into the outcome's required test metadata so the outcome YAML and manifest stay aligned.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
                     "feature_id": { "type": "string" },
                     "outcome_id": { "type": "string" },
-                    "path": { "type": "string", "description": "Related test path to add into required_tests." }
+                    "test_id": { "type": "string", "description": "Related manifest test identifier to append into required_tests." },
+                    "path": { "type": "string", "description": "Related test path to add into required_test_files." }
                 },
-                "required": ["feature_id", "outcome_id", "path"]
+                "required": ["feature_id", "outcome_id", "test_id", "path"]
             }
         }),
         json!({
             "name": "specrail_test_add",
             "title": "Add Test",
-            "description": "Register a test in the specrail manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
+            "description": "Direct MCP mutation action: register a test in the manifest for a specific outcome. Tests start in 'planned' status. Change to 'written' with specrail_test_set_status once the test file exists. At least one written (non-planned) test is required before specrail_implement.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
                     "id": { "type": "string", "description": "Unique test identifier." },
+                    "name": { "type": "string", "description": "Test case/method display name stored in tests.name." },
                     "feature_id": { "type": "string", "description": "Feature this test belongs to." },
                     "outcome_id": { "type": "string", "description": "Outcome this test validates." },
                     "path": { "type": "string", "description": "Relative file path of the test (e.g. 'tests/auth_login_test.rs')." },
@@ -2425,7 +2942,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with no required_tests yet, the agent can bootstrap an initial test path and specrail will persist it back into the outcome YAML.",
+            "description": "Direct MCP mutation action: use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete metadata, the agent can bootstrap initial required test IDs, test names, and file paths and specrail will persist them.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2439,7 +2956,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_set_status",
             "title": "Update Test Status",
-            "description": "Update a test's status in the manifest. Allowed transitions: planned → written (test file written), written → passing (test now passes), written/passing → failing (regression). All tests must be non-planned before specrail_implement can run.",
+            "description": "Direct MCP mutation action: update a test's status in the manifest. Allowed transitions: planned → written (test file written), written → passing (test now passes), written/passing → failing (regression). All tests must be non-planned before specrail_implement can run.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2453,7 +2970,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_implement",
             "title": "Implement",
-            "description": "Run the AI implementation agent for the active outcome. Requires: active feature, active outcome, at least one registered test, and no tests in 'planned' status. The agent receives a structured prompt and the list of test paths to pass. After implementing, run specrail_verify.",
+            "description": "Direct MCP mutation action: run the AI implementation agent for the active outcome. Requires active feature, active outcome, at least one registered test, and no tests in 'planned' status. After implementing, run specrail_verify.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2465,7 +2982,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_verify",
             "title": "Verify",
-            "description": "Run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome 'verified' on success or 'failed' on failure. After a failed verify, fix the implementation and call verify again. After verified, call specrail_advance.",
+            "description": "Direct MCP mutation action: run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome verified on success or failed on failure. After verified, call specrail_advance.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2476,7 +2993,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_advance",
             "title": "Advance",
-            "description": "Advance from a verified outcome to the next one in sequence (by order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be in 'verified' status.",
+            "description": "Direct MCP mutation action: advance from a verified outcome to the next one in sequence (order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be verified.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2576,6 +3093,7 @@ fn jsonrpc_error(id: Value, code: i64, message: impl Into<String>) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::models::{TestKind, TestStatus};
     use std::io::Cursor;
 
     #[test]
@@ -2733,5 +3251,66 @@ mod tests {
             .expect("message should write");
 
         assert_eq!(String::from_utf8(output).unwrap(), "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}\n");
+    }
+
+    #[test]
+    fn feature_implement_status_is_not_success_when_required_tests_missing() {
+        let outcomes = vec![OutcomeSpec {
+            id: "outcome-1".to_string(),
+            feature_id: "feature-a".to_string(),
+            title: "Outcome 1".to_string(),
+            goal: "Goal".to_string(),
+            order: 1,
+            prerequisites: vec![],
+            allowed_paths: vec![],
+            forbidden_paths: vec![],
+            required_tests: vec![],
+            required_test_files: vec![],
+            status: OutcomeStatus::Verified,
+        }];
+
+        let status = feature_implement_status_payload(
+            &outcomes,
+            &TestManifest::default(),
+            &HashMap::new(),
+        );
+
+        assert_eq!(status["tone"], "warning");
+        assert_eq!(status["label"], "Needed");
+    }
+
+    #[test]
+    fn feature_implement_status_is_success_when_all_required_tests_are_linked() {
+        let outcomes = vec![OutcomeSpec {
+            id: "outcome-1".to_string(),
+            feature_id: "feature-a".to_string(),
+            title: "Outcome 1".to_string(),
+            goal: "Goal".to_string(),
+            order: 1,
+            prerequisites: vec![],
+            allowed_paths: vec![],
+            forbidden_paths: vec![],
+            required_tests: vec!["validates_credentials".to_string()],
+            required_test_files: vec!["tests/feature_a/outcome_1.rs".to_string()],
+            status: OutcomeStatus::Pending,
+        }];
+
+        let manifest = TestManifest {
+            tests: vec![TestSpec {
+                id: "validates_credentials".to_string(),
+                name: "validates_credentials".to_string(),
+                feature_id: "feature-a".to_string(),
+                outcome_id: "outcome-1".to_string(),
+                path: "tests/feature_a/outcome_1.rs".to_string(),
+                purpose_refs: vec![],
+                kind: TestKind::Unit,
+                status: TestStatus::Written,
+            }],
+        };
+
+        let status = feature_implement_status_payload(&outcomes, &manifest, &HashMap::new());
+
+        assert_eq!(status["tone"], "success");
+        assert_eq!(status["label"], "Ready");
     }
 }

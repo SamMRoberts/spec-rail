@@ -2,6 +2,9 @@
     "mcpServers": {
         "specrail": {
             "type": "stdio",
+            "env": {
+                "SPECRAIL_MCP_DEBUG_STDERR": "1"
+            },
             "command": "specrail",
             "args": [
                 "mcp-server"

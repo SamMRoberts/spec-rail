@@ -12,7 +12,8 @@
         "mcp",
         "workflow",
         "tdd",
-        "specrail"
+        "specrail",
+        "test-driven-development"
     ],
     "skills": "skills/",
     "mcpServers": ".mcp.json"

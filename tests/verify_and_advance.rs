@@ -1,3 +1,5 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;
@@ -253,9 +255,10 @@ fn test_set_status_updates_manifest() {
         .assert()
         .success();
 
-    let manifest =
-        fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
-    assert!(manifest.contains("passing"), "status should be updated to 'passing'");
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.id == "test-validate-email" && test.status == "passing"
+    }));
 }
 
 // ── verify + advance happy path ───────────────────────────────────────────────
@@ -282,9 +285,8 @@ fn verify_and_advance_happy_path() {
     specrail(&dir).arg("advance").assert().success();
 
     // State should now reference outcome-2
-    let state =
-        fs::read_to_string(dir.path().join(".specrail/state/current.yaml")).unwrap();
-    assert!(state.contains("outcome-2"), "state should advance to outcome-2");
+    let state = support::current_state(&dir);
+    assert_eq!(state.active_outcome.as_deref(), Some("outcome-2"));
 
     // Ledger should show advancement
     let ledger =
@@ -310,11 +312,10 @@ fn verify_marks_outcome_failed_on_test_failure() {
     // Verify exits with success (CLI completes) but records failure
     specrail(&dir).arg("verify").assert().success();
 
-    let outcome = fs::read_to_string(
-        dir.path()
-            .join(".specrail/outcomes/auth/outcome-1.yaml"),
-    )
-    .unwrap();
-    assert!(outcome.contains("failed"), "outcome should be marked failed");
+    specrail(&dir)
+        .args(["outcome", "show", "auth", "outcome-1"])
+        .assert()
+        .success()
+        .stdout(contains("Status:  Failed"));
 }
 
