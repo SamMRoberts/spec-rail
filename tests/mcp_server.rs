@@ -562,21 +562,23 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(outcomes[0]["id"], "login");
     assert_eq!(outcomes[0]["goal"], "Let a user sign in with valid credentials.");
     assert_eq!(outcomes[0]["requiredTestCount"], 2);
-    assert_eq!(outcomes[0]["missingRequiredTestCount"], 2);
-    assert_eq!(outcomes[0]["plannedTestCount"], 0);
+    assert_eq!(outcomes[0]["missingRequiredTestCount"], 1);
+    assert_eq!(outcomes[0]["plannedTestCount"], 1);
     assert_eq!(outcomes[0]["writtenTestCount"], 0);
     assert_eq!(outcomes[0]["failingTestCount"], 0);
-    assert_eq!(outcomes[0]["undeclaredTestCount"], 2);
+    assert_eq!(outcomes[0]["undeclaredTestCount"], 1);
     assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
     let missing_required = outcomes[0]["testReview"]["missing_required_tests"]
         .as_array()
         .unwrap();
     assert!(missing_required.iter().any(|value| value == "auth-mfa-rs"));
-    assert!(missing_required.iter().any(|value| value == "auth-login-rs"));
-    assert!(outcomes[0]["testReview"]["missing_required_test_files"]
+    assert_eq!(
+        outcomes[0]["testReview"]["missing_required_test_files"]
         .as_array()
         .unwrap()
-        .is_empty());
+        .len(),
+        0
+    );
     let undeclared_tests = outcomes[0]["testReview"]["undeclared_tests"]
         .as_array()
         .unwrap();
@@ -645,7 +647,8 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert!(review["result"]["structuredContent"]["review"]["planned_required_tests"]
         .as_array()
         .unwrap()
-        .is_empty());
+        .iter()
+        .any(|value| value == "auth-login-rs"));
     assert_eq!(
         review["result"]["structuredContent"]["review"]["planned_required_test_files"][0],
         "tests/auth/login.rs"
@@ -1207,7 +1210,7 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
         }),
     );
     assert_eq!(add_required["result"]["isError"], json!(false));
-    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(true));
+    assert_eq!(add_required["result"]["structuredContent"]["added"]["test_id"], json!(false));
     assert_eq!(add_required["result"]["structuredContent"]["added"]["test_file"], json!(false));
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")

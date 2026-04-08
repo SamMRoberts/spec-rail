@@ -2266,12 +2266,36 @@
                 return outcome && outcome.testReview && typeof outcome.testReview === "object" ? outcome.testReview : null;
             }
 
+            function requiredTestNamesFromReview(requiredIds, review) {
+                var byId = {};
+                if (review && Array.isArray(review.related_tests)) {
+                    review.related_tests.forEach(function (test) {
+                        var id = String((test && test.id) || "").trim();
+                        if (!id) return;
+                        byId[id] = String((test && test.name) || "").trim();
+                    });
+                }
+                return (Array.isArray(requiredIds) ? requiredIds : []).map(function (id) {
+                    return byId[String(id)] || "";
+                });
+            }
+
+            function currentOutcomeReview(featureId, outcomeId) {
+                var sc = state.toolResult && state.toolResult.structuredContent;
+                var outcomes = Array.isArray(sc && sc.outcomes) ? sc.outcomes : [];
+                var found = outcomes.find(function (outcome) {
+                    return String((outcome && outcome.id) || "") === String(outcomeId || "");
+                });
+                if (!found) return null;
+                return getOutcomeReview(found);
+            }
+
             function reviewSummary(review) {
                 if (!review) return { tone: "muted", text: "Test health is not available for this outcome yet." };
-                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test names to make this outcome verifiable." };
+                if (review.has_no_required_tests) return { tone: "warn", text: "Add required test IDs to make this outcome verifiable." };
                 if (review.has_no_required_test_files) return { tone: "warn", text: "Add required test file paths to make this outcome verifiable." };
                 if (review.has_no_related_tests) return { tone: "warn", text: "No manifest tests are linked to this outcome yet." };
-                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test name" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
+                if (review.missing_required_tests.length > 0) return { tone: "warn", text: review.missing_required_tests.length + " required test ID" + (review.missing_required_tests.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
                 if (review.missing_required_test_files.length > 0) return { tone: "warn", text: review.missing_required_test_files.length + " required test file path" + (review.missing_required_test_files.length !== 1 ? "s are" : " is") + " still missing from the manifest." };
                 if (review.planned_required_tests.length > 0) return { tone: "warn", text: review.planned_required_tests.length + " required test" + (review.planned_required_tests.length !== 1 ? "s remain" : " remains") + " in planned status." };
                 if (review.planned_required_test_files.length > 0) return { tone: "warn", text: review.planned_required_test_files.length + " required test file" + (review.planned_required_test_files.length !== 1 ? "s remain" : " remains") + " in planned status." };
@@ -2299,7 +2323,7 @@
 
             function testDisplayName(test) {
                 var fileName = testFileName(test && test.path);
-                var methodName = String((test && test.id) || "unnamed-test");
+                var methodName = String((test && test.name) || "").trim() || String((test && test.id) || "unnamed-test");
                 return fileName === methodName ? fileName : (fileName + " :: " + methodName);
             }
 
@@ -2517,7 +2541,7 @@
                 if (review.required_test_ids.length > 0 && review.suggested_test_paths.length === 0 && review.related_test_count === 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Required test names";
+                    requiredTitle.textContent = "Required test IDs";
                     section.appendChild(requiredTitle);
                     section.appendChild(renderPathList(review.required_test_ids, "path-list"));
                 }
@@ -2606,7 +2630,7 @@
                 copy.className = "section-card-copy";
                 copy.textContent = review.related_test_count > 0
                     ? review.related_test_count + " manifest test" + (review.related_test_count !== 1 ? "s are" : " is") + " linked to this outcome."
-                    : "No manifest tests are linked yet. Use the required test names and file paths below to register or generate them.";
+                    : "No manifest tests are linked yet. Use required test IDs and file paths below to register or generate them.";
                 section.appendChild(copy);
 
                 if (review.related_tests.length > 0) {
@@ -2651,7 +2675,7 @@
                 if (review.required_test_ids.length > 0) {
                     var requiredTitle = document.createElement("div");
                     requiredTitle.className = "card-note";
-                    requiredTitle.textContent = "Expected required test names";
+                    requiredTitle.textContent = "Expected required test IDs";
                     section.appendChild(requiredTitle);
                     section.appendChild(renderPathList(review.required_test_ids, "path-list"));
                 }
@@ -2724,6 +2748,7 @@
                         goal: o.goal || "", order: String(o.order || 1),
                         prerequisites: arrayToLines(o.prerequisites), allowed_paths: arrayToLines(o.allowed_paths),
                         forbidden_paths: arrayToLines(o.forbidden_paths), required_tests: arrayToLines(o.required_tests),
+                        required_test_names: arrayToLines(requiredTestNamesFromReview(o.required_tests, currentOutcomeReview(featureId, outcomeId))),
                         required_test_files: arrayToLines(o.required_test_files)
                     };
                     appendLog("Editing outcome: " + outcomeId, "info"); render();
@@ -2744,6 +2769,7 @@
                         allowed_paths: linesToArray(state.outcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.outcomeDraft.forbidden_paths),
                         required_tests: linesToArray(state.outcomeDraft.required_tests),
+                        required_test_names: linesToArray(state.outcomeDraft.required_test_names),
                         required_test_files: linesToArray(state.outcomeDraft.required_test_files)
                     }));
                     state.editingOutcomeId = null; state.outcomeDraft = null;
@@ -2775,7 +2801,7 @@
 
             function startNewOutcome(featureId, suggestedOrder) {
                 state.creatingOutcome = true;
-                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "", required_test_files: "" };
+                state.newOutcomeDraft = { feature_id: featureId, outcome_id: "", title: "", goal: "", order: String(suggestedOrder || 1), prerequisites: "", allowed_paths: "", forbidden_paths: "", required_tests: "", required_test_names: "", required_test_files: "" };
                 appendLog("Creating new outcome\u2026", "info"); render();
             }
             function cancelNewOutcome() { state.creatingOutcome = false; state.newOutcomeDraft = null; render(); }
@@ -2792,6 +2818,7 @@
                         allowed_paths: linesToArray(state.newOutcomeDraft.allowed_paths),
                         forbidden_paths: linesToArray(state.newOutcomeDraft.forbidden_paths),
                         required_tests: linesToArray(state.newOutcomeDraft.required_tests),
+                        required_test_names: linesToArray(state.newOutcomeDraft.required_test_names),
                         required_test_files: linesToArray(state.newOutcomeDraft.required_test_files)
                     }));
                     state.creatingOutcome = false; state.newOutcomeDraft = null;
@@ -3285,7 +3312,8 @@
                         mkField("Order", "order", d.order, "newOutcome"),
                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "newOutcome", true),
                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "newOutcome", true),
-                        mkField("Required tests (one name per line)", "required_tests", d.required_tests, "newOutcome", true, "Test names or facts that must pass"),
+                        mkField("Required test IDs (one per line)", "required_tests", d.required_tests, "newOutcome", true, "Manifest test IDs that must pass"),
+                        mkField("Required test names (one per line)", "required_test_names", d.required_test_names, "newOutcome", true, "Optional display names saved into matching tests.name rows"),
                         mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "newOutcome", true, "Test file paths used for generation"),
                     ], saveNewOutcome, cancelNewOutcome));
                 }
@@ -3426,7 +3454,8 @@
                                         mkField("Prerequisites (one outcome ID per line)", "prerequisites", d.prerequisites, "outcome", true),
                                         mkField("Allowed paths (one glob per line)", "allowed_paths", d.allowed_paths, "outcome", true),
                                         mkField("Forbidden paths (one glob per line)", "forbidden_paths", d.forbidden_paths, "outcome", true),
-                                        mkField("Required tests (one name per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required test IDs (one per line)", "required_tests", d.required_tests, "outcome", true),
+                                        mkField("Required test names (one per line)", "required_test_names", d.required_test_names, "outcome", true),
                                         mkField("Required test files (one path per line)", "required_test_files", d.required_test_files, "outcome", true),
                                     ], saveOutcomeEdit, cancelOutcomeEdit));
                                 }

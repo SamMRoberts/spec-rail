@@ -211,13 +211,13 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         ])
         .assert()
         .success()
-        .stdout(contains("required_tests not updated"))
+        .stdout(contains("required_tests updated with auth-outcome-1-validate"))
         .stdout(contains("Status:  planned"));
 
     specrail(&dir)
         .args(["outcome", "show", "auth", "outcome-1"])
         .assert()
         .success()
-        .stdout(contains("No required test names set."))
+        .stdout(contains("auth-outcome-1-validate"))
         .stdout(contains("tests/auth/validate.rs"));
 }

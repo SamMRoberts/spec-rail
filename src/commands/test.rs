@@ -103,22 +103,15 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 
     add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
     let test = manifest.tests.last().context("manifest missing inserted test")?;
-    let required_test_name = test.name.trim().to_string();
+    let required_test_id = test.id.clone();
     repo.save_manifest(&manifest)?;
-    let added_to_outcome = if required_test_name.is_empty() {
-        crate::commands::outcome::RequiredTestReferenceUpdate {
-            added_test_id: false,
-            added_test_file: false,
-        }
-    } else {
-        crate::commands::outcome::ensure_required_test_reference(
-            repo,
-            &feature_id,
-            &outcome_id,
-            &required_test_name,
-            &path,
-        )?
-    };
+    let added_to_outcome = crate::commands::outcome::ensure_required_test_reference(
+        repo,
+        &feature_id,
+        &outcome_id,
+        &required_test_id,
+        &path,
+    )?;
 
     let event = LedgerEvent::new(LedgerEventType::TestAdded)
         .with_feature(&test.feature_id)
@@ -132,11 +125,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
         "  Status:  planned — update to 'written' once the test file exists"
     );
     if added_to_outcome.added_test_id {
-        println!("  Outcome: required_tests updated with {}", required_test_name);
-    } else if required_test_name.is_empty() {
-        println!(
-            "  Outcome: required_tests not updated (test case name unknown until generation or explicit --name)."
-        );
+        println!("  Outcome: required_tests updated with {}", required_test_id);
     }
     if added_to_outcome.added_test_file {
         println!("  Outcome: required_test_files updated with {}", path);

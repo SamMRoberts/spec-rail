@@ -367,11 +367,7 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 
     let missing_required_tests: Vec<String> = required_test_ids
         .iter()
-        .filter(|test_name| {
-            !related_tests
-                .iter()
-                .any(|test| manifest_test_name(test) == **test_name)
-        })
+        .filter(|test_id| !related_tests.iter().any(|test| test.id == **test_id))
         .cloned()
         .collect();
 
@@ -383,12 +379,10 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 
     let planned_required_tests: Vec<String> = required_test_ids
         .iter()
-        .filter(|test_name| {
+        .filter(|test_id| {
             related_tests
                 .iter()
-                .any(|test| {
-                    manifest_test_name(test) == **test_name && test.status == TestStatus::Planned
-                })
+                .any(|test| test.id == **test_id && test.status == TestStatus::Planned)
         })
         .cloned()
         .collect();
@@ -406,9 +400,7 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
     let undeclared_tests: Vec<TestSpec> = related_tests
         .iter()
         .filter(|test| {
-            !required_test_ids
-                .iter()
-                .any(|test_name| test_name == &manifest_test_name(test))
+            !required_test_ids.iter().any(|test_id| test_id == &test.id)
                 || !required_test_files.iter().any(|path| path == &test.path)
         })
         .cloned()
@@ -462,8 +454,49 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
     }
 }
 
-fn manifest_test_name(test: &TestSpec) -> String {
-    test.name.clone()
+fn sync_required_test_names(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+    required_tests: &[String],
+    required_test_names: &[String],
+) -> Result<usize> {
+    if required_test_names.is_empty() {
+        return Ok(0);
+    }
+
+    if required_tests.len() != required_test_names.len() {
+        return Err(anyhow!(
+            "required_test_names length ({}) must match required_tests length ({})",
+            required_test_names.len(),
+            required_tests.len()
+        ));
+    }
+
+    let mut manifest = repo.load_manifest()?;
+    let mut updated = 0usize;
+
+    for (test_id, test_name_raw) in required_tests.iter().zip(required_test_names.iter()) {
+        let test_name = test_name_raw.trim();
+        if test_name.is_empty() {
+            continue;
+        }
+
+        if let Some(test) = manifest.tests.iter_mut().find(|test| {
+            test.feature_id == feature_id && test.outcome_id == outcome_id && test.id == *test_id
+        }) {
+            if test.name != test_name {
+                test.name = test_name.to_string();
+                updated += 1;
+            }
+        }
+    }
+
+    if updated > 0 {
+        repo.save_manifest(&manifest)?;
+    }
+
+    Ok(updated)
 }
 
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -870,7 +903,7 @@ fn feature_implement_status_payload(
         let mut blockers: Vec<String> = Vec::new();
         if outcomes_without_required_tests > 0 {
             blockers.push(format!(
-                "{} outcome{} missing required test names",
+                "{} outcome{} missing required test IDs",
                 outcomes_without_required_tests,
                 if outcomes_without_required_tests == 1 {
                     " is"
@@ -892,7 +925,7 @@ fn feature_implement_status_payload(
         }
         if outcomes_missing_required_test_links > 0 {
             blockers.push(format!(
-                "{} outcome{} missing registered manifest tests for one or more required test names",
+                "{} outcome{} missing registered manifest tests for one or more required test IDs",
                 outcomes_missing_required_test_links,
                 if outcomes_missing_required_test_links == 1 {
                     " is"
@@ -926,7 +959,7 @@ fn feature_implement_status_payload(
     status_indicator_payload(
         "success",
         "Ready",
-        "Every outcome has required test names and required test files linked to registered manifest tests.",
+        "Every outcome has required test IDs and required test files linked to registered manifest tests.",
     )
 }
 
@@ -1637,13 +1670,14 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_names = string_array(arguments, "required_test_names")?;
     let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
         "new".to_string(),
-        feature_id,
-        outcome_id,
+        feature_id.clone(),
+        outcome_id.clone(),
         "--title".to_string(),
         title,
         "--goal".to_string(),
@@ -1655,10 +1689,21 @@ fn tool_outcome_new(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--prereq", prerequisites);
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
-    push_repeated_flag(&mut args, "--test", required_tests);
-    push_repeated_flag(&mut args, "--test-file", required_test_files);
+    push_repeated_flag(&mut args, "--test", required_tests.clone());
+    push_repeated_flag(&mut args, "--test-file", required_test_files.clone());
 
-    run_cli_tool(&cwd, args)
+    let payload = run_cli_tool(&cwd, args)?;
+    if !required_test_names.is_empty() {
+        let repo = Repository::discover(&cwd)?;
+        let _ = sync_required_test_names(
+            &repo,
+            &feature_id,
+            &outcome_id,
+            &required_tests,
+            &required_test_names,
+        )?;
+    }
+    Ok(payload)
 }
 
 fn tool_outcome_activate(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1687,13 +1732,14 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     let allowed_paths = string_array(arguments, "allowed_paths")?;
     let forbidden_paths = string_array(arguments, "forbidden_paths")?;
     let required_tests = string_array(arguments, "required_tests")?;
+    let required_test_names = string_array(arguments, "required_test_names")?;
     let required_test_files = string_array(arguments, "required_test_files")?;
 
     let mut args = vec![
         "outcome".to_string(),
         "edit".to_string(),
-        feature_id,
-        outcome_id,
+        feature_id.clone(),
+        outcome_id.clone(),
         "--title".to_string(),
         title,
         "--goal".to_string(),
@@ -1705,10 +1751,21 @@ fn tool_outcome_edit(arguments: &Map<String, Value>) -> Result<Value> {
     push_repeated_flag(&mut args, "--prereq", prerequisites);
     push_repeated_flag(&mut args, "--allow", allowed_paths);
     push_repeated_flag(&mut args, "--forbid", forbidden_paths);
-    push_repeated_flag(&mut args, "--test", required_tests);
-    push_repeated_flag(&mut args, "--test-file", required_test_files);
+    push_repeated_flag(&mut args, "--test", required_tests.clone());
+    push_repeated_flag(&mut args, "--test-file", required_test_files.clone());
 
-    run_cli_tool(&cwd, args)
+    let payload = run_cli_tool(&cwd, args)?;
+    if !required_test_names.is_empty() {
+        let repo = Repository::discover(&cwd)?;
+        let _ = sync_required_test_names(
+            &repo,
+            &feature_id,
+            &outcome_id,
+            &required_tests,
+            &required_test_names,
+        )?;
+    }
+    Ok(payload)
 }
 
 fn tool_outcome_unverify(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1731,18 +1788,11 @@ fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Valu
     let outcome_id = require_string(arguments, "outcome_id")?;
     let test_id = require_string(arguments, "test_id")?;
     let path = require_string(arguments, "path")?;
-    let manifest = repo.load_manifest()?;
-    let test_name = manifest
-        .tests
-        .iter()
-        .find(|test| test.id == test_id)
-        .map(manifest_test_name)
-        .unwrap_or_else(|| test_id.clone());
     let added = crate::commands::outcome::ensure_required_test_reference(
         &repo,
         &feature_id,
         &outcome_id,
-        &test_name,
+        &test_id,
         &path,
     )?;
 
@@ -1750,19 +1800,18 @@ fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Valu
         if added.added_test_id || added.added_test_file {
             format!(
                 "Added required test '{}' and file '{}' for outcome '{}:{}'.",
-                test_name, path, feature_id, outcome_id
+                test_id, path, feature_id, outcome_id
             )
         } else {
             format!(
                 "Required test '{}' and file '{}' are already listed for outcome '{}:{}'.",
-                test_name, path, feature_id, outcome_id
+                test_id, path, feature_id, outcome_id
             )
         },
         Some(json!({
             "feature_id": feature_id,
             "outcome_id": outcome_id,
             "test_id": test_id,
-            "test_name": test_name,
             "path": path,
             "added": {
                 "test_id": added.added_test_id,
@@ -2522,7 +2571,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_show",
             "title": "Show Outcome",
-            "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, and required tests.",
+            "description": "Show full details of a single outcome including title, goal, status, order, prerequisites, allowed/forbidden paths, required test IDs, and required test files.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2536,7 +2585,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_test_review",
             "title": "Review Outcome Tests",
-            "description": "Review one outcome's test health. Returns related manifest tests, missing required_tests paths, planned required tests, undeclared tests, and suggested test paths to add or generate.",
+            "description": "Review one outcome's test health. Returns related manifest tests, missing required test IDs/files, planned required tests, undeclared tests, and suggested test paths to add or generate.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2797,7 +2846,8 @@ fn tool_definitions() -> Vec<Value> {
                     "prerequisites": { "type": "array", "items": { "type": "string" }, "description": "Outcome IDs that must be verified first." },
                     "allowed_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent is allowed to modify." },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns the agent must not modify." },
-                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Required test names/facts that must pass." },
+                    "required_tests": { "type": "array", "items": { "type": "string" }, "description": "Required manifest test IDs that must pass." },
+                    "required_test_names": { "type": "array", "items": { "type": "string" }, "description": "Optional display names to persist into related manifest tests in the same order as required_tests." },
                     "required_test_files": { "type": "array", "items": { "type": "string" }, "description": "Required test file paths used for generation and manifest alignment." }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
@@ -2820,7 +2870,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_outcome_edit",
             "title": "Edit Outcome",
-            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, required test names/facts, or required test files. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
+            "description": "Update an existing outcome's title, goal, order, prerequisites, allowed/forbidden paths, required test IDs, optional required test names for manifest records, or required test files. Editing a verified/failed/skipped outcome resets it to pending. All fields must be supplied.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2834,6 +2884,7 @@ fn tool_definitions() -> Vec<Value> {
                     "allowed_paths": { "type": "array", "items": { "type": "string" } },
                     "forbidden_paths": { "type": "array", "items": { "type": "string" } },
                     "required_tests": { "type": "array", "items": { "type": "string" } },
+                    "required_test_names": { "type": "array", "items": { "type": "string" } },
                     "required_test_files": { "type": "array", "items": { "type": "string" } }
                 },
                 "required": ["feature_id", "outcome_id", "title", "goal", "order"]
@@ -2863,7 +2914,7 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string" },
                     "feature_id": { "type": "string" },
                     "outcome_id": { "type": "string" },
-                    "test_id": { "type": "string", "description": "Related manifest test identifier used to look up the stored test name/fact for required_tests." },
+                    "test_id": { "type": "string", "description": "Related manifest test identifier to append into required_tests." },
                     "path": { "type": "string", "description": "Related test path to add into required_test_files." }
                 },
                 "required": ["feature_id", "outcome_id", "test_id", "path"]
@@ -2878,7 +2929,7 @@ fn tool_definitions() -> Vec<Value> {
                 "properties": {
                     "cwd": { "type": "string" },
                     "id": { "type": "string", "description": "Unique test identifier." },
-                    "name": { "type": "string", "description": "Test case/method name stored in required_tests." },
+                    "name": { "type": "string", "description": "Test case/method display name stored in tests.name." },
                     "feature_id": { "type": "string", "description": "Feature this test belongs to." },
                     "outcome_id": { "type": "string", "description": "Outcome this test validates." },
                     "path": { "type": "string", "description": "Relative file path of the test (e.g. 'tests/auth_login_test.rs')." },
@@ -2891,7 +2942,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete required test metadata, the agent can bootstrap an initial test name/fact and path and specrail will persist them back into the outcome YAML.",
+            "description": "Use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete required metadata, the agent can bootstrap initial required test IDs, test names, and file paths and specrail will persist them.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
