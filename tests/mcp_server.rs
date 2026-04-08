@@ -133,6 +133,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_init"));
     assert!(tool_names.contains(&"specrail_verify"));
     assert!(tool_names.contains(&"specrail_outcome_unverify"));
+    assert!(tool_names.contains(&"specrail_outcome_add_required_test"));
     assert!(tool_names.contains(&"specrail_outcome_test_review"));
     assert!(tool_names.contains(&"specrail_test_suggest"));
     let feature_navigate = tools["result"]["tools"]
@@ -784,6 +785,117 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     let manifest = fs::read_to_string(dir.path().join(".specrail/tests/manifest.yaml")).unwrap();
     assert!(manifest.contains("tests/auth/login.rs"));
     assert!(manifest.contains("status: written"));
+
+    client.shutdown();
+}
+
+#[test]
+fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
+    let dir = TempDir::new().unwrap();
+    let mut client = McpClient::spawn(dir.path());
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1,
+                "required_tests": ["tests/auth/password.rs"]
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_add",
+            "arguments": {
+                "id": "auth-login-rs",
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login.rs",
+                "kind": "unit",
+                "purpose_refs": []
+            }
+        }),
+    );
+
+    let outcome_path = dir.path().join(".specrail/outcomes/auth/login.yaml");
+    let reverted = fs::read_to_string(&outcome_path)
+        .unwrap()
+        .replace("- tests/auth/login.rs\n", "");
+    fs::write(&outcome_path, reverted).unwrap();
+
+    let review_before = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_test_review",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login"
+            }
+        }),
+    );
+    assert_eq!(
+        review_before["result"]["structuredContent"]["review"]["undeclared_tests"][0]["path"],
+        "tests/auth/login.rs"
+    );
+
+    let add_required = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_add_required_test",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login.rs"
+            }
+        }),
+    );
+    assert_eq!(add_required["result"]["isError"], json!(false));
+    assert_eq!(add_required["result"]["structuredContent"]["added"], json!(true));
+
+    let outcome = fs::read_to_string(dir.path().join(".specrail/outcomes/auth/login.yaml")).unwrap();
+    assert!(outcome.contains("tests/auth/login.rs"));
+
+    let review_after = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_test_review",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login"
+            }
+        }),
+    );
+    assert!(review_after["result"]["structuredContent"]["review"]["undeclared_tests"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 
     client.shutdown();
 }

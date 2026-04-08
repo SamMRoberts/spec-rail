@@ -1671,6 +1671,14 @@
                 return fileName === methodName ? fileName : (fileName + " :: " + methodName);
             }
 
+            function isUndeclaredRelatedTest(review, test) {
+                if (!review || !Array.isArray(review.undeclared_tests) || !test) return false;
+                return review.undeclared_tests.some(function (candidate) {
+                    return String(candidate.path || "") === String(test.path || "")
+                        && String(candidate.id || "") === String(test.id || "");
+                });
+            }
+
             function renderPathList(paths, className) {
                 var list = document.createElement("ul");
                 list.className = className || "path-list";
@@ -1964,6 +1972,7 @@
                     review.related_tests.forEach(function (test) {
                         var item = document.createElement("li");
                         item.className = "related-test-item";
+                        var isUndeclared = isUndeclaredRelatedTest(review, test);
 
                         var main = document.createElement("div");
                         main.className = "related-test-main";
@@ -1974,8 +1983,22 @@
                         meta.className = "related-test-meta";
                         appendTestChip(meta, String(test.status || "planned"), testStatusChipClass(String(test.status || "planned")));
                         appendTestChip(meta, String(test.kind || "unit"), "");
+                        if (isUndeclared) appendTestChip(meta, "not required", "warning");
                         main.appendChild(meta);
                         item.appendChild(main);
+
+                        if (isUndeclared) {
+                            var actions = document.createElement("div");
+                            actions.className = "btn-group";
+                            appendActionButton(actions, {
+                                title: "Add As Required",
+                                tool: "specrail_outcome_add_required_test",
+                                args: { feature_id: featureId, outcome_id: outcome.id, path: test.path },
+                                refresh: true,
+                            });
+                            item.appendChild(actions);
+                        }
+
                         list.appendChild(item);
                     });
                     section.appendChild(list);

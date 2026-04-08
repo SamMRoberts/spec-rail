@@ -265,6 +265,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_outcome_new" => tool_outcome_new(arguments),
         "specrail_outcome_activate" => tool_outcome_activate(arguments),
         "specrail_outcome_edit" => tool_outcome_edit(arguments),
+        "specrail_outcome_add_required_test" => tool_outcome_add_required_test(arguments),
         "specrail_outcome_unverify" => tool_outcome_unverify(arguments),
         "specrail_test_add" => tool_test_add(arguments),
         "specrail_test_suggest" => tool_test_suggest(arguments),
@@ -341,15 +342,11 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
         .cloned()
         .collect();
 
-    let undeclared_tests: Vec<TestSpec> = if required_test_paths.is_empty() {
-        Vec::new()
-    } else {
-        related_tests
-            .iter()
-            .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
-            .cloned()
-            .collect()
-    };
+    let undeclared_tests: Vec<TestSpec> = related_tests
+        .iter()
+        .filter(|test| !required_test_paths.iter().any(|path| path == &test.path))
+        .cloned()
+        .collect();
 
     let mut suggested_test_paths = missing_required_tests.clone();
     for path in &planned_required_tests {
@@ -991,6 +988,34 @@ fn tool_outcome_unverify(arguments: &Map<String, Value>) -> Result<Value> {
             "Outcome '{outcome_id}' for feature '{feature_id}' reset to pending."
         ),
         Some(json!({ "outcome": outcome })),
+    ))
+}
+
+fn tool_outcome_add_required_test(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = require_string(arguments, "feature_id")?;
+    let outcome_id = require_string(arguments, "outcome_id")?;
+    let path = require_string(arguments, "path")?;
+    let added = crate::commands::outcome::ensure_required_test(&repo, &feature_id, &outcome_id, &path)?;
+
+    Ok(tool_success_payload(
+        if added {
+            format!(
+                "Added '{}' to required_tests for outcome '{}:{}'.",
+                path, feature_id, outcome_id
+            )
+        } else {
+            format!(
+                "'{}' is already listed in required_tests for outcome '{}:{}'.",
+                path, feature_id, outcome_id
+            )
+        },
+        Some(json!({
+            "feature_id": feature_id,
+            "outcome_id": outcome_id,
+            "path": path,
+            "added": added,
+        })),
     ))
 }
 
@@ -1855,6 +1880,21 @@ fn tool_definitions() -> Vec<Value> {
                     "outcome_id": { "type": "string", "description": "Outcome identifier to reset." }
                 },
                 "required": ["feature_id", "outcome_id"]
+            }
+        }),
+        json!({
+            "name": "specrail_outcome_add_required_test",
+            "title": "Add Required Test",
+            "description": "Add an existing related test path into the outcome's required_tests list so the outcome YAML and manifest stay aligned.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string" },
+                    "outcome_id": { "type": "string" },
+                    "path": { "type": "string", "description": "Related test path to add into required_tests." }
+                },
+                "required": ["feature_id", "outcome_id", "path"]
             }
         }),
         json!({
