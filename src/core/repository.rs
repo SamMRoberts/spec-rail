@@ -45,35 +45,10 @@ impl Repository {
         }
     }
 
-    // ── Directory paths ────────────────────────────────────────────────────
+    // ── Storage paths ──────────────────────────────────────────────────────
 
     pub fn specrail_dir(&self) -> PathBuf {
         self.root.join(SPECRAIL_DIR)
-    }
-
-    pub fn features_dir(&self) -> PathBuf {
-        self.specrail_dir().join("features")
-    }
-
-    pub fn solutions_dir(&self) -> PathBuf {
-        self.specrail_dir().join("solutions")
-    }
-
-    pub fn projects_dir(&self) -> PathBuf {
-        self.specrail_dir().join("projects")
-    }
-
-    pub fn components_dir(&self) -> PathBuf {
-        self.specrail_dir().join("components")
-    }
-
-    pub fn outcomes_dir(&self) -> PathBuf {
-        self.specrail_dir().join("outcomes")
-    }
-
-    #[allow(dead_code)]
-    pub fn tests_dir(&self) -> PathBuf {
-        self.specrail_dir().join("tests")
     }
 
     pub fn state_dir(&self) -> PathBuf {
@@ -94,50 +69,8 @@ impl Repository {
         self.specrail_dir().join("project.yaml")
     }
 
-    #[allow(dead_code)]
-    pub fn manifest_path(&self) -> PathBuf {
-        self.tests_dir().join("manifest.yaml")
-    }
-
-    #[allow(dead_code)]
-    pub fn state_path(&self) -> PathBuf {
-        self.state_dir().join("current.yaml")
-    }
-
     pub fn ledger_path(&self) -> PathBuf {
         self.state_dir().join("ledger.jsonl")
-    }
-
-    #[allow(dead_code)]
-    pub fn feature_path(&self, feature_id: &str) -> PathBuf {
-        self.features_dir().join(format!("{feature_id}.yaml"))
-    }
-
-    #[allow(dead_code)]
-    pub fn solution_path(&self, solution_id: &str) -> PathBuf {
-        self.solutions_dir().join(format!("{solution_id}.yaml"))
-    }
-
-    #[allow(dead_code)]
-    pub fn project_path(&self, project_id: &str) -> PathBuf {
-        self.projects_dir().join(format!("{project_id}.yaml"))
-    }
-
-    #[allow(dead_code)]
-    pub fn component_path(&self, component_id: &str) -> PathBuf {
-        self.components_dir().join(format!("{component_id}.yaml"))
-    }
-
-    #[allow(dead_code)]
-    pub fn outcome_path(&self, feature_id: &str, outcome_id: &str) -> PathBuf {
-        self.outcomes_dir()
-            .join(feature_id)
-            .join(format!("{outcome_id}.yaml"))
-    }
-
-    #[allow(dead_code)]
-    pub fn feature_outcomes_dir(&self, feature_id: &str) -> PathBuf {
-        self.outcomes_dir().join(feature_id)
     }
 
     // ── Load helpers ───────────────────────────────────────────────────────
