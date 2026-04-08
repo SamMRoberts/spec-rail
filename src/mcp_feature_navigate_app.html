@@ -1125,6 +1125,22 @@
                 actions.appendChild(save); actions.appendChild(cancel); form.appendChild(actions); wrap.appendChild(form); return wrap;
             }
 
+            function appendFeatureProgress(container, outcomeCount, verifiedCount) {
+                if (outcomeCount > 0) {
+                    const pct = Math.round((verifiedCount / outcomeCount) * 100);
+                    const prog = document.createElement("div");
+                    prog.className = "progress-wrap";
+                    prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+                    container.appendChild(prog);
+                    return;
+                }
+
+                const meta = document.createElement("div");
+                meta.className = "card-meta";
+                meta.textContent = "No outcomes yet";
+                container.appendChild(meta);
+            }
+
             function renderFeatureSelection(data) {
                 const features = Array.isArray(data.features) ? data.features : [];
                 const root = document.getElementById("root"); root.innerHTML = "";
@@ -1175,7 +1191,6 @@
                     const isActive = !!feature.isActive;
                     const outcomeCount = Number(feature.outcomeCount ?? 0);
                     const verifiedCount = Number(feature.verifiedOutcomeCount ?? 0);
-                    const pct = outcomeCount > 0 ? Math.round((verifiedCount / outcomeCount) * 100) : 0;
 
                     const featureKey = cardStateKey("feature", feature.id);
                     const card = makeCollapsibleCard({
@@ -1194,16 +1209,9 @@
                             row.appendChild(body);
                             row.appendChild(badge(isActive ? "active" : String(feature.status ?? "pending")));
                             summary.appendChild(row);
+                            appendFeatureProgress(summary, outcomeCount, verifiedCount);
                         },
                         buildContent(content) {
-                            if (outcomeCount > 0) {
-                                const prog = document.createElement("div"); prog.className = "progress-wrap";
-                                prog.innerHTML = `<div class="progress-label"><span>${verifiedCount}/${outcomeCount} outcomes verified</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
-                                content.appendChild(prog);
-                            } else {
-                                const meta = document.createElement("div"); meta.className = "card-meta"; meta.textContent = "No outcomes yet"; content.appendChild(meta);
-                            }
-
                             const actions = document.createElement("div"); actions.className = "card-actions";
                             const openBtn = document.createElement("button"); openBtn.className = "btn btn-primary btn-sm";
                             openBtn.disabled = state.pendingFeatureId === feature.id || state.isSaving;
@@ -1282,6 +1290,8 @@
                 renderToolOutput(root);
 
                 const isActive = data.activeFeatureId === featureId;
+                const featureOutcomeCount = outcomes.length;
+                const featureVerifiedCount = outcomes.filter(outcome => outcome.status === "verified").length;
                 const selectedFeatureKey = cardStateKey("selected-feature", featureId);
                 const fCard = makeCollapsibleCard({
                     key: selectedFeatureKey,
@@ -1299,6 +1309,7 @@
                         fRow.appendChild(fBody);
                         fRow.appendChild(badge(isActive ? "active" : String(selectedFeature.status ?? "pending")));
                         summary.appendChild(fRow);
+                        appendFeatureProgress(summary, featureOutcomeCount, featureVerifiedCount);
                     },
                     buildContent(content) {
                         const fActions = document.createElement("div"); fActions.className = "card-actions";
@@ -1361,9 +1372,8 @@
                 }
 
                 if (outcomes.length > 0) {
-                    const verifiedCount = outcomes.filter(o => o.status === "verified").length;
                     const sec = document.createElement("div"); sec.className = "section-header";
-                    sec.innerHTML = `<span class="section-label">Outcomes</span><span class="stat-chip"><strong>${verifiedCount}/${outcomes.length}</strong> verified</span>`;
+                    sec.innerHTML = `<span class="section-label">Outcomes</span><span class="stat-chip"><strong>${featureVerifiedCount}/${outcomes.length}</strong> verified</span>`;
                     root.appendChild(sec);
 
                     const list = document.createElement("ul"); list.className = "outcome-list";
