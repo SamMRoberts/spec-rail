@@ -15,6 +15,7 @@ pub struct StateSnapshot {
 #[derive(Debug)]
 pub struct TestRecord {
     pub id: String,
+    pub name: String,
     pub feature_id: String,
     pub outcome_id: String,
     pub path: String,
@@ -105,18 +106,19 @@ pub fn tests(dir: &TempDir) -> Vec<TestRecord> {
     let conn = open_db(dir);
     let mut stmt = conn
         .prepare(
-            "SELECT id, feature_id, outcome_id, path, kind, status FROM tests ORDER BY id",
+            "SELECT id, name, feature_id, outcome_id, path, kind, status FROM tests ORDER BY id",
         )
         .unwrap();
     let rows = stmt
         .query_map([], |row| {
             Ok(TestRecord {
                 id: row.get(0)?,
-                feature_id: row.get(1)?,
-                outcome_id: row.get(2)?,
-                path: row.get(3)?,
-                kind: row.get(4)?,
-                status: row.get(5)?,
+                name: row.get(1)?,
+                feature_id: row.get(2)?,
+                outcome_id: row.get(3)?,
+                path: row.get(4)?,
+                kind: row.get(5)?,
+                status: row.get(6)?,
             })
         })
         .unwrap();

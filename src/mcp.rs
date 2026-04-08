@@ -367,7 +367,11 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
 
     let missing_required_tests: Vec<String> = required_test_ids
         .iter()
-        .filter(|test_id| !related_tests.iter().any(|test| test.id == **test_id))
+        .filter(|test_id| {
+            !related_tests
+                .iter()
+                .any(|test| test.id == **test_id || test.name == **test_id)
+        })
         .cloned()
         .collect();
 
@@ -380,9 +384,10 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
     let planned_required_tests: Vec<String> = required_test_ids
         .iter()
         .filter(|test_id| {
-            related_tests
-                .iter()
-                .any(|test| test.id == **test_id && test.status == TestStatus::Planned)
+            related_tests.iter().any(|test| {
+                (test.id == **test_id || test.name == **test_id)
+                    && test.status == TestStatus::Planned
+            })
         })
         .cloned()
         .collect();
@@ -400,7 +405,9 @@ fn build_outcome_test_review(outcome: &OutcomeSpec, manifest: &TestManifest) -> 
     let undeclared_tests: Vec<TestSpec> = related_tests
         .iter()
         .filter(|test| {
-            !required_test_ids.iter().any(|test_id| test_id == &test.id)
+            !required_test_ids
+                .iter()
+                .any(|test_id| test_id == &test.id || test_id == &test.name)
                 || !required_test_files.iter().any(|path| path == &test.path)
         })
         .cloned()

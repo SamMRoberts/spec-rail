@@ -101,9 +101,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
     let path = args.path.clone();
     let mut manifest = repo.load_manifest()?;
 
-    add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
-    let test = manifest.tests.last().context("manifest missing inserted test")?;
-    let required_test_id = test.id.clone();
+    let required_test_id = add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
     repo.save_manifest(&manifest)?;
     let added_to_outcome = crate::commands::outcome::ensure_required_test_reference(
         repo,
@@ -114,13 +112,13 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
     )?;
 
     let event = LedgerEvent::new(LedgerEventType::TestAdded)
-        .with_feature(&test.feature_id)
-        .with_outcome(&test.outcome_id)
-        .with_message(format!("test '{}' added", test.id));
+        .with_feature(&feature_id)
+        .with_outcome(&outcome_id)
+        .with_message(format!("test '{}' added", required_test_id));
     Ledger::append(&repo.ledger_path(), &event)?;
 
-    println!("✓ Test '{}' added to manifest.", test.id);
-    println!("  Path:    {}", test.path);
+    println!("✓ Test '{}' added to manifest.", required_test_id);
+    println!("  Path:    {}", path);
     println!(
         "  Status:  planned — update to 'written' once the test file exists"
     );
@@ -228,7 +226,7 @@ pub fn generate_scoped(
 
         write_file(&repo.root.join(&generated.path), &generated.content)?;
 
-        add_to_manifest(
+        let _ = add_to_manifest(
             &mut manifest,
             AddArgs {
                 id: id.clone(),
@@ -594,7 +592,7 @@ pub fn set_status(
     Ok(())
 }
 
-fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatus) -> Result<()> {
+fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatus) -> Result<String> {
     if manifest.tests.iter().any(|t| t.id == args.id) {
         bail!("test '{}' already exists in the manifest", args.id);
     }
@@ -602,13 +600,14 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
     if let Some(existing) = manifest.tests.iter_mut().find(|t| {
         t.feature_id == args.feature_id && t.outcome_id == args.outcome_id && t.path == args.path
     }) {
+        let id = existing.id.clone();
         if let Some(name) = args.name {
             existing.name = name;
         }
         existing.kind = args.kind;
         existing.purpose_refs = args.purpose_refs;
         existing.status = status;
-        return Ok(());
+        return Ok(id);
     }
 
     let AddArgs {
@@ -624,7 +623,7 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
     let name = name.unwrap_or_default();
 
     manifest.tests.push(TestSpec {
-        id,
+        id: id.clone(),
         name,
         feature_id,
         outcome_id,
@@ -634,7 +633,7 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
         status,
     });
 
-    Ok(())
+    Ok(id)
 }
 
 fn parse_generated_tests(output: &str) -> Result<GeneratedTestsResponse> {

@@ -28,7 +28,7 @@ pub fn check_implementation_gates(outcome: &OutcomeSpec, manifest: &TestManifest
     let outcome_tests: Vec<_> = manifest
         .tests
         .iter()
-        .filter(|t| t.outcome_id == outcome.id)
+        .filter(|t| t.feature_id == outcome.feature_id && t.outcome_id == outcome.id)
         .collect();
 
     // Gate 2 — at least one test must exist
