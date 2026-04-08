@@ -1,8 +1,11 @@
 pub mod advance;
+pub mod component;
 pub mod feature;
 pub mod implement;
 pub mod init;
 pub mod outcome;
+pub mod project;
+pub mod solution;
 pub mod status;
 pub mod test;
 pub mod trace;

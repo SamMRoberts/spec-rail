@@ -10,6 +10,7 @@ use crate::core::{
 
 pub struct NewArgs {
     pub id: String,
+    pub component_id: Option<String>,
     pub title: String,
     pub purpose: String,
     pub outcomes: Vec<String>,
@@ -34,8 +35,14 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
         bail!("feature '{}' already exists at {}", args.id, path.display());
     }
 
+    let component_id = resolve_component_id(repo, args.component_id.as_deref())?;
+    let component = repo.load_component(&component_id)?;
+
     let feature = FeatureSpec {
         id: args.id.clone(),
+        solution_id: component.solution_id.clone(),
+        project_id: component.project_id.clone(),
+        component_id: component.id.clone(),
         title: args.title,
         purpose: args.purpose,
         outcomes: args.outcomes,
@@ -62,6 +69,10 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
 
     println!("✓ Feature '{}' created: {}", feature.id, feature.title);
     println!("  Path: {}", path.display());
+    println!(
+        "  Hierarchy: {}/{}/{}",
+        feature.solution_id, feature.project_id, feature.component_id
+    );
     println!("  Next: specrail outcome new {} <outcome-id>", feature.id);
     Ok(())
 }
@@ -74,11 +85,17 @@ pub fn list(repo: &Repository) -> Result<()> {
         println!("No features found. Run `specrail feature new <id>` to create one.");
         return Ok(());
     }
-    println!("{:<30} {:<12} {}", "ID", "STATUS", "TITLE");
-    println!("{}", "─".repeat(70));
+    println!(
+        "{:<20} {:<20} {:<20} {:<24} {:<12} {}",
+        "SOLUTION", "PROJECT", "COMPONENT", "ID", "STATUS", "TITLE"
+    );
+    println!("{}", "─".repeat(128));
     for f in &features {
         let status = format!("{:?}", f.status).to_lowercase();
-        println!("{:<30} {:<12} {}", f.id, status, f.title);
+        println!(
+            "{:<20} {:<20} {:<20} {:<24} {:<12} {}",
+            f.solution_id, f.project_id, f.component_id, f.id, status, f.title
+        );
     }
     Ok(())
 }
@@ -88,6 +105,10 @@ pub fn list(repo: &Repository) -> Result<()> {
 pub fn show(repo: &Repository, id: &str) -> Result<()> {
     let f = repo.load_feature(id)?;
     println!("Feature: {} — {}", f.id, f.title);
+    println!(
+        "Hierarchy: {}/{}/{}",
+        f.solution_id, f.project_id, f.component_id
+    );
     println!("Status:  {:?}", f.status);
     println!("Purpose: {}", f.purpose);
 
@@ -150,7 +171,11 @@ pub(crate) fn activate_feature(repo: &Repository, id: &str) -> Result<()> {
     feature.status = FeatureStatus::Active;
     repo.save_feature(&feature)?;
 
+    state.active_solution = Some(feature.solution_id.clone());
+    state.active_project = Some(feature.project_id.clone());
+    state.active_component = Some(feature.component_id.clone());
     state.active_feature = Some(id.to_string());
+    state.active_outcome = None;
     repo.save_state(&state)?;
 
     let event = LedgerEvent::new(LedgerEventType::FeatureActivated).with_feature(id);
@@ -177,4 +202,19 @@ pub fn set_current_outcome(
     let mut feature = repo.load_feature(feature_id)?;
     feature.current_outcome = outcome_id.map(str::to_string);
     repo.save_feature(&feature)
+}
+
+fn resolve_component_id(repo: &Repository, requested: Option<&str>) -> Result<String> {
+    if let Some(component_id) = requested {
+        repo.load_component(component_id)?;
+        return Ok(component_id.to_string());
+    }
+
+    let state = repo.load_state()?;
+    if let Some(component_id) = state.active_component {
+        repo.load_component(&component_id)?;
+        return Ok(component_id);
+    }
+
+    Ok(crate::core::repository::DEFAULT_COMPONENT_ID.to_string())
 }

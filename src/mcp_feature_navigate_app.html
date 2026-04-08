@@ -2592,6 +2592,9 @@
             // Feature Selection View
             function renderFeatureSelection(data) {
                 var features = Array.isArray(data.features) ? data.features : [];
+                var solutions = Array.isArray(data.solutions) ? data.solutions : [];
+                var projects = Array.isArray(data.projects) ? data.projects : [];
+                var components = Array.isArray(data.components) ? data.components : [];
                 var root = document.getElementById("root"); root.innerHTML = "";
                 var ha = document.getElementById("headerActions"); ha.innerHTML = "";
                 var total = features.length;
@@ -2607,22 +2610,22 @@
                 appendUtilityActions(ha);
 
                 root.appendChild(buildHeroPanel({
-                    kicker: "Workspace overview",
-                    title: features.length ? "Shape the next verified milestone" : "Start your specrail workspace",
+                    kicker: "Solution / Project / Component overview",
+                    title: features.length ? "Navigate the hierarchy, then shape the next verified milestone" : "Start your specrail hierarchy",
                     badgeText: activeFeature ? "Active feature" : (features.length ? "Navigator ready" : "Fresh workspace"),
                     description: features.length
                         ? (activeFeature
-                            ? "Review progress, reopen the active feature, and keep the outcome-driven loop moving without hunting through clutter."
-                            : "Choose a feature to inspect outcomes, verify test readiness, and move into implementation with a clearer visual map.")
-                        : "Create a feature to begin the outcome-gated TDD flow. Specrail will guide you from planning to verification with focused next actions.",
+                            ? "Review progress inside the active solution/project/component path, reopen the active feature, and keep the outcome-driven loop moving."
+                            : "Choose a feature within the current solution/project/component map to inspect outcomes, verify test readiness, and move into implementation.")
+                        : "Create or reuse a solution, project, and component path, then add the first feature to begin the outcome-gated TDD flow.",
                     meta: activeFeature
-                        ? "Current focus: " + (activeFeature.title || activeFeature.id)
-                        : "Modern, outcome-driven planning with a single place to track momentum.",
+                        ? "Current focus: " + (activeFeature.pathLabel || "") + (activeFeature.pathLabel ? " • " : "") + (activeFeature.title || activeFeature.id)
+                        : "One place to track momentum across the full solution/project/component hierarchy.",
                     stats: [
-                        { value: String(total), label: "Features", tone: "accent" },
-                        { value: String(totalOutcomes), label: "Outcomes", tone: "default" },
-                        { value: String(verified), label: "Verified", tone: "success" },
-                        { value: activeFeature ? "Live" : "Idle", label: "Focus rail", tone: activeFeature ? "warn" : "muted" },
+                        { value: String(solutions.length), label: "Solutions", tone: "accent" },
+                        { value: String(projects.length), label: "Projects", tone: "default" },
+                        { value: String(components.length), label: "Components", tone: "default" },
+                        { value: String(total), label: "Features", tone: "success" },
                     ],
                     icon: features.length ? "\u{1F6E4}\uFE0F" : "\u{1F682}",
                 }));
@@ -2644,12 +2647,12 @@
 
                 if (!features.length) {
                     var empty = document.createElement("div"); empty.className = "empty";
-                    empty.innerHTML = '<div class="empty-icon">\u{1F3D7}\uFE0F</div><div class="empty-title">No features yet</div><div>Click &ldquo;+ Feature&rdquo; above to create your first feature.</div>';
+                    empty.innerHTML = '<div class="empty-icon">\u{1F3D7}\uFE0F</div><div class="empty-title">No features yet</div><div>Click &ldquo;+ Feature&rdquo; above to create the first feature in your current solution/project/component path.</div>';
                     root.appendChild(empty); return;
                 }
 
                 var sec = document.createElement("div"); sec.className = "section-header";
-                sec.innerHTML = '<span class="section-label">Features</span>'; root.appendChild(sec);
+                sec.innerHTML = '<span class="section-label">Features by hierarchy path</span><span class="stat-chip"><strong>' + totalOutcomes + '</strong> outcomes tracked</span>'; root.appendChild(sec);
 
                 var grid = document.createElement("div"); grid.className = "feature-grid";
                 features.forEach(function (feature) {
@@ -2671,7 +2674,7 @@
                         buildSummary: function (summary) {
                             var row = document.createElement("div"); row.className = "card-row";
                             var body = document.createElement("div"); body.className = "card-body";
-                            body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div>';
+                            body.innerHTML = '<div class="card-id">' + esc(feature.id) + '</div><div class="card-title">' + esc(feature.title || feature.id) + '</div><div class="card-meta">' + esc(feature.pathLabel || "") + '</div>';
                             row.appendChild(body);
                             row.appendChild(badge(isActive ? "active" : String(feature.status || "pending")));
                             summary.appendChild(row);
@@ -2707,8 +2710,8 @@
                             var note = document.createElement("div");
                             note.className = "card-note";
                             note.textContent = outcomeCount > 0
-                                ? verifiedCount + " of " + outcomeCount + " outcomes verified. Open the feature to inspect milestones and tests."
-                                : "No outcomes yet. Open the feature to add the first verifiable milestone.";
+                                ? verifiedCount + " of " + outcomeCount + " outcomes verified for " + (feature.pathLabel || "this hierarchy path") + "."
+                                : "No outcomes yet. Open the feature to add the first verifiable milestone under " + (feature.pathLabel || "this hierarchy path") + ".";
                             content.appendChild(note);
 
                             if (state.editingFeatureId === feature.id && state.featureDraft) {
@@ -2755,7 +2758,12 @@
                 var backLink = document.createElement("span"); backLink.className = "bc-item clickable";
                 backLink.textContent = "Features"; backLink.addEventListener("click", returnToFeatures);
                 bc.appendChild(backLink);
-                bc.innerHTML += '<span class="bc-sep">\u203A</span><span class="bc-item">' + esc(selectedFeature.title || featureId) + '</span>';
+                var pathBits = [];
+                if (selectedFeature.solution_id) pathBits.push(selectedFeature.solution_id);
+                if (selectedFeature.project_id) pathBits.push(selectedFeature.project_id);
+                if (selectedFeature.component_id) pathBits.push(selectedFeature.component_id);
+                pathBits.push(selectedFeature.title || featureId);
+                bc.innerHTML += '<span class="bc-sep">\u203A</span><span class="bc-item">' + esc(pathBits.join(' / ')) + '</span>';
                 bcBar.appendChild(bc);
 
                 var isActiveF = data.activeFeatureId === featureId;
@@ -2774,7 +2782,9 @@
                         : "Review outcome milestones, test readiness, and the next command to keep the TDD loop moving.",
                     meta: activeOutcome
                         ? "Current outcome: " + (activeOutcome.title || activeOutcome.id)
-                        : (outcomes.length ? "Choose the next outcome to activate or inspect." : "Add the first verifiable outcome to begin."),
+                        : ((selectedFeature.solution_id && selectedFeature.project_id && selectedFeature.component_id)
+                            ? "Hierarchy: " + selectedFeature.solution_id + "/" + selectedFeature.project_id + "/" + selectedFeature.component_id
+                            : (outcomes.length ? "Choose the next outcome to activate or inspect." : "Add the first verifiable outcome to begin.")),
                     stats: [
                         { value: String(featureOutcomeCount), label: "Outcomes", tone: "accent" },
                         { value: String(featureVerifiedCount), label: "Verified", tone: "success" },
