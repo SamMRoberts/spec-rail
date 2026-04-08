@@ -14,6 +14,7 @@ use crate::core::{
     models::{FeatureSpec, OutcomeSpec, OutcomeStatus, ProjectState, TestManifest, TestSpec, TestStatus},
     repository::Repository,
 };
+use crate::commands;
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
 const UI_EXTENSION_NAME: &str = "io.modelcontextprotocol/ui";
@@ -266,6 +267,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_outcome_edit" => tool_outcome_edit(arguments),
         "specrail_outcome_unverify" => tool_outcome_unverify(arguments),
         "specrail_test_add" => tool_test_add(arguments),
+        "specrail_test_suggest" => tool_test_suggest(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
         "specrail_implement" => tool_implement(arguments),
@@ -613,6 +615,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                     "advanceTool": "specrail_advance",
                     "testListTool": "specrail_test_list",
                     "testReviewTool": "specrail_outcome_test_review",
+                    "testSuggestTool": "specrail_test_suggest",
                     "testGenerateTool": "specrail_test_generate",
                     "featureShowTool": "specrail_feature_show",
                     "outcomeShowTool": "specrail_outcome_show",
@@ -1026,6 +1029,29 @@ fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
         args.push(agent);
     }
     run_cli_tool(&cwd, args)
+}
+
+fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+    let preview = commands::test::preview(
+        &repo,
+        feature_id.as_deref(),
+        outcome_id.as_deref(),
+        agent.as_deref(),
+    )?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Previewed {} suggested test file(s) with agent '{}' for {}.",
+            preview.suggestions.len(),
+            preview.agent,
+            preview.scope_label
+        ),
+        Some(json!({ "preview": preview })),
+    ))
 }
 
 fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
@@ -1646,6 +1672,20 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string" },
                     "feature_id": { "type": "string", "description": "Filter to tests for this feature." },
                     "outcome_id": { "type": "string", "description": "Filter to tests for this outcome (requires feature_id)." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_test_suggest",
+            "title": "Preview Test Suggestions",
+            "description": "Preview agent-generated required test suggestions without writing files or changing the manifest. Can be scoped to one feature and outcome to inspect missing test ideas safely before generation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature identifier to scope preview." },
+                    "outcome_id": { "type": "string", "description": "Optional outcome identifier within feature_id." },
+                    "agent": { "type": "string", "description": "Optional agent override for previewing suggestions." }
                 }
             }
         }),

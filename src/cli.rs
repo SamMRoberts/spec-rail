@@ -250,6 +250,19 @@ pub enum TestCommands {
         agent: Option<String>,
     },
 
+    /// Preview suggested required tests from feature and outcome YAML without writing files
+    Suggest {
+        /// Filter to a single feature
+        #[arg(long, short)]
+        feature: Option<String>,
+        /// Filter to a single outcome within the selected feature
+        #[arg(long, short = 'o')]
+        outcome: Option<String>,
+        /// Override the agent used for previewing suggestions (defaults to `copilot`)
+        #[arg(long, short)]
+        agent: Option<String>,
+    },
+
     /// List tests in the manifest
     List {
         /// Filter by feature ID

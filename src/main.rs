@@ -194,6 +194,16 @@ fn run(cli: Cli) -> Result<()> {
             TestCommands::Generate { agent } => {
                 commands::test::generate(&repo, agent.as_deref())
             }
+            TestCommands::Suggest {
+                feature,
+                outcome,
+                agent,
+            } => commands::test::suggest(
+                &repo,
+                feature.as_deref(),
+                outcome.as_deref(),
+                agent.as_deref(),
+            ),
             TestCommands::List { feature, outcome } => {
                 commands::test::list(&repo, feature.as_deref(), outcome.as_deref())
             }

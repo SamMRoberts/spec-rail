@@ -782,6 +782,40 @@
             margin-top: 6px;
         }
 
+
+        .suggestion-preview-list {
+            list-style: none;
+            display: grid;
+            gap: 5px;
+            margin-top: 6px;
+        }
+
+        .suggestion-preview-item {
+            padding: 6px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .suggestion-preview-path {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--fg);
+        }
+
+        .suggestion-preview-copy {
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .suggestion-preview-note {
+            font-size: 10px;
+            color: var(--fg-muted);
+            margin-top: 6px;
+        }
+
         .suggestion-list li,
         .path-list li {
             font-family: var(--font-mono);
@@ -1123,6 +1157,8 @@
                 runningAction: null,
                 expandedCards: {},
                 expandedPanels: {},
+                suggestionPreviews: {},
+                suggestionPreviewErrors: {},
             };
             let nextId = 1;
             const pending = new Map();
@@ -1582,7 +1618,120 @@
                 appendLog("Requested editor open for: " + path + ". If your host ignores the request, use the inline path list.", "info");
             }
 
-            function renderTestHealthSection(outcome, isActiveOutcome) {
+            function suggestionPreviewKey(featureId, outcomeId) {
+                return panelStateKey("ai-suggestions", featureId, outcomeId);
+            }
+
+            function getSuggestionPreview(featureId, outcomeId) {
+                return state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] || null;
+            }
+
+            function getSuggestionPreviewError(featureId, outcomeId) {
+                return state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)] || null;
+            }
+
+            async function previewOutcomeSuggestions(featureId, outcomeId) {
+                var actionKey = "test-suggest:" + featureId + ":" + outcomeId;
+                state.runningAction = actionKey;
+                delete state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)];
+                appendLog("Previewing AI test suggestions for: " + outcomeId, "action");
+                render();
+                try {
+                    var result = await callTool("specrail_test_suggest", Object.assign({}, state.toolArguments, {
+                        feature_id: featureId,
+                        outcome_id: outcomeId,
+                    }));
+                    if (result && result.isError) {
+                        throw new Error(toolText(result) || "Suggestion preview failed.");
+                    }
+
+                    var preview = result && result.structuredContent && result.structuredContent.preview;
+                    state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] = preview || null;
+                    appendLog("AI preview ready for: " + outcomeId, "success");
+                } catch (e) {
+                    state.suggestionPreviewErrors[suggestionPreviewKey(featureId, outcomeId)] = e && e.message ? e.message : String(e);
+                    appendLog("AI preview failed for " + outcomeId + ": " + (e && e.message ? e.message : String(e)), "error");
+                }
+                state.runningAction = null;
+                render();
+            }
+
+            function renderSuggestionPreview(featureId, outcomeId) {
+                var preview = getSuggestionPreview(featureId, outcomeId);
+                var previewError = getSuggestionPreviewError(featureId, outcomeId);
+                if (!preview && !previewError) return null;
+
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">AI preview suggestions</span>';
+                var previewBadge = badge(preview && preview.exact_path_match ? "verified" : "failed");
+                previewBadge.textContent = preview && preview.exact_path_match ? "\u2713 Match" : "\u26A0 Review";
+                head.appendChild(previewBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                if (previewError) {
+                    copy.textContent = previewError;
+                    section.appendChild(copy);
+                    return section;
+                }
+
+                copy.textContent = "Preview only. These suggestions did not write files or update the manifest.";
+                section.appendChild(copy);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                appendTestChip(chips, preview.suggestions.length + " suggestion" + (preview.suggestions.length !== 1 ? "s" : ""), "");
+                if (preview.missing_expected_paths.length > 0) appendTestChip(chips, preview.missing_expected_paths.length + " missing", "danger");
+                if (preview.unexpected_paths.length > 0) appendTestChip(chips, preview.unexpected_paths.length + " unexpected", "warning");
+                section.appendChild(chips);
+
+                if (Array.isArray(preview.suggestions) && preview.suggestions.length > 0) {
+                    var list = document.createElement("ul");
+                    list.className = "suggestion-preview-list";
+                    preview.suggestions.forEach(function (suggestion) {
+                        var item = document.createElement("li");
+                        item.className = "suggestion-preview-item";
+                        item.innerHTML =
+                            '<div class="suggestion-preview-path">' + esc(suggestion.path) + '</div>' +
+                            '<div class="related-test-meta"></div>' +
+                            '<div class="suggestion-preview-copy">' + esc(suggestion.content_preview || "No content preview available.") + '</div>';
+                        var meta = item.querySelector(".related-test-meta");
+                        appendTestChip(meta, String(suggestion.kind || "unit"), "");
+                        appendTestChip(meta, String(suggestion.content_line_count || 0) + " lines", "");
+                        list.appendChild(item);
+                    });
+                    section.appendChild(list);
+                }
+
+                if (preview.missing_expected_paths.length > 0) {
+                    var missingTitle = document.createElement("div");
+                    missingTitle.className = "card-note";
+                    missingTitle.textContent = "Still missing from the AI preview";
+                    section.appendChild(missingTitle);
+                    section.appendChild(renderPathList(preview.missing_expected_paths, "path-list"));
+                }
+
+                if (preview.unexpected_paths.length > 0) {
+                    var unexpectedTitle = document.createElement("div");
+                    unexpectedTitle.className = "card-note";
+                    unexpectedTitle.textContent = "Unexpected preview paths";
+                    section.appendChild(unexpectedTitle);
+                    section.appendChild(renderPathList(preview.unexpected_paths, "path-list"));
+                }
+
+                var note = document.createElement("div");
+                note.className = "suggestion-preview-note";
+                note.textContent = "Agent: " + esc(preview.agent || "unknown") + " • Scope: " + esc(preview.scope_label || (featureId + ":" + outcomeId));
+                section.appendChild(note);
+                return section;
+            }
+
+            function renderTestHealthSection(featureId, outcome, isActiveOutcome) {
                 var review = getOutcomeReview(outcome);
                 if (!review) return null;
 
@@ -1628,11 +1777,30 @@
                     section.appendChild(renderPathList(review.required_test_paths, "path-list"));
                 }
 
+                var actionRow = document.createElement("div");
+                actionRow.className = "inline-actions";
+                var suggestionActionKey = "test-suggest:" + featureId + ":" + outcome.id;
+                if (review.required_test_count > 0 && review.has_gaps) {
+                    var previewBtn = document.createElement("button");
+                    previewBtn.className = "btn btn-sm";
+                    previewBtn.disabled = state.isSaving || state.runningAction === suggestionActionKey;
+                    previewBtn.textContent = state.runningAction === suggestionActionKey
+                        ? "Previewing AI Suggestions…"
+                        : (getSuggestionPreview(featureId, outcome.id) ? "Refresh AI Suggestions" : "Preview AI Suggestions");
+                    previewBtn.addEventListener("click", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        previewOutcomeSuggestions(featureId, outcome.id);
+                    });
+                    actionRow.appendChild(previewBtn);
+                }
+
                 if (isActiveOutcome && review.needs_generation) {
-                    var actions = document.createElement("div");
-                    actions.className = "inline-actions";
-                    appendActionButton(actions, { title: "Generate Missing Tests", tool: "specrail_test_generate", kind: "primary", refresh: true });
-                    section.appendChild(actions);
+                    appendActionButton(actionRow, { title: "Generate Missing Tests", tool: "specrail_test_generate", kind: "primary", refresh: true });
+                }
+
+                if (actionRow.childNodes.length > 0) {
+                    section.appendChild(actionRow);
                 }
 
                 return section;
@@ -2239,8 +2407,11 @@
                                 outcomeMeta.textContent = outcome.goal || "No outcome goal recorded.";
                                 content.appendChild(outcomeMeta);
 
-                                var healthSection = renderTestHealthSection(outcome, isActiveOutcome);
+                                var healthSection = renderTestHealthSection(featureId, outcome, isActiveOutcome);
                                 if (healthSection) content.appendChild(healthSection);
+
+                                var suggestionPreviewSection = renderSuggestionPreview(featureId, outcome.id);
+                                if (suggestionPreviewSection) content.appendChild(suggestionPreviewSection);
 
                                 var relatedTestsSection = renderRelatedTestsSection(featureId, outcome);
                                 if (relatedTestsSection) content.appendChild(relatedTestsSection);

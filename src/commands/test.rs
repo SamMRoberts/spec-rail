@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     agents,
@@ -28,12 +28,12 @@ pub struct AddArgs {
     pub purpose_refs: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct GeneratedTestsResponse {
     tests: Vec<GeneratedTest>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct GeneratedTest {
     feature_id: String,
     outcome_id: String,
@@ -47,6 +47,35 @@ struct GeneratedTest {
 struct OutcomeGenerationContext {
     feature_id: String,
     outcome: OutcomeSpec,
+}
+
+struct PreparedTestGeneration {
+    prompt: String,
+    expected_paths: BTreeSet<(String, String, String)>,
+    outcome_contexts: Vec<OutcomeGenerationContext>,
+    scope_label: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SuggestedTestFile {
+    pub feature_id: String,
+    pub outcome_id: String,
+    pub path: String,
+    pub kind: String,
+    pub purpose_refs: Vec<String>,
+    pub content_line_count: usize,
+    pub content_preview: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TestSuggestionPreview {
+    pub agent: String,
+    pub scope_label: String,
+    pub expected_paths: Vec<String>,
+    pub missing_expected_paths: Vec<String>,
+    pub unexpected_paths: Vec<String>,
+    pub exact_path_match: bool,
+    pub suggestions: Vec<SuggestedTestFile>,
 }
 
 pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
@@ -76,88 +105,41 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 }
 
 pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
-    let config = repo.load_config()?;
+    let prepared = prepare_test_generation(repo, None, None)?;
     let mut manifest = repo.load_manifest()?;
-    let features = repo.list_features()?;
-
-    if features.is_empty() {
-        bail!("no features found — define features and outcomes before generating tests");
-    }
-
-    let mut prompt_features = Vec::new();
-    let mut outcome_contexts = Vec::new();
-    let mut expected_paths = BTreeSet::new();
-
-    for feature in features {
-        let outcomes = repo.list_outcomes(&feature.id)?;
-        for outcome in &outcomes {
-            if outcome.required_tests.is_empty() {
-                continue;
-            }
-
-            for path in &outcome.required_tests {
-                expected_paths.insert((feature.id.clone(), outcome.id.clone(), path.clone()));
-            }
-
-            outcome_contexts.push(OutcomeGenerationContext {
-                feature_id: feature.id.clone(),
-                outcome: outcome.clone(),
-            });
-        }
-        prompt_features.push((feature, outcomes));
-    }
-
-    if expected_paths.is_empty() {
-        bail!("no outcome.required_tests entries found — add required test paths to your outcomes first");
-    }
-
-    let prompt = builder::build_test_generation_prompt(&config, &prompt_features, &manifest)?;
     let agent_name = agent_override.unwrap_or("copilot");
 
     println!("▶ Running agent '{agent_name}' to generate required tests…");
     println!("{}", "─".repeat(60));
-
-    let task = AgentTask {
-        feature_id: "project".to_string(),
-        outcome_id: "all-required-tests".to_string(),
-        agent: agent_name.to_string(),
-        prompt,
-        allowed_paths: expected_paths.iter().map(|(_, _, path)| path.clone()).collect(),
-        forbidden_paths: Vec::new(),
-    };
-
-    let result = agents::run_task(agent_name, &task, Some(&repo.root))?;
+    let agent_output = run_test_generation_agent(repo, &prepared, agent_override)?;
+    let agent_name = agent_output.agent_name.as_str();
 
     let run_event = LedgerEvent::new(LedgerEventType::TestGenerationRun)
         .with_agent(agent_name)
-        .with_success(result.success);
+        .with_success(agent_output.result.success);
     Ledger::append(&repo.ledger_path(), &run_event)?;
 
-    if !result.success {
-        println!("stdout:\n{}", result.stdout);
-        if !result.stderr.is_empty() {
-            eprintln!("stderr:\n{}", result.stderr);
+    if !agent_output.result.success {
+        println!("stdout:\n{}", agent_output.result.stdout);
+        if !agent_output.result.stderr.is_empty() {
+            eprintln!("stderr:\n{}", agent_output.result.stderr);
         }
         bail!(
             "test generation agent exited with non-zero status ({})",
-            result.exit_code.unwrap_or(-1)
+            agent_output.result.exit_code.unwrap_or(-1)
         );
     }
 
-    let response = parse_generated_tests(&result.stdout)?;
-    let actual_paths: BTreeSet<_> = response
-        .tests
-        .iter()
-        .map(|test| (test.feature_id.clone(), test.outcome_id.clone(), test.path.clone()))
-        .collect();
+    let response = parse_generated_tests(&agent_output.result.stdout)?;
+    let actual_paths = generated_test_paths(&response);
 
-    if actual_paths != expected_paths {
+    if actual_paths != prepared.expected_paths {
         bail!("generated tests did not match outcome.required_tests declarations");
     }
 
     let mut generated_count = 0usize;
     for generated in response.tests {
-        let outcome = outcome_contexts
+        let outcome = prepared.outcome_contexts
             .iter()
             .find(|context| {
                 context.feature_id == generated.feature_id
@@ -211,6 +193,239 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     println!("Generated {generated_count} test file(s) and updated the manifest.");
     println!("{}", "─".repeat(60));
     Ok(())
+}
+
+pub fn suggest(
+    repo: &Repository,
+    feature_id: Option<&str>,
+    outcome_id: Option<&str>,
+    agent_override: Option<&str>,
+) -> Result<()> {
+    let preview = preview(repo, feature_id, outcome_id, agent_override)?;
+
+    println!(
+        "Previewed {} suggested test file(s) with agent '{}' for {}.",
+        preview.suggestions.len(),
+        preview.agent,
+        preview.scope_label
+    );
+    println!(
+        "Path match: {}",
+        if preview.exact_path_match {
+            "exact"
+        } else {
+            "mismatch"
+        }
+    );
+
+    if !preview.suggestions.is_empty() {
+        println!("\nSuggested files:");
+        for suggestion in &preview.suggestions {
+            println!(
+                "  - {} [{}] {} line(s)",
+                suggestion.path, suggestion.kind, suggestion.content_line_count
+            );
+        }
+    }
+
+    if !preview.missing_expected_paths.is_empty() {
+        println!("\nMissing expected paths:");
+        for path in &preview.missing_expected_paths {
+            println!("  - {path}");
+        }
+    }
+
+    if !preview.unexpected_paths.is_empty() {
+        println!("\nUnexpected generated paths:");
+        for path in &preview.unexpected_paths {
+            println!("  - {path}");
+        }
+    }
+
+    println!("\nPreview only: no files were written and the manifest was unchanged.");
+    Ok(())
+}
+
+pub fn preview(
+    repo: &Repository,
+    feature_id: Option<&str>,
+    outcome_id: Option<&str>,
+    agent_override: Option<&str>,
+) -> Result<TestSuggestionPreview> {
+    let prepared = prepare_test_generation(repo, feature_id, outcome_id)?;
+    let agent_output = run_test_generation_agent(repo, &prepared, agent_override)?;
+
+    if !agent_output.result.success {
+        bail!(
+            "test suggestion agent exited with non-zero status ({})\nstdout:\n{}\nstderr:\n{}",
+            agent_output.result.exit_code.unwrap_or(-1),
+            agent_output.result.stdout,
+            agent_output.result.stderr
+        );
+    }
+
+    let response = parse_generated_tests(&agent_output.result.stdout)?;
+    let actual_paths = generated_test_paths(&response);
+    let expected_paths = prepared
+        .expected_paths
+        .iter()
+        .map(|(_, _, path)| path.clone())
+        .collect::<Vec<_>>();
+    let missing_expected_paths = prepared
+        .expected_paths
+        .difference(&actual_paths)
+        .map(format_generated_path_tuple)
+        .collect::<Vec<_>>();
+    let unexpected_paths = actual_paths
+        .difference(&prepared.expected_paths)
+        .map(format_generated_path_tuple)
+        .collect::<Vec<_>>();
+    let exact_path_match = missing_expected_paths.is_empty() && unexpected_paths.is_empty();
+    let suggestions = response
+        .tests
+        .into_iter()
+        .map(|test| SuggestedTestFile {
+            content_line_count: test.content.lines().count(),
+            content_preview: summarize_content_preview(&test.content),
+            feature_id: test.feature_id,
+            outcome_id: test.outcome_id,
+            path: test.path,
+            kind: test.kind,
+            purpose_refs: test.purpose_refs,
+        })
+        .collect::<Vec<_>>();
+
+    Ok(TestSuggestionPreview {
+        agent: agent_output.agent_name,
+        scope_label: prepared.scope_label,
+        expected_paths,
+        missing_expected_paths,
+        unexpected_paths: unexpected_paths.clone(),
+        exact_path_match,
+        suggestions,
+    })
+}
+
+fn prepare_test_generation(
+    repo: &Repository,
+    feature_filter: Option<&str>,
+    outcome_filter: Option<&str>,
+) -> Result<PreparedTestGeneration> {
+    if outcome_filter.is_some() && feature_filter.is_none() {
+        bail!("outcome filter requires a feature filter");
+    }
+
+    let config = repo.load_config()?;
+    let manifest = repo.load_manifest()?;
+    let features = match feature_filter {
+        Some(feature_id) => vec![repo.load_feature(feature_id)?],
+        None => repo.list_features()?,
+    };
+
+    if features.is_empty() {
+        bail!("no features found — define features and outcomes before generating tests");
+    }
+
+    let mut prompt_features = Vec::new();
+    let mut outcome_contexts = Vec::new();
+    let mut expected_paths = BTreeSet::new();
+
+    for feature in features {
+        let mut outcomes = repo.list_outcomes(&feature.id)?;
+        if let Some(selected_outcome_id) = outcome_filter {
+            repo.load_outcome(&feature.id, selected_outcome_id)?;
+            outcomes.retain(|outcome| outcome.id == selected_outcome_id);
+        }
+
+        outcomes.retain(|outcome| !outcome.required_tests.is_empty());
+
+        for outcome in &outcomes {
+            for path in &outcome.required_tests {
+                expected_paths.insert((feature.id.clone(), outcome.id.clone(), path.clone()));
+            }
+
+            outcome_contexts.push(OutcomeGenerationContext {
+                feature_id: feature.id.clone(),
+                outcome: outcome.clone(),
+            });
+        }
+
+        if !outcomes.is_empty() {
+            prompt_features.push((feature, outcomes));
+        }
+    }
+
+    if expected_paths.is_empty() {
+        bail!("no outcome.required_tests entries found — add required test paths to your outcomes first");
+    }
+
+    let prompt = builder::build_test_generation_prompt(&config, &prompt_features, &manifest)?;
+    let scope_label = match (feature_filter, outcome_filter) {
+        (Some(feature_id), Some(outcome_id)) => format!("{feature_id}:{outcome_id}"),
+        (Some(feature_id), None) => format!("feature '{feature_id}'"),
+        _ => "the project".to_string(),
+    };
+
+    Ok(PreparedTestGeneration {
+        prompt,
+        expected_paths,
+        outcome_contexts,
+        scope_label,
+    })
+}
+
+struct GenerationAgentOutput {
+    agent_name: String,
+    result: crate::core::models::AgentRunResult,
+}
+
+fn run_test_generation_agent(
+    repo: &Repository,
+    prepared: &PreparedTestGeneration,
+    agent_override: Option<&str>,
+) -> Result<GenerationAgentOutput> {
+    let agent_name = agent_override.unwrap_or("copilot").to_string();
+    let task = AgentTask {
+        feature_id: "project".to_string(),
+        outcome_id: "all-required-tests".to_string(),
+        agent: agent_name.clone(),
+        prompt: prepared.prompt.clone(),
+        allowed_paths: prepared
+            .expected_paths
+            .iter()
+            .map(|(_, _, path)| path.clone())
+            .collect(),
+        forbidden_paths: Vec::new(),
+    };
+    let result = agents::run_task(&agent_name, &task, Some(&repo.root))?;
+
+    Ok(GenerationAgentOutput { agent_name, result })
+}
+
+fn generated_test_paths(response: &GeneratedTestsResponse) -> BTreeSet<(String, String, String)> {
+    response
+        .tests
+        .iter()
+        .map(|test| (test.feature_id.clone(), test.outcome_id.clone(), test.path.clone()))
+        .collect()
+}
+
+fn format_generated_path_tuple(value: &(String, String, String)) -> String {
+    format!("{}:{}:{}", value.0, value.1, value.2)
+}
+
+fn summarize_content_preview(content: &str) -> String {
+    let first_non_empty = content
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("")
+        .trim();
+
+    if first_non_empty.chars().count() <= 80 {
+        first_non_empty.to_string()
+    } else {
+        first_non_empty.chars().take(80).collect::<String>() + "…"
+    }
 }
 
 // ── test list ─────────────────────────────────────────────────────────────────
