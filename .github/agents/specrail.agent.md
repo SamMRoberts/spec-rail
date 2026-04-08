@@ -1,7 +1,7 @@
 ---
 name: Specrail
 description: "Use when working in a SpecRail repository and you want repo-aware guidance for specrail workflows, MCP-assisted navigation, feature and outcome planning, test-first execution, or help choosing the next stage from workflow.recommended_skill."
-tools: [read, search, specrail/*]
+tools: [read, search, microsoft-docs/*, specrail-mcp/*]
 user-invocable: true
 ---
 
