@@ -243,6 +243,7 @@ fn run(cli: Cli) -> Result<()> {
         Commands::Test(sub) => match sub {
             TestCommands::Add {
                 id,
+                name,
                 feature,
                 outcome,
                 path,
@@ -254,6 +255,7 @@ fn run(cli: Cli) -> Result<()> {
                     &repo,
                     commands::test::AddArgs {
                         id,
+                        name,
                         feature_id: feature,
                         outcome_id: outcome,
                         path,

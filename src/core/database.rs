@@ -8,7 +8,7 @@ use super::models::{
     TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 pub struct Database {
     conn: Connection,
@@ -92,8 +92,8 @@ impl Database {
                 prerequisites_json TEXT NOT NULL,
                 allowed_paths_json TEXT NOT NULL,
                 forbidden_paths_json TEXT NOT NULL,
-                required_tests_json TEXT NOT NULL,
-                required_test_files_json TEXT NOT NULL DEFAULT '[]',
+                required_tests TEXT NOT NULL,
+                required_test_files TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL,
                 PRIMARY KEY(feature_id, id),
                 FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE CASCADE
@@ -101,6 +101,7 @@ impl Database {
 
             CREATE TABLE IF NOT EXISTS tests (
                 id TEXT PRIMARY KEY,
+                name TEXT NOT NULL DEFAULT '',
                 feature_id TEXT NOT NULL,
                 outcome_id TEXT NOT NULL,
                 path TEXT NOT NULL,
@@ -134,6 +135,18 @@ impl Database {
                 ",
             )
             .context("migrating outcomes required test metadata")?;
+        }
+
+        if version > 0 && version < 4 {
+            conn.execute_batch(
+                "
+                ALTER TABLE outcomes RENAME COLUMN required_tests_json TO required_tests;
+                ALTER TABLE outcomes RENAME COLUMN required_test_files_json TO required_test_files;
+                ALTER TABLE tests ADD COLUMN name TEXT NOT NULL DEFAULT '';
+                UPDATE tests SET name = id WHERE name = '';
+                "
+            )
+            .context("migrating required test columns and test names")?;
         }
 
         if version < SCHEMA_VERSION {
@@ -425,7 +438,7 @@ impl Database {
                 INSERT INTO outcomes (
                     feature_id, id, title, goal, order_index,
                     prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                    required_tests_json, required_test_files_json, status
+                    required_tests, required_test_files, status
                 )
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                 ON CONFLICT(feature_id, id) DO UPDATE SET
@@ -435,8 +448,8 @@ impl Database {
                     prerequisites_json = excluded.prerequisites_json,
                     allowed_paths_json = excluded.allowed_paths_json,
                     forbidden_paths_json = excluded.forbidden_paths_json,
-                    required_tests_json = excluded.required_tests_json,
-                    required_test_files_json = excluded.required_test_files_json,
+                    required_tests = excluded.required_tests,
+                    required_test_files = excluded.required_test_files,
                     status = excluded.status
                 ",
                 params![
@@ -462,7 +475,7 @@ impl Database {
             .conn
             .prepare(
                 "
-                SELECT id, feature_id, outcome_id, path, purpose_refs_json, kind, status
+                SELECT id, name, feature_id, outcome_id, path, purpose_refs_json, kind, status
                 FROM tests
                 ORDER BY id
                 ",
@@ -472,12 +485,13 @@ impl Database {
             .query_map([], |row| {
                 Ok(TestRow {
                     id: row.get(0)?,
-                    feature_id: row.get(1)?,
-                    outcome_id: row.get(2)?,
-                    path: row.get(3)?,
-                    purpose_refs_json: row.get(4)?,
-                    kind: row.get(5)?,
-                    status: row.get(6)?,
+                    name: row.get(1)?,
+                    feature_id: row.get(2)?,
+                    outcome_id: row.get(3)?,
+                    path: row.get(4)?,
+                    purpose_refs_json: row.get(5)?,
+                    kind: row.get(6)?,
+                    status: row.get(7)?,
                 })
             })
             .context("querying tests")?;
@@ -498,11 +512,12 @@ impl Database {
         for test in &manifest.tests {
             tx.execute(
                 "
-                INSERT INTO tests (id, feature_id, outcome_id, path, purpose_refs_json, kind, status)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                INSERT INTO tests (id, name, feature_id, outcome_id, path, purpose_refs_json, kind, status)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                 ",
                 params![
                     test.id,
+                    if test.name.trim().is_empty() { &test.id } else { &test.name },
                     test.feature_id,
                     test.outcome_id,
                     test.path,
@@ -578,7 +593,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                      required_tests_json, required_test_files_json, status
+                      required_tests, required_test_files, status
                 FROM outcomes
                 WHERE feature_id = ?1
                 ORDER BY order_index, id
@@ -596,8 +611,8 @@ impl Database {
                     prerequisites_json: row.get(5)?,
                     allowed_paths_json: row.get(6)?,
                     forbidden_paths_json: row.get(7)?,
-                    required_tests_json: row.get(8)?,
-                    required_test_files_json: row.get(9)?,
+                    required_tests: row.get(8)?,
+                    required_test_files: row.get(9)?,
                     status: row.get(10)?,
                 })
             })
@@ -701,7 +716,7 @@ impl Database {
                 "
                 SELECT feature_id, id, title, goal, order_index,
                        prerequisites_json, allowed_paths_json, forbidden_paths_json,
-                      required_tests_json, required_test_files_json, status
+                      required_tests, required_test_files, status
                 FROM outcomes
                 WHERE feature_id = ?1 AND id = ?2
                 ",
@@ -716,8 +731,8 @@ impl Database {
                         prerequisites_json: row.get(5)?,
                         allowed_paths_json: row.get(6)?,
                         forbidden_paths_json: row.get(7)?,
-                        required_tests_json: row.get(8)?,
-                        required_test_files_json: row.get(9)?,
+                        required_tests: row.get(8)?,
+                        required_test_files: row.get(9)?,
                         status: row.get(10)?,
                     })
                 },
@@ -786,13 +801,14 @@ struct OutcomeRow {
     prerequisites_json: String,
     allowed_paths_json: String,
     forbidden_paths_json: String,
-    required_tests_json: String,
-    required_test_files_json: String,
+    required_tests: String,
+    required_test_files: String,
     status: String,
 }
 
 struct TestRow {
     id: String,
+    name: String,
     feature_id: String,
     outcome_id: String,
     path: String,
@@ -805,8 +821,15 @@ impl TryFrom<TestRow> for TestSpec {
     type Error = anyhow::Error;
 
     fn try_from(value: TestRow) -> Result<Self> {
+        let name = if value.name.trim().is_empty() {
+            value.id.clone()
+        } else {
+            value.name.clone()
+        };
+
         Ok(Self {
             id: value.id,
+            name,
             feature_id: value.feature_id,
             outcome_id: value.outcome_id,
             path: value.path,
@@ -830,8 +853,8 @@ impl TryFrom<OutcomeRow> for OutcomeSpec {
             prerequisites: decode_json(&value.prerequisites_json)?,
             allowed_paths: decode_json(&value.allowed_paths_json)?,
             forbidden_paths: decode_json(&value.forbidden_paths_json)?,
-            required_tests: decode_json(&value.required_tests_json)?,
-            required_test_files: decode_json(&value.required_test_files_json)?,
+            required_tests: decode_json(&value.required_tests)?,
+            required_test_files: decode_json(&value.required_test_files)?,
             status: decode_enum(&value.status)?,
         })
     }

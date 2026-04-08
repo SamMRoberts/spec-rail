@@ -21,6 +21,7 @@ use crate::{
 
 pub struct AddArgs {
     pub id: String,
+    pub name: Option<String>,
     pub feature_id: String,
     pub outcome_id: String,
     pub path: String,
@@ -38,6 +39,8 @@ struct GeneratedTest {
     feature_id: String,
     outcome_id: String,
     id: String,
+    #[serde(default)]
+    name: Option<String>,
     path: String,
     kind: String,
     #[serde(default)]
@@ -63,6 +66,7 @@ pub struct SuggestedTestFile {
     pub feature_id: String,
     pub outcome_id: String,
     pub id: String,
+    pub name: String,
     pub path: String,
     pub kind: String,
     pub purpose_refs: Vec<String>,
@@ -100,12 +104,17 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 
     add_to_manifest(&mut manifest, args, TestStatus::Planned)?;
     let test = manifest.tests.last().context("manifest missing inserted test")?;
+    let required_test_name = if test.name.trim().is_empty() {
+        test.id.clone()
+    } else {
+        test.name.clone()
+    };
     repo.save_manifest(&manifest)?;
     let added_to_outcome = crate::commands::outcome::ensure_required_test_reference(
         repo,
         &feature_id,
         &outcome_id,
-        &test.id,
+        &required_test_name,
         &path,
     )?;
 
@@ -121,7 +130,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
         "  Status:  planned — update to 'written' once the test file exists"
     );
     if added_to_outcome.added_test_id {
-        println!("  Outcome: required_tests updated with {}", test.id);
+        println!("  Outcome: required_tests updated with {}", required_test_name);
     }
     if added_to_outcome.added_test_file {
         println!("  Outcome: required_test_files updated with {}", path);
@@ -193,7 +202,9 @@ pub fn generate_scoped(
             })?;
 
         if !prepared.allow_path_discovery
-            && (!outcome.required_tests.iter().any(|test_id| test_id == &generated.id)
+            && (!outcome.required_tests.iter().any(|test_name| {
+                test_name == &generated.name.clone().unwrap_or_else(|| generated.id.clone())
+            })
                 || !outcome
                     .required_test_files
                     .iter()
@@ -212,7 +223,10 @@ pub fn generate_scoped(
             repo,
             &generated.feature_id,
             &generated.outcome_id,
-            &generated.id,
+            generated
+                .name
+                .as_deref()
+                .unwrap_or(&generated.id),
             &generated.path,
         )?;
 
@@ -225,6 +239,7 @@ pub fn generate_scoped(
             &mut manifest,
             AddArgs {
                 id: id.clone(),
+                name: generated.name.clone(),
                 feature_id: generated.feature_id.clone(),
                 outcome_id: generated.outcome_id.clone(),
                 path: generated.path.clone(),
@@ -342,15 +357,19 @@ pub fn preview(
     let suggestions = response
         .tests
         .into_iter()
-        .map(|test| SuggestedTestFile {
-            content_line_count: test.content.lines().count(),
-            content_preview: summarize_content_preview(&test.content),
-            feature_id: test.feature_id,
-            outcome_id: test.outcome_id,
-            id: test.id,
-            path: test.path,
-            kind: test.kind,
-            purpose_refs: test.purpose_refs,
+        .map(|test| {
+            let name = test.name.clone().unwrap_or_else(|| test.id.clone());
+            SuggestedTestFile {
+                content_line_count: test.content.lines().count(),
+                content_preview: summarize_content_preview(&test.content),
+                feature_id: test.feature_id,
+                outcome_id: test.outcome_id,
+                id: test.id,
+                name,
+                path: test.path,
+                kind: test.kind,
+                purpose_refs: test.purpose_refs,
+            }
         })
         .collect::<Vec<_>>();
 
@@ -483,7 +502,7 @@ fn generated_test_specs(response: &GeneratedTestsResponse) -> BTreeSet<(String, 
             (
                 test.feature_id.clone(),
                 test.outcome_id.clone(),
-                test.id.clone(),
+                test.name.clone().unwrap_or_else(|| test.id.clone()),
                 test.path.clone(),
             )
         })
@@ -592,19 +611,35 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
     if let Some(existing) = manifest.tests.iter_mut().find(|t| {
         t.feature_id == args.feature_id && t.outcome_id == args.outcome_id && t.path == args.path
     }) {
+        if let Some(name) = args.name {
+            existing.name = name;
+        }
         existing.kind = args.kind;
         existing.purpose_refs = args.purpose_refs;
         existing.status = status;
         return Ok(());
     }
 
+    let AddArgs {
+        id,
+        name,
+        feature_id,
+        outcome_id,
+        path,
+        kind,
+        purpose_refs,
+    } = args;
+
+    let name = name.unwrap_or_else(|| id.clone());
+
     manifest.tests.push(TestSpec {
-        id: args.id,
-        feature_id: args.feature_id,
-        outcome_id: args.outcome_id,
-        path: args.path,
-        purpose_refs: args.purpose_refs,
-        kind: args.kind,
+        id,
+        name,
+        feature_id,
+        outcome_id,
+        path,
+        purpose_refs,
+        kind,
         status,
     });
 

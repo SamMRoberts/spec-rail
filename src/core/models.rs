@@ -167,6 +167,8 @@ pub struct OutcomeSpec {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TestSpec {
     pub id: String,
+    #[serde(default)]
+    pub name: String,
     pub feature_id: String,
     pub outcome_id: String,
     pub path: String,

@@ -86,7 +86,7 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     println!("    prereq — outcome IDs that must be verified before this one can be activated");
     println!("    allow  — glob paths the AI agent may modify (omit to allow all paths)");
     println!("    forbid — glob paths the AI agent must NOT touch");
-    println!("    test   — required manifest test IDs or method names that must pass");
+    println!("    test   — required test names/facts that must pass");
     println!("    test-file — test file paths used by `specrail test generate`");
     println!();
     println!("  Next steps:");
@@ -158,13 +158,13 @@ pub fn show(repo: &Repository, feature_id: &str, outcome_id: &str) -> Result<()>
         }
     }
     if !o.required_tests.is_empty() {
-        println!("\nRequired test IDs / method names:");
+        println!("\nRequired test names / facts:");
         for rt in &o.required_tests {
             println!("  • {rt}");
         }
         println!("  Tip: add individual tests with `specrail test add`");
     } else {
-        println!("\nNo required test IDs set.");
+        println!("\nNo required test names set.");
     }
     if !o.required_test_files.is_empty() {
         println!("\nRequired test files (used by `specrail test generate` to create test files):");
