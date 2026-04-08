@@ -865,6 +865,24 @@
             margin-top: 2px;
         }
 
+        .related-test-status {
+            font-size: 10px;
+            margin-top: 4px;
+            line-height: 1.35;
+        }
+
+        .related-test-status.pending {
+            color: var(--accent);
+        }
+
+        .related-test-status.opened {
+            color: var(--verified-fg);
+        }
+
+        .related-test-status.fallback {
+            color: var(--active-fg);
+        }
+
         .inline-actions {
             display: flex;
             gap: 4px;
@@ -1157,6 +1175,7 @@
                 runningAction: null,
                 expandedCards: {},
                 expandedPanels: {},
+                fileOpenStates: {},
                 suggestionPreviews: {},
                 suggestionPreviewErrors: {},
             };
@@ -1195,6 +1214,27 @@
                 var id = nextId++;
                 window.parent.postMessage({ jsonrpc: "2.0", id: id, method: m, params: p }, "*");
                 return new Promise(function (res, rej) { pending.set(id, { resolve: res, reject: rej }); });
+            }
+            function sendRequestWithTimeout(m, p, timeoutMs) {
+                var id = nextId++;
+                window.parent.postMessage({ jsonrpc: "2.0", id: id, method: m, params: p }, "*");
+                return new Promise(function (res, rej) {
+                    var timeout = setTimeout(function () {
+                        if (!pending.has(id)) return;
+                        pending.delete(id);
+                        rej(new Error("Timed out waiting for host acknowledgement."));
+                    }, timeoutMs || 800);
+                    pending.set(id, {
+                        resolve: function (value) {
+                            clearTimeout(timeout);
+                            res(value);
+                        },
+                        reject: function (error) {
+                            clearTimeout(timeout);
+                            rej(error);
+                        }
+                    });
+                });
             }
             function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
             function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id: id, result: r }, "*"); }
@@ -1610,12 +1650,42 @@
                 return list;
             }
 
-            function requestOpenRelatedTest(path) {
-                sendNotification("ui/notifications/open-file", {
+            function fileOpenStateKey(path) {
+                return panelStateKey("open-file", path);
+            }
+
+            function getFileOpenState(path) {
+                return state.fileOpenStates[fileOpenStateKey(path)] || null;
+            }
+
+            function setFileOpenState(path, status, message) {
+                state.fileOpenStates[fileOpenStateKey(path)] = { status: status, message: message };
+            }
+
+            async function requestOpenRelatedTest(path) {
+                var params = {
                     path: path,
                     cwd: state.toolArguments && state.toolArguments.cwd ? state.toolArguments.cwd : null,
-                });
-                appendLog("Requested editor open for: " + path + ". If your host ignores the request, use the inline path list.", "info");
+                };
+
+                setFileOpenState(path, "pending", "Awaiting host acknowledgement for the file-open request.");
+                render();
+
+                try {
+                    var result = await sendRequestWithTimeout("ui/requests/open-file", params, 900);
+                    if (result && result.opened === false) {
+                        throw new Error(result.message || "Host declined the file-open request.");
+                    }
+
+                    setFileOpenState(path, "opened", "Host acknowledged the file-open request.");
+                    appendLog("Host acknowledged file open: " + path, "success");
+                } catch (e) {
+                    sendNotification("ui/notifications/open-file", params);
+                    setFileOpenState(path, "fallback", "No acknowledgement received. Sent a best-effort open notification; keep using the inline test panel if nothing opens.");
+                    appendLog("No host acknowledgement for file open: " + path + ". Sent fallback notification.", "warn");
+                }
+
+                render();
             }
 
             function suggestionPreviewKey(featureId, outcomeId) {
@@ -1843,6 +1913,7 @@
                     review.related_tests.forEach(function (test) {
                         var item = document.createElement("li");
                         item.className = "related-test-item";
+                        var fileOpenState = getFileOpenState(test.path);
 
                         var main = document.createElement("div");
                         main.className = "related-test-main";
@@ -1854,11 +1925,22 @@
                         appendTestChip(meta, String(test.kind || "unit"), "");
                         appendTestChip(meta, String(test.status || "planned"), testStatusChipClass(String(test.status || "planned")));
                         main.appendChild(meta);
+                        if (fileOpenState && fileOpenState.message) {
+                            var statusLine = document.createElement("div");
+                            statusLine.className = "related-test-status " + (fileOpenState.status || "fallback");
+                            statusLine.textContent = fileOpenState.message;
+                            main.appendChild(statusLine);
+                        }
                         item.appendChild(main);
 
                         var openButton = document.createElement("button");
                         openButton.className = "btn btn-sm";
-                        openButton.textContent = "Open File";
+                        openButton.disabled = !!fileOpenState && fileOpenState.status === "pending";
+                        openButton.textContent = fileOpenState && fileOpenState.status === "pending"
+                            ? "Opening…"
+                            : fileOpenState && fileOpenState.status === "opened"
+                                ? "Open Again"
+                                : "Open File";
                         openButton.addEventListener("click", function (ev) {
                             ev.preventDefault();
                             ev.stopPropagation();
@@ -2492,6 +2574,20 @@
                 }
                 if (msg.method === "ui/notifications/tool-result") { state.toolResult = msg.params; render(); reportSize(); return; }
                 if (msg.method === "ui/notifications/tool-cancelled") { appendLog("Cancelled: " + ((msg.params && msg.params.reason) || "Operation was cancelled."), "warn"); return; }
+                if (msg.method === "ui/notifications/open-file-result") {
+                    var path = msg.params && msg.params.path;
+                    if (path) {
+                        if (msg.params.opened === true) {
+                            setFileOpenState(path, "opened", (msg.params.message || "Host acknowledged the file-open request."));
+                            appendLog("Host acknowledged file open: " + path, "success");
+                        } else {
+                            setFileOpenState(path, "fallback", (msg.params.message || "Host declined the file-open request. Use the inline test panel instead."));
+                            appendLog("Host declined file open: " + path, "warn");
+                        }
+                        render();
+                    }
+                    return;
+                }
                 if (msg.method === "ui/notifications/host-context-changed") { state.hostContext = merge(state.hostContext, msg.params || {}); render(); }
             });
 
