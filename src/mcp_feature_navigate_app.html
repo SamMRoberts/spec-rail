@@ -1456,6 +1456,11 @@
             }
 
             // Collapsible cards
+            function updateCollapsibleToggleLabel(details, collapsedLabel, expandedLabel) {
+                var toggle = details && details.querySelector("summary .card-toggle, summary .outcome-toggle");
+                if (toggle) toggle.textContent = details.open ? expandedLabel : collapsedLabel;
+            }
+
             function makeCollapsibleCard(options) {
                 var key = options.key, baseClass = options.baseClass, extraClass = options.extraClass || "",
                     summaryClass = options.summaryClass, contentClass = options.contentClass,
@@ -1465,10 +1470,26 @@
 
                 var details = document.createElement("details");
                 details.className = (baseClass + " " + extraClass).trim();
+                details.dataset.cardKey = key;
+                if (accordionGroup) details.dataset.accordionGroup = accordionGroup;
                 details.open = isCardExpanded(key, accordionGroup);
                 details.addEventListener("toggle", function () {
                     setCardExpanded(key, details.open, accordionGroup);
-                    render();
+                    updateCollapsibleToggleLabel(details, collapsedLabel, expandedLabel);
+
+                    if (details.open && accordionGroup) {
+                        Array.prototype.forEach.call(
+                            document.querySelectorAll("details[data-accordion-group]"),
+                            function (other) {
+                                if (other === details) return;
+                                if (other.dataset.accordionGroup !== accordionGroup) return;
+                                if (!other.open) return;
+                                other.open = false;
+                            }
+                        );
+                    }
+
+                    reportSize();
                 });
 
                 var summary = document.createElement("summary");
