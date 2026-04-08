@@ -1,16 +1,16 @@
 # specrail
 
-`specrail` is a Rust CLI for a phase-gated, test-driven workflow. It keeps project state under `.specrail/` and guides work through features, phases, registered tests, implementation, verification, and advancement to the next phase.
+`specrail` is a Rust CLI for an outcome-gated, test-driven workflow. It keeps project state under `.specrail/` and guides work through features, outcomes, registered tests, implementation, verification, and advancement to the next outcome.
 
 ## Overview
 
 The tool is designed to help you:
 
 - define a feature before writing code
-- break work into explicit phases with goals and path constraints
+- break work into explicit outcomes with goals and path constraints
 - register tests up front and track their status
-- run an implementation agent only when the phase is ready
-- verify each phase with your project's test command
+- run an implementation agent only when the outcome is ready
+- verify each outcome with your project's test command
 - keep an audit trail of project activity
 
 ## How it works
@@ -32,12 +32,12 @@ and `state/ledger.jsonl` remains the append-only audit trail.
 
 Key rules:
 
-- `specrail init` creates the project structure and immediately walks through feature and phase setup.
-- `specrail init --no-wizard` creates only the project structure.
+- `specrail init` creates the project structure and immediately walks through solution, project, component, feature, and outcome setup.
+- `specrail init --no-wizard` creates only the project structure (and seeds default solution/project/component).
 - All other commands require an existing `.specrail/` directory and will discover it by walking upward from the current directory.
-- `implement` requires an active feature, an active phase, at least one registered test for that phase, and no phase tests left in `planned`.
+- `implement` requires an active feature, an active outcome, at least one registered test for that outcome, and no outcome tests left in `planned`.
 - `verify` runs the `test_command` from `.specrail/project.yaml`.
-- `advance` only works after the active phase has been verified.
+- `advance` only works after the active outcome has been verified.
 
 ## Build and test
 
@@ -72,33 +72,33 @@ specrail feature new auth \
   --constraint "Keep login logic inside the auth module"
 ```
 
-Create phases for the feature:
+Create outcomes for the feature:
 
 ```bash
-specrail phase new auth phase-1 \
+specrail outcome new auth outcome-1 \
   --title "Validation" \
   --goal "Validate credentials and reject bad input." \
   --order 1 \
   --allow "src/auth/**" \
   --forbid "src/billing/**"
 
-specrail phase new auth phase-2 \
+specrail outcome new auth outcome-2 \
   --title "Persistence" \
   --goal "Persist authenticated users." \
   --order 2
 ```
 
-Register the tests for a phase:
+Register the tests for an outcome:
 
 ```bash
 specrail test add validate-email \
   --feature auth \
-  --phase phase-1 \
+  --outcome outcome-1 \
   --path tests/auth/validate_email.rs \
   --kind unit
 ```
 
-Or let an AI agent generate the required tests declared in your phase YAML:
+Or let an AI agent generate the required tests declared in your outcome:
 
 ```bash
 specrail test generate --agent copilot
@@ -110,11 +110,11 @@ Mark a test as ready for implementation:
 specrail test set-status validate-email written
 ```
 
-Activate the feature and phase:
+Activate the feature and outcome:
 
 ```bash
 specrail feature activate auth
-specrail phase activate auth phase-1
+specrail outcome activate auth outcome-1
 ```
 
 Run the workflow:
@@ -139,11 +139,32 @@ specrail trace --limit 20
 - `specrail init`
 - `specrail init --no-wizard`
 
+### Hierarchy
+
+- `specrail solution new <id> --title <title> --purpose <purpose>`
+- `specrail solution list`
+- `specrail solution show <id>`
+- `specrail solution edit <id> --title <title> --purpose <purpose>`
+- `specrail solution activate <id>`
+
+- `specrail project new <solution_id> <id> --title <title> --purpose <purpose>`
+- `specrail project list <solution_id>`
+- `specrail project show <id>`
+- `specrail project edit <id> --title <title> --purpose <purpose>`
+- `specrail project activate <id>`
+
+- `specrail component new <project_id> <id> --title <title> --purpose <purpose>`
+- `specrail component list <project_id>`
+- `specrail component show <id>`
+- `specrail component edit <id> --title <title> --purpose <purpose>`
+- `specrail component activate <id>`
+
 ### Features
 
 - `specrail feature new <id> --title <title> --purpose <purpose>`
 - `specrail feature list`
 - `specrail feature show <id>`
+- `specrail feature edit <id> --title <title> --purpose <purpose>`
 - `specrail feature activate <id>`
 
 Optional feature flags:
@@ -152,26 +173,30 @@ Optional feature flags:
 - `--constraint`
 - `--non-goal`
 - `--dep`
+- `--component` (override the active component)
 
-### Phases
+### Outcomes
 
-- `specrail phase new <feature_id> <phase_id> --title <title> --goal <goal> --order <n>`
-- `specrail phase list <feature_id>`
-- `specrail phase show <feature_id> <phase_id>`
-- `specrail phase activate <feature_id> <phase_id>`
+- `specrail outcome new <feature_id> <outcome_id> --title <title> --goal <goal> --order <n>`
+- `specrail outcome list <feature_id>`
+- `specrail outcome show <feature_id> <outcome_id>`
+- `specrail outcome edit <feature_id> <outcome_id> --title <title> --goal <goal> --order <n>`
+- `specrail outcome activate <feature_id> <outcome_id>`
 
-Optional phase flags:
+Optional outcome flags:
 
 - `--prereq`
 - `--allow`
 - `--forbid`
 - `--test`
+- `--test-file`
 
 ### Tests
 
-- `specrail test add <id> --feature <feature_id> --phase <phase_id> --path <path>`
+- `specrail test add <id> --feature <feature_id> --outcome <outcome_id> --path <path>`
 - `specrail test generate --agent <generic-shell|copilot|codex>`
-- `specrail test list [--feature <feature_id>] [--phase <phase_id>]`
+- `specrail test suggest [--feature <feature_id>] [--outcome <outcome_id>]`
+- `specrail test list [--feature <feature_id>] [--outcome <outcome_id>]`
 - `specrail test set-status <id> <planned|written|passing|failing>`
 
 ### Workflow
@@ -202,29 +227,29 @@ Default values created by `specrail init` include:
 
 ## Integrating specrail into another CLI or program
 
-`specrail` works best as the workflow state machine around another AI tool, not as the tool that invents the work on its own. Your outer CLI or program should translate requirements into `specrail` features, phases, and tests, then let `specrail` enforce the handoff points.
+`specrail` works best as the workflow state machine around another AI tool, not as the tool that invents the work on its own. Your outer CLI or program should translate requirements into `specrail` features, outcomes, and tests, then let `specrail` enforce the handoff points.
 
 Recommended model:
 
 1. Your program collects requirements from the user.
 2. Your program turns those requirements into:
    - one `feature`
-   - one or more ordered `phase`s
-   - one or more tests per phase
+   - one or more ordered `outcome`s
+   - one or more tests per outcome
 3. Your program calls `specrail` commands to persist that plan under `.specrail/`.
 4. Your AI coding CLI writes tests and implementation code.
-5. `specrail` verifies the phase and decides whether work can advance.
+5. `specrail` verifies the outcome and decides whether work can advance.
 
 Use the `specrail` CLI as the write interface:
 
 ```bash
 specrail init
 specrail feature new <id> --title <title> --purpose <purpose> ...
-specrail phase new <feature> <phase> --title <title> --goal <goal> --order <n> ...
-specrail test add <test-id> --feature <feature> --phase <phase> --path <path> ...
+specrail outcome new <feature> <outcome> --title <title> --goal <goal> --order <n> ...
+specrail test add <test-id> --feature <feature> --outcome <outcome> --path <path> ...
 specrail test set-status <test-id> written
 specrail feature activate <feature>
-specrail phase activate <feature> <phase>
+specrail outcome activate <feature> <outcome>
 ```
 
 Use the CLI as the read interface too when your orchestrator needs to inspect progress:
@@ -232,32 +257,32 @@ Use the CLI as the read interface too when your orchestrator needs to inspect pr
 - `specrail status`
 - `specrail trace --limit <n>`
 - `specrail feature show <feature>`
-- `specrail phase show <feature> <phase>`
-- `specrail test list --feature <feature> --phase <phase>`
+- `specrail outcome show <feature> <outcome>`
+- `specrail test list --feature <feature> --outcome <outcome>`
 
 Then run the control loop:
 
 1. **Requirements → specrail**
-   - Ask your AI tool to break the requirement into a feature, ordered phases, and tests.
-   - Register each artifact with `specrail feature new`, `specrail phase new`, and `specrail test add`.
+   - Ask your AI tool to break the requirement into a feature, ordered outcomes, and tests.
+   - Register each artifact with `specrail feature new`, `specrail outcome new`, and `specrail test add`.
 2. **Test authoring**
-   - Hand the active phase goal to your coding CLI and ask it to create the test files for that phase.
+   - Hand the active outcome goal to your coding CLI and ask it to create the test files for that outcome.
    - After each test file exists, mark it ready with `specrail test set-status <id> written`.
 3. **Implementation**
-   - Activate the feature and phase.
-   - Either call your coding CLI directly from your program, or run `specrail implement` to hand the structured phase prompt to an adapter.
+   - Activate the feature and outcome.
+   - Either call your coding CLI directly from your program, or run `specrail implement` to hand the structured outcome prompt to an adapter.
 4. **Verification**
    - Run `specrail verify`.
    - If verification fails, hand the failure output back to your coding CLI and repeat the implementation step.
 5. **Advancement**
    - When verification passes, run `specrail advance`.
-   - Repeat until there is no next phase.
+   - Repeat until there is no next outcome.
 
 ### Best integration pattern
 
 For another CLI or automation layer, prefer this ownership split:
 
-- **Your orchestrator** decides what feature, phases, and tests to create.
+- **Your orchestrator** decides what feature, outcomes, and tests to create.
 - **specrail** stores the plan, tracks active state, blocks implementation until tests are registered, and blocks advancement until verification passes.
 - **Your AI coding CLI** writes the tests and code.
 - **Your project's test command** is the final authority through `specrail verify`.
@@ -436,12 +461,12 @@ For the next outcome, repeat the same loop:
 If you want a Copilot-or-other-agent driven workflow, the safest sequence is:
 
 1. Feed requirements into your own orchestrator.
-2. Use the orchestrator to call `specrail feature new` and `specrail phase new`.
-3. Ask the coding agent to write the phase tests.
+2. Use the orchestrator to call `specrail feature new` and `specrail outcome new`.
+3. Ask the coding agent to write the outcome tests.
 4. Register those tests with `specrail test add`.
 5. Mark them `written`.
-6. Activate the feature and phase.
-7. Ask the coding agent to implement only the active phase.
+6. Activate the feature and outcome.
+7. Ask the coding agent to implement only the active outcome.
 8. Run `specrail verify`.
 9. If tests pass, run `specrail advance`; otherwise loop back to step 7 with the failure output.
 
