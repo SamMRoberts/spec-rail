@@ -1401,12 +1401,12 @@
                             desc = needsGeneration
                                 ? "Generate or register the missing required tests before implementation so the outcome has a complete test target."
                                 : "Register the outcome tests first so implementation has a concrete target to satisfy.";
-                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
                         } else if (pc > 0) {
                             icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
                             title = pc + " test" + (pc > 1 ? "s" : "") + " still in planned status";
                             desc = "Move planned tests to written or passing before implementation so the outcome gate can run cleanly.";
-                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", {}, { refresh: true }); }, kind: "primary" }];
+                            actions = [{ text: "Generate Missing Tests", fn: function () { runToolAction("Generate Missing Tests", "specrail_test_generate", { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id }, { refresh: true }); }, kind: "primary" }];
                         } else if (st === "active" || st === "failed") {
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
                             title = st === "failed" ? "Implementation failed \u2014 try again" : "Ready to implement";
@@ -1886,8 +1886,14 @@
                     actionRow.appendChild(previewBtn);
                 }
 
-                if (isActiveOutcome && review.needs_generation) {
-                    appendActionButton(actionRow, { title: "Generate Missing Tests", tool: "specrail_test_generate", kind: "primary", refresh: true });
+                if (review.needs_generation) {
+                    appendActionButton(actionRow, {
+                        title: "Generate Missing Tests",
+                        tool: "specrail_test_generate",
+                        args: { feature_id: featureId, outcome_id: outcome.id },
+                        kind: "primary",
+                        refresh: true
+                    });
                 }
 
                 if (actionRow.childNodes.length > 0) {
@@ -2471,11 +2477,19 @@
                                     actions.appendChild(actBtn);
                                 }
 
+                                if (review && review.needs_generation) {
+                                    appendActionButton(actions, {
+                                        title: "Generate Missing Tests",
+                                        tool: "specrail_test_generate",
+                                        args: { feature_id: featureId, outcome_id: outcome.id },
+                                        refresh: true,
+                                    });
+                                }
+
                                 if (isActiveOutcome) {
                                     if (outcome.status !== "verified" && outcome.status !== "skipped") {
                                         appendActionButton(actions, { title: "Run Implement", tool: "specrail_implement", kind: "primary", refresh: true });
                                         appendActionButton(actions, { title: "Run Verify", tool: "specrail_verify", kind: "success", refresh: true });
-                                        if (review && review.needs_generation) appendActionButton(actions, { title: "Generate Missing Tests", tool: "specrail_test_generate", refresh: true });
                                     }
                                     if (outcome.status === "verified") {
                                         appendActionButton(actions, { title: "Advance To Next Outcome", tool: "specrail_advance", kind: "success", refresh: true });

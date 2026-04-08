@@ -587,7 +587,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
                         &outcome.status,
                         active_outcome_id.as_deref() == Some(outcome.id.as_str()),
                         test_count,
-                        planned_test_count,
+                        review.needs_generation,
                     )
                 })
             })
@@ -650,12 +650,16 @@ fn outcome_available_actions(
     status: &OutcomeStatus,
     is_active: bool,
     test_count: usize,
-    planned_test_count: usize,
+    needs_test_generation: bool,
 ) -> Vec<&'static str> {
     let mut actions = vec!["edit", "show"];
 
     if test_count > 0 {
         actions.push("tests");
+    }
+
+    if needs_test_generation && !matches!(status, OutcomeStatus::Skipped) {
+        actions.push("generate_tests");
     }
 
     if !matches!(status, OutcomeStatus::Verified | OutcomeStatus::Skipped) && !is_active {
@@ -665,9 +669,6 @@ fn outcome_available_actions(
     if is_active {
         actions.push("implement");
         actions.push("verify");
-        if planned_test_count > 0 {
-            actions.push("generate_tests");
-        }
     }
 
     if *status == OutcomeStatus::Verified && is_active {
@@ -1022,9 +1023,31 @@ fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+
+    if feature_id.is_some() || outcome_id.is_some() {
+        let repo = discover_repo(arguments)?;
+        let summary = commands::test::generate_scoped(
+            &repo,
+            feature_id.as_deref(),
+            outcome_id.as_deref(),
+            agent.as_deref(),
+        )?;
+
+        return Ok(tool_success_payload(
+            format!(
+                "Generated {} test file(s) for {} with agent '{}'.",
+                summary.generated_count, summary.scope_label, summary.agent
+            ),
+            Some(json!({ "generation": summary })),
+        ));
+    }
+
     let cwd = resolve_cwd(arguments)?;
     let mut args = vec!["test".to_string(), "generate".to_string()];
-    if let Some(agent) = optional_string(arguments, "agent") {
+    if let Some(agent) = agent {
         args.push("--agent".to_string());
         args.push(agent);
     }
@@ -1855,11 +1878,13 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Use the configured AI agent to generate test files for planned tests in the active outcome. After generating, set test status to 'written' with specrail_test_set_status.",
+            "description": "Use the configured AI agent to generate test files for planned or missing required tests. By default this targets the active outcome, or you can pass feature_id and outcome_id to target a specific outcome directly.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature ID to scope generation to a specific outcome." },
+                    "outcome_id": { "type": "string", "description": "Optional outcome ID to scope generation to a specific outcome. Requires feature_id." },
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }

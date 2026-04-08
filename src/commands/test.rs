@@ -78,6 +78,13 @@ pub struct TestSuggestionPreview {
     pub suggestions: Vec<SuggestedTestFile>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct TestGenerationRunSummary {
+    pub agent: String,
+    pub scope_label: String,
+    pub generated_count: usize,
+}
+
 pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
     // Verify feature and outcome exist
     repo.load_feature(&args.feature_id)?;
@@ -105,7 +112,17 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
 }
 
 pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
-    let prepared = prepare_test_generation(repo, None, None)?;
+    generate_scoped(repo, None, None, agent_override)?;
+    Ok(())
+}
+
+pub fn generate_scoped(
+    repo: &Repository,
+    feature_id: Option<&str>,
+    outcome_id: Option<&str>,
+    agent_override: Option<&str>,
+) -> Result<TestGenerationRunSummary> {
+    let prepared = prepare_test_generation(repo, feature_id, outcome_id)?;
     let mut manifest = repo.load_manifest()?;
     let agent_name = agent_override.unwrap_or("copilot");
 
@@ -192,7 +209,11 @@ pub fn generate(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
 
     println!("Generated {generated_count} test file(s) and updated the manifest.");
     println!("{}", "─".repeat(60));
-    Ok(())
+    Ok(TestGenerationRunSummary {
+        agent: agent_name.to_string(),
+        scope_label: prepared.scope_label,
+        generated_count,
+    })
 }
 
 pub fn suggest(
