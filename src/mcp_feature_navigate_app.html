@@ -2100,7 +2100,8 @@
                             if (text) appendLog(title + ": " + text, "success");
                             else appendLog(title + " prepared a chat prompt.", "success");
                             if (delegation) {
-                                await startChatForDelegation(delegation);
+                                var handoff = await startChatForDelegation(delegation);
+                                markImplementationDelegationHandoff(delegation, handoff);
                             }
                             if (refresh) await refreshView();
                             state.runningAction = null; render(); return;
@@ -2632,6 +2633,25 @@
                 state.implementationDelegations[implementationDelegationKey(featureId, outcomeId)] = payload;
             }
 
+            function markImplementationDelegationHandoff(delegation, handoff) {
+                if (!delegation || typeof delegation !== "object") return;
+                var featureId = delegation.feature_id || "";
+                var outcomeId = delegation.outcome_id || "";
+                var payload = getImplementationDelegation(featureId, outcomeId);
+                if (payload) {
+                    payload.handoff = handoff || null;
+                }
+
+                var featurePayload = getImplementationDelegation(featureId, "*");
+                if (featurePayload && Array.isArray(featurePayload.delegations)) {
+                    featurePayload.delegations.forEach(function (item) {
+                        if (item && item.outcome_id === outcomeId) {
+                            item.handoff = handoff || null;
+                        }
+                    });
+                }
+            }
+
             function rememberImplementationDelegation(result, args) {
                 var sc = result && result.structuredContent;
                 if (!sc || typeof sc !== "object") return false;
@@ -2732,8 +2752,8 @@
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
                 var prompt = String(delegation.prompt || "");
-                var builtInChatCommand = "workbench.action.chat.open";
                 var chatBridgeCommand = "specrail.runMcpAction";
+                var builtInChatCommand = "workbench.action.chat.open";
                 var copied = false;
                 if (prompt) {
                     try {
@@ -2742,19 +2762,19 @@
                     } catch (_) { }
                 }
 
-                if (invokeCommandUri(builtInChatCommand, [{ query: prompt, isPartialQuery: false }])) {
-                    appendLog("Requested built-in VS Code chat with the implementation prompt.", "success");
-                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
-                }
-
-                if (invokeCommandUri(chatBridgeCommand, [{ prompt: prompt }])) {
-                    appendLog("Requested fallback VS Code command 'specrail.runMcpAction' with the implementation prompt.", "success");
+                if (invokeCommandUri(chatBridgeCommand, [{ prompt: prompt, mode: "agent", autoSubmit: true }])) {
+                    appendLog("Requested automatic VS Code chat execution through 'specrail.runMcpAction'.", "success");
                     return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction" };
                 }
 
                 if (invokeCommandUri(chatBridgeCommand, [])) {
                     appendLog("Requested fallback VS Code command 'specrail.runMcpAction' without arguments.", "warn");
                     return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction-empty" };
+                }
+
+                if (invokeCommandUri(builtInChatCommand, [{ query: prompt, isPartialQuery: false, mode: "agent" }])) {
+                    appendLog("Requested built-in VS Code chat with the implementation prompt. Submission may still require host support.", "success");
+                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
                 }
 
                 appendLog("Command handoff unavailable. The built-in chat command was not accepted, and no fallback bridge is available.", "warn");
@@ -3001,8 +3021,10 @@
 
                 var copy = document.createElement("div");
                 copy.className = "section-card-copy";
-                copy.textContent = payload.message
-                    || "The navigator prepared an implementation prompt for chat. It does not execute automatically in the current shell from this embedded view.";
+                copy.textContent = payload.handoff && payload.handoff.opened
+                    ? "Implementation prompt was handed off to VS Code chat for execution via " + String(payload.handoff.method || "host command") + ". Retry only if the chat session did not start."
+                    : (payload.message
+                        || "The navigator prepared an implementation prompt for chat. It does not execute automatically in the current shell from this embedded view.");
                 section.appendChild(copy);
 
                 var chips = document.createElement("div");
@@ -3028,9 +3050,11 @@
                 var startChatBtn = document.createElement("button");
                 startChatBtn.type = "button";
                 startChatBtn.className = "btn btn-success btn-sm";
-                startChatBtn.textContent = "Start Editor Chat";
-                startChatBtn.addEventListener("click", function () {
-                    startChatForDelegation(delegation);
+                startChatBtn.textContent = payload.handoff && payload.handoff.opened ? "Retry Chat Handoff" : "Start Editor Chat";
+                startChatBtn.addEventListener("click", async function () {
+                    var handoff = await startChatForDelegation(delegation);
+                    markImplementationDelegationHandoff(delegation, handoff);
+                    render();
                 });
                 actions.appendChild(startChatBtn);
 
@@ -3072,15 +3096,17 @@
                     section.appendChild(renderPathList(delegation.forbidden_paths, "path-list"));
                 }
 
-                var promptTitle = document.createElement("div");
-                promptTitle.className = "card-note";
-                promptTitle.textContent = "Prompt";
-                section.appendChild(promptTitle);
+                if (!(payload.handoff && payload.handoff.opened)) {
+                    var promptTitle = document.createElement("div");
+                    promptTitle.className = "card-note";
+                    promptTitle.textContent = "Prompt";
+                    section.appendChild(promptTitle);
 
-                var prompt = document.createElement("pre");
-                prompt.className = "delegation-prompt";
-                prompt.textContent = delegation.prompt || "No implementation prompt returned.";
-                section.appendChild(prompt);
+                    var prompt = document.createElement("pre");
+                    prompt.className = "delegation-prompt";
+                    prompt.textContent = delegation.prompt || "No implementation prompt returned.";
+                    section.appendChild(prompt);
+                }
 
                 return section;
             }
