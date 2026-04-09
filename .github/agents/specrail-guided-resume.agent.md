@@ -30,8 +30,9 @@ You determine the next guided phase from current state.
 
 ## Decision picker requirement
 
-- Present picker with:
+- Invoke `vscode_askQuestions` with picker options:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option
+- Do not only print options in chat text.
 - Do not hand off until user confirms selection.

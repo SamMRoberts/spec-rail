@@ -25,8 +25,9 @@ You handle repository bootstrap for guided SpecRail mode.
 
 ## Decision picker requirement
 
-- For initialization choice and solution/project naming choices, present picker with:
+- For initialization choice and solution/project naming choices, invoke `vscode_askQuestions` with picker options:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option
+- Do not only print options in chat text.
 - Do not run `specrail_init` or hand off until user confirms.

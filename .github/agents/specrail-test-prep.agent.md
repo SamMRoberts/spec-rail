@@ -37,6 +37,11 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Only delegate to `Specrail Plan` or `Specrail Execute`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Run Workflow` handoff once all required tests are written and ready.
 
+## Picker menu requirement
+
+- When asking the user to choose test actions, invoke `vscode_askQuestions`.
+- Do not only output choices in chat text.
+
 ## Output
 
 - Summarize the current test gaps, the registered tests, and anything that still blocks implementation.

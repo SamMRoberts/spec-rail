@@ -38,6 +38,11 @@ You handle feature and outcome planning for SpecRail.
 - Only delegate to `Specrail Setup` or `Specrail Test Prep`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Prepare Tests` handoff once the feature and outcome are created.
 
+## Picker menu requirement
+
+- When asking the user to choose solution/project/feature/outcome scope, invoke `vscode_askQuestions`.
+- Do not only output choices in chat text.
+
 ## Output
 
 - Present the proposed feature and outcome structure in a compact form for confirmation.

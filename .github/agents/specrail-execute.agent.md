@@ -42,6 +42,11 @@ You execute the active SpecRail outcome from implementation through verification
 - Do not stop after one outcome is advanced. Check `specrail_status` to see if there are more outcomes for the same feature, and if so, continue looping through test prep and execution.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan Next Slice` handoff once an outcome is advanced, or continue with the next outcome if more exist for the active feature.
 
+## Picker menu requirement
+
+- When asking the user to choose execution scope or next-phase routing, invoke `vscode_askQuestions`.
+- Do not only output choices in chat text.
+
 ## Output
 
 - State which feature and outcome are active.

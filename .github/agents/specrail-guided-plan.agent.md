@@ -31,8 +31,9 @@ You handle planning in guided mode.
 
 ## Decision picker requirement
 
-- For each planning decision (solution/project/feature/outcome), present picker with:
+- For each planning decision (solution/project/feature/outcome), invoke `vscode_askQuestions` with picker options:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option
+- Do not only print options in chat text.
 - Do not create entities or hand off until user confirms.

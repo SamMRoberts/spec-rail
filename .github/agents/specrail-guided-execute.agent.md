@@ -30,8 +30,9 @@ You execute the active outcome in guided mode.
 
 ## Decision picker requirement
 
-- Before implement/verify/advance or phase handoffs, present picker with:
+- Before implement/verify/advance or phase handoffs, invoke `vscode_askQuestions` with picker options:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option
+- Do not only print options in chat text.
 - Do not mutate state until user confirms.

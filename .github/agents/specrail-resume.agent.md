@@ -41,6 +41,11 @@ You determine the correct resume point for an existing SpecRail workflow before 
 - Only delegate to `Specrail Plan`, `Specrail Test Prep`, or `Specrail Execute`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute an immediate handoff based on the determined resume point.
 
+## Picker menu requirement
+
+- When asking the user to choose a resume phase, invoke `vscode_askQuestions`.
+- Do not only output choices in chat text.
+
 ## Output
 
 - Before handing off, briefly state what is complete, what is active, what is blocked, and which phase you are resuming.

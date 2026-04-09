@@ -34,8 +34,9 @@ You handle test-first workflow in guided mode.
 
 ## Decision picker requirement
 
-- For each test decision, present picker with:
+- For each test decision, invoke `vscode_askQuestions` with picker options:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option
+- Do not only print options in chat text.
 - Do not register/change status/generate files/handoff until user confirms.
