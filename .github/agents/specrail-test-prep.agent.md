@@ -6,11 +6,11 @@ agents: ["Specrail Plan", "Specrail Execute"]
 user-invocable: false
 argument-hint: "Prepare the tests for the active outcome, or describe which required test cases still need to be added or written."
 handoffs:
-  - label: Revise Feature Plan
+  - label: Refine Current Outcome Scope
     agent: Specrail Plan
     prompt: The current outcome scope or required tests are unclear. Refine the feature and outcome structure before continuing.
     send: true
-  - label: Run Workflow
+  - label: Execute Current Outcome
     agent: Specrail Execute
     prompt: The current outcome's required tests are registered, written, and ready. Implement only what those tests require.
     send: true
@@ -26,7 +26,7 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Use `specrail_test_generate` when the user wants generated test files, or edit test files directly when manual drafting is requested.
 - Move tests from `planned` to `written` only after the file exists and is ready to execute.
 - Re-check `specrail_outcome_test_review` and `specrail_status` after mutating test state.
-- Once all required tests are registered, written, and ready, **immediately use the `Run Workflow` handoff** to transition to execution.
+- Once all required tests are registered, written, and ready, **immediately use the `Execute Current Outcome` handoff** to transition to execution.
 
 ## Boundaries
 
@@ -35,7 +35,7 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Do not broaden coverage beyond the active outcome unless you explicitly justify shared regression coverage.
 - Do not leave required tests in `planned` if the next step is implementation.
 - Only delegate to `Specrail Plan` or `Specrail Execute`.
-- Do not list "Natural next steps" or stop with recommendations. Always execute the `Run Workflow` handoff once all required tests are written and ready.
+- Do not list "Natural next steps" or stop with recommendations. Always execute the `Execute Current Outcome` handoff once all required tests are written and ready.
 
 ## Picker menu requirement
 

@@ -1,32 +1,28 @@
 ---
 name: Specrail Automatic
-description: "Automatic mode: use when working in a SpecRail repository and you want the workflow to continue through setup, planning, test prep, execution, and resume with minimal pauses."
+description: "Automatic mode with one clear continue path for regular workflow use and direct stage handoffs for exceptions."
 tools: [agent, read, search, todo, specrail-mcp/*]
 agents: ["Specrail Setup", "Specrail Plan", "Specrail Test Prep", "Specrail Execute", "Specrail Resume"]
 user-invocable: true
-argument-hint: "Continue the workflow, or name a phase such as setup, planning, test prep, execution, or resume."
+argument-hint: "Continue the current workflow with minimal pauses, or jump straight to setup, planning, tests, or execution."
 handoffs:
-  - label: Continue With Suggestions
+  - label: Continue Current Workflow
     agent: Specrail Resume
-    prompt: Continue based on the current SpecRail workflow state and recommendations, but you decide which phase agent to delegate to without explicit user input.
+    prompt: Continue from the active feature and outcome with minimal re-checking, then immediately hand off to the appropriate phase agent.
     send: true
-  - label: Resume Current Workflow
-    agent: Specrail Resume
-    prompt: Inspect the current SpecRail state, determine the right resume point, and immediately hand off to the appropriate phase agent.
-    send: true
-  - label: Initialize SpecRail
+  - label: Start Or Repair Setup
     agent: Specrail Setup
     prompt: Check whether this repository is initialized for SpecRail. If setup is needed, always ask for solution and project names before init, then initialize and continue.
     send: true
-  - label: Plan Features
+  - label: Plan Or Refine Scope
     agent: Specrail Plan
-    prompt: Inspect the current SpecRail state and plan the next feature and outcome slice.
+    prompt: Inspect the current SpecRail state and plan or refine the next feature and outcome slice.
     send: true
-  - label: Prepare Tests
+  - label: Prepare Tests For Current Outcome
     agent: Specrail Test Prep
     prompt: Inspect the active outcome and prepare the required tests without widening scope.
     send: true
-  - label: Run Workflow
+  - label: Execute Current Outcome
     agent: Specrail Execute
     prompt: Drive the active SpecRail outcome through implement, verify, and advance while keeping the code change minimal.
     send: true
@@ -108,3 +104,8 @@ You are the Specrail workflow coordinator. Your job is to keep the repository al
 - If tests are missing, blocked, or still `planned`, delegate to `Specrail Test Prep`.
 - If tests are ready and the user wants to make progress on the active outcome, delegate to `Specrail Execute`.
 - After a worker agent returns, summarize the result, re-check `specrail_status`, and decide whether another phase agent should run.
+
+## Handoff selection guidance
+
+- For routine workflow continuation, prefer the `Continue Current Workflow` handoff instead of asking the user to choose a stage manually.
+- Only surface the direct stage handoffs when the user explicitly says they want setup, planning, tests, or execution.

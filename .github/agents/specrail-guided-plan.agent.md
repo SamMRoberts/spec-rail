@@ -6,11 +6,11 @@ agents: ["Specrail Guided Setup", "Specrail Guided Test Prep"]
 user-invocable: false
 argument-hint: "Collect user goals for feature and outcomes, then create only confirmed slices."
 handoffs:
-  - label: Guided Back To Setup
+  - label: Set Up Repository First
     agent: Specrail Guided Setup
     prompt: Repository setup is incomplete. Return to guided setup.
     send: true
-  - label: Guided Prepare Tests
+  - label: Prepare Tests For Confirmed Outcome
     agent: Specrail Guided Test Prep
     prompt: Planning is confirmed. Generate and review tests with the user.
     send: true
@@ -27,7 +27,7 @@ You handle planning in guided mode.
   - outcome goals and ordering
 - Propose a compact plan and confirm via picker before creating anything.
 - Create only what the user confirmed.
-- Hand off to `Specrail Guided Test Prep`.
+- Hand off to `Specrail Guided Test Prep` using `Prepare Tests For Confirmed Outcome`.
 
 ## Decision picker requirement
 

@@ -6,11 +6,11 @@ agents: ["Specrail Guided Plan", "Specrail Guided Execute"]
 user-invocable: false
 argument-hint: "Generate candidate tests from outcome goals and confirm each test with the user."
 handoffs:
-  - label: Guided Revise Plan
+  - label: Refine Outcome Scope
     agent: Specrail Guided Plan
     prompt: Outcome scope needs revision before tests can be finalized.
     send: true
-  - label: Guided Run Workflow
+  - label: Execute Confirmed Outcome
     agent: Specrail Guided Execute
     prompt: Confirmed tests are ready. Continue with guided execution.
     send: true
@@ -30,7 +30,7 @@ You handle test-first workflow in guided mode.
 - Ask for additional tests, incorporate feedback, and repeat review until user says the test set is complete.
 - For each confirmed test, generate final test id, display name, and path.
 - Register tests and update statuses to `written` only when files exist.
-- Hand off to `Specrail Guided Execute` once user confirms the full test set.
+- Hand off to `Specrail Guided Execute` using `Execute Confirmed Outcome` once user confirms the full test set.
 
 ## Decision picker requirement
 

@@ -6,7 +6,7 @@ agents: ["Specrail Guided Plan"]
 user-invocable: false
 argument-hint: "Run setup with confirmation checkpoints before planning."
 handoffs:
-  - label: Guided Plan Features
+  - label: Plan First Feature
     agent: Specrail Guided Plan
     prompt: Setup is complete. Continue in guided planning mode with user-provided goals.
     send: true
@@ -21,7 +21,7 @@ You handle repository bootstrap for guided SpecRail mode.
 - If either name is missing, prompt for it and do not continue.
 - Suggest initializing with `specrail_init no_wizard: true` and confirm with picker.
 - After init, create and/or activate the user-named solution and project using MCP solution/project tools before handing off.
-- If initialized (or after init completes), hand off to `Specrail Guided Plan`.
+- If initialized (or after init completes), hand off to `Specrail Guided Plan` using `Plan First Feature`.
 
 ## Decision picker requirement
 

@@ -6,11 +6,11 @@ agents: ["Specrail Setup", "Specrail Test Prep"]
 user-invocable: false
 argument-hint: "Describe the next feature or outcome slice to plan, or ask for roadmap clarification."
 handoffs:
-  - label: Back To Setup
+  - label: Set Up Repository First
     agent: Specrail Setup
     prompt: Verify whether the repository still needs initialization before planning continues.
     send: true
-  - label: Prepare Tests
+  - label: Prepare Tests For Current Outcome
     agent: Specrail Test Prep
     prompt: The features and outcomes are defined. Prepare the required tests for the current outcome before implementation.
     send: true
@@ -21,12 +21,12 @@ You handle feature and outcome planning for SpecRail.
 ## Workflow
 
 - Start with `specrail_status`.
-- If the repository is not initialized, use the `Back To Setup` handoff instead of planning against missing state.
+- If the repository is not initialized, use the `Set Up Repository First` handoff instead of planning against missing state.
 - Use `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, and `specrail_outcome_show` to inspect the current workflow before proposing changes.
 - Ask targeted follow-up questions when a feature, outcome, or dependency is unclear.
 - Keep the workflow incremental by default: define the next feature or next outcome slice.
 - Confirm the proposed feature and outcome structure with the user before creating anything in `specrail`.
-- Once the feature and outcome are defined and created, **immediately hand off to `Specrail Test Prep`** using the `Prepare Tests` handoff without pausing.
+- Once the feature and outcome are defined and created, **immediately hand off to `Specrail Test Prep`** using the `Prepare Tests For Current Outcome` handoff without pausing.
 - Re-check `specrail_status` after every mutating MCP call.
 
 ## Boundaries
@@ -36,7 +36,7 @@ You handle feature and outcome planning for SpecRail.
 - Do not implement production code.
 - Do not widen scope beyond the next clear slice unless the user explicitly asks for a full roadmap.
 - Only delegate to `Specrail Setup` or `Specrail Test Prep`.
-- Do not list "Natural next steps" or stop with recommendations. Always execute the `Prepare Tests` handoff once the feature and outcome are created.
+- Do not list "Natural next steps" or stop with recommendations. Always execute the `Prepare Tests For Current Outcome` handoff once the feature and outcome are created.
 
 ## Picker menu requirement
 
