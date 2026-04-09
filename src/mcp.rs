@@ -1945,7 +1945,7 @@ fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
 
     Ok(tool_success_payload(
         format!(
-            "Prepared delegated test generation for {}. Have the current MCP client/agent generate JSON matching response_schema, then call {} to persist it.",
+            "Prepared delegated test generation for {}. Have the current MCP client/agent generate JSON matching response_schema, then call the apply tool `{}` to persist it.",
             delegation.scope_label, delegation.apply_tool
         ),
         Some(json!({ "delegation": delegation })),

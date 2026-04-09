@@ -12,6 +12,9 @@ use crate::{
     prompts::builder,
 };
 
+const VERIFY_TOOL: &str = "specrail_verify";
+const ADVANCE_TOOL: &str = "specrail_advance";
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ImplementationRequest {
     pub agent: String,
@@ -126,7 +129,7 @@ pub fn prepare_request_for_outcome(
         prompt,
         allowed_paths: outcome.allowed_paths.clone(),
         forbidden_paths: outcome.forbidden_paths.clone(),
-        verify_tool: "specrail_verify".to_string(),
-        advance_tool: "specrail_advance".to_string(),
+        verify_tool: VERIFY_TOOL.to_string(),
+        advance_tool: ADVANCE_TOOL.to_string(),
     })
 }

@@ -1277,6 +1277,7 @@ fn mcp_implement_returns_delegation_without_spawning_nested_agent() {
         }),
     );
     fs::create_dir_all(dir.path().join("tests/auth")).unwrap();
+    assert!(dir.path().join("tests/auth").is_dir());
     fs::write(
         dir.path().join("tests/auth/login.rs"),
         "#[test]\nfn logs_in() {\n    assert!(true);\n}\n",

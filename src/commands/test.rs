@@ -565,6 +565,7 @@ fn apply_generated_tests_response(
     })
 }
 
+/// Preserve the historical CLI default when no explicit agent override is supplied.
 fn resolve_generation_agent(agent_override: Option<&str>) -> String {
     agent_override.unwrap_or("copilot").to_string()
 }
