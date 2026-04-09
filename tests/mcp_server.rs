@@ -127,7 +127,6 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .filter_map(|tool| tool["name"].as_str())
         .collect();
     assert!(tool_names.contains(&"specrail_status"));
-    assert!(tool_names.contains(&"specrail_feature_navigate"));
     assert!(tool_names.contains(&"specrail_solution_list"));
     assert!(tool_names.contains(&"specrail_project_list"));
     assert!(tool_names.contains(&"specrail_component_list"));
@@ -138,14 +137,6 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_outcome_test_review"));
     assert!(tool_names.contains(&"specrail_test_suggest"));
     assert!(tool_names.contains(&"specrail_test_apply_generated"));
-    let feature_navigate = tools["result"]["tools"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|tool| tool["name"] == "specrail_feature_navigate")
-        .unwrap();
-    assert!(feature_navigate["_meta"].is_null());
-
     let status_before = client.request(
         "tools/call",
         json!({
@@ -378,176 +369,30 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         }),
     );
 
-    let feature_picker = client.request(
+    let feature_show = client.request(
         "tools/call",
         json!({
-            "name": "specrail_feature_navigate",
-            "arguments": {}
-        }),
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["mode"],
-        "feature_selection"
-    );
-    assert!(feature_picker["result"]["_meta"].is_null());
-    let features = feature_picker["result"]["structuredContent"]["features"]
-        .as_array()
-        .unwrap();
-    assert_eq!(features.len(), 2);
-    assert!(features.iter().any(|feature| feature["id"] == "auth"));
-    assert!(features.iter().all(|feature| feature["pathLabel"] == "default-solution/default-project/default-component"));
-    let auth_feature = features
-        .iter()
-        .find(|feature| feature["id"] == "auth")
-        .unwrap();
-    assert_eq!(auth_feature["totalTestCount"], 2);
-    assert_eq!(auth_feature["plannedTestCount"], 2);
-    assert_eq!(auth_feature["undeclaredOutcomeCount"], 1);
-    assert_eq!(auth_feature["hasUndeclaredTests"], json!(true));
-    assert_eq!(auth_feature["implementStatus"]["tone"], "warning");
-    assert_eq!(auth_feature["implementStatus"]["label"], "Needed");
-    assert_eq!(auth_feature["verifyStatus"]["tone"], "muted");
-    assert_eq!(auth_feature["verifyStatus"]["label"], "Waiting");
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["solutions"][0]["id"],
-        "default-solution"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["activeSolutionId"],
-        "default-solution"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["activeProjectId"],
-        "default-project"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["activeComponentId"],
-        "default-component"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["nextActions"]["selectFeatureTool"],
-        "specrail_feature_navigate"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["nextActions"]["activateSolutionTool"],
-        "specrail_solution_activate"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["nextActions"]["activateProjectTool"],
-        "specrail_project_activate"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["nextActions"]["activateComponentTool"],
-        "specrail_component_activate"
-    );
-    assert_eq!(
-        feature_picker["result"]["structuredContent"]["nextActions"]["editFeatureTool"],
-        "specrail_feature_edit"
-    );
-
-    let outcome_picker = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_feature_navigate",
+            "name": "specrail_feature_show",
             "arguments": {
-                "feature_id": "auth"
+                "id": "auth"
             }
         }),
     );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["mode"],
-        "outcome_selection"
+    assert_eq!(feature_show["result"]["isError"], json!(false));
+    assert_eq!(feature_show["result"]["structuredContent"]["feature"]["id"], "auth");
+
+    let outcome_show = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_show",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login"
+            }
+        }),
     );
-    assert!(outcome_picker["result"]["_meta"].is_null());
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["selectedFeature"]["id"],
-        "auth"
-    );
-    let outcomes = outcome_picker["result"]["structuredContent"]["outcomes"]
-        .as_array()
-        .unwrap();
-    assert_eq!(outcomes.len(), 1);
-    assert_eq!(outcomes[0]["id"], "login");
-    assert_eq!(outcomes[0]["goal"], "Let a user sign in with valid credentials.");
-    assert_eq!(outcomes[0]["requiredTestCount"], 2);
-    assert_eq!(outcomes[0]["missingRequiredTestCount"], 1);
-    assert_eq!(outcomes[0]["plannedTestCount"], 1);
-    assert_eq!(outcomes[0]["writtenTestCount"], 0);
-    assert_eq!(outcomes[0]["failingTestCount"], 0);
-    assert_eq!(outcomes[0]["undeclaredTestCount"], 1);
-    assert_eq!(outcomes[0]["hasTestGaps"], json!(true));
-    let missing_required = outcomes[0]["testReview"]["missing_required_tests"]
-        .as_array()
-        .unwrap();
-    assert!(missing_required.iter().any(|value| value == "auth-mfa-rs"));
-    assert_eq!(
-        outcomes[0]["testReview"]["missing_required_test_files"]
-        .as_array()
-        .unwrap()
-        .len(),
-        0
-    );
-    let undeclared_tests = outcomes[0]["testReview"]["undeclared_tests"]
-        .as_array()
-        .unwrap();
-    assert!(undeclared_tests
-        .iter()
-        .any(|value| value["path"] == "tests/auth/login_smoke.rs"));
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["selectOutcomeTool"],
-        "specrail_outcome_activate"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["createOutcomeTool"],
-        "specrail_outcome_new"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["editOutcomeTool"],
-        "specrail_outcome_edit"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["unverifyOutcomeTool"],
-        "specrail_outcome_unverify"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["testReviewTool"],
-        "specrail_outcome_test_review"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["testSuggestTool"],
-        "specrail_test_suggest"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["testAddTool"],
-        "specrail_test_add"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["testSetStatusTool"],
-        "specrail_test_set_status"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["nextActions"]["implementTool"],
-        "specrail_implement"
-    );
-    assert_eq!(
-        outcome_picker["result"]["structuredContent"]["suggestedNewOutcomeOrder"],
-        2
-    );
-    assert!(outcomes[0]["availableActions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|value| value == "activate"));
-    assert!(outcomes[0]["availableActions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|value| value == "tests"));
-    assert!(outcomes[0]["availableActions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|value| value == "generate_tests"));
+    assert_eq!(outcome_show["result"]["isError"], json!(false));
+    assert_eq!(outcome_show["result"]["structuredContent"]["outcome"]["id"], "login");
 
     let review = client.request(
         "tools/call",
@@ -573,162 +418,6 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         review["result"]["structuredContent"]["review"]["suggested_test_paths"][0],
         "tests/auth/login.rs"
     );
-
-    client.shutdown();
-}
-
-#[test]
-fn mcp_feature_navigate_scopes_features_to_active_hierarchy() {
-    let dir = TempDir::new().unwrap();
-    let mut client = McpClient::spawn(dir.path());
-    client.initialize();
-
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_init",
-            "arguments": {
-                "no_wizard": true
-            }
-        }),
-    );
-
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_solution_new",
-            "arguments": {
-                "id": "platform",
-                "title": "Platform",
-                "purpose": "Shared delivery surface."
-            }
-        }),
-    );
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_project_new",
-            "arguments": {
-                "solution_id": "platform",
-                "id": "api",
-                "title": "API",
-                "purpose": "Backend services."
-            }
-        }),
-    );
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_component_new",
-            "arguments": {
-                "project_id": "api",
-                "id": "billing",
-                "title": "Billing",
-                "purpose": "Charge subscriptions."
-            }
-        }),
-    );
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_component_new",
-            "arguments": {
-                "project_id": "api",
-                "id": "identity",
-                "title": "Identity",
-                "purpose": "Authenticate requests."
-            }
-        }),
-    );
-
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_feature_new",
-            "arguments": {
-                "id": "invoice-retries",
-                "component_id": "billing",
-                "title": "Invoice retries",
-                "purpose": "Retry failed invoice collection."
-            }
-        }),
-    );
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_feature_new",
-            "arguments": {
-                "id": "token-refresh",
-                "component_id": "identity",
-                "title": "Token refresh",
-                "purpose": "Refresh expired access tokens."
-            }
-        }),
-    );
-
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_component_activate",
-            "arguments": {
-                "id": "billing"
-            }
-        }),
-    );
-
-    let billing_picker = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_feature_navigate",
-            "arguments": {}
-        }),
-    );
-    let billing_features = billing_picker["result"]["structuredContent"]["features"]
-        .as_array()
-        .unwrap();
-    assert_eq!(billing_picker["result"]["structuredContent"]["activeSolutionId"], "platform");
-    assert_eq!(billing_picker["result"]["structuredContent"]["activeProjectId"], "api");
-    assert_eq!(billing_picker["result"]["structuredContent"]["activeComponentId"], "billing");
-    assert_eq!(billing_features.len(), 1);
-    assert_eq!(billing_features[0]["id"], "invoice-retries");
-    assert_eq!(
-        billing_picker["result"]["structuredContent"]["visibleProjects"]
-            .as_array()
-            .unwrap()
-            .len(),
-        1
-    );
-    assert_eq!(
-        billing_picker["result"]["structuredContent"]["visibleComponents"]
-            .as_array()
-            .unwrap()
-            .len(),
-        2
-    );
-
-    let _ = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_component_activate",
-            "arguments": {
-                "id": "identity"
-            }
-        }),
-    );
-
-    let identity_picker = client.request(
-        "tools/call",
-        json!({
-            "name": "specrail_feature_navigate",
-            "arguments": {}
-        }),
-    );
-    let identity_features = identity_picker["result"]["structuredContent"]["features"]
-        .as_array()
-        .unwrap();
-    assert_eq!(identity_picker["result"]["structuredContent"]["activeComponentId"], "identity");
-    assert_eq!(identity_features.len(), 1);
-    assert_eq!(identity_features[0]["id"], "token-refresh");
 
     client.shutdown();
 }
@@ -1363,7 +1052,7 @@ fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
 }
 
 #[test]
-fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
+fn mcp_outcome_show_refreshes_outcome_status_after_edit() {
     let dir = TempDir::new().unwrap();
     let mut client = McpClient::spawn(dir.path());
     client.initialize();
@@ -1428,17 +1117,14 @@ fn mcp_feature_navigate_refreshes_outcome_status_after_edit() {
     let refreshed = client.request(
         "tools/call",
         json!({
-            "name": "specrail_feature_navigate",
+            "name": "specrail_outcome_show",
             "arguments": {
-                "feature_id": "auth"
+                "feature_id": "auth",
+                "outcome_id": "login"
             }
         }),
     );
-
-    let outcomes = refreshed["result"]["structuredContent"]["outcomes"]
-        .as_array()
-        .unwrap();
-    assert_eq!(outcomes[0]["status"], "pending");
+    assert_eq!(refreshed["result"]["structuredContent"]["outcome"]["status"], "pending");
 
     client.shutdown();
 }
@@ -1500,19 +1186,17 @@ fn mcp_outcome_unverify_resets_verified_outcome_to_pending() {
     assert_eq!(reset["result"]["isError"], json!(false));
     assert_eq!(reset["result"]["structuredContent"]["outcome"]["status"], "pending");
 
-    let navigate = client.request(
+    let outcome_show = client.request(
         "tools/call",
         json!({
-            "name": "specrail_feature_navigate",
+            "name": "specrail_outcome_show",
             "arguments": {
-                "feature_id": "auth"
+                "feature_id": "auth",
+                "outcome_id": "login"
             }
         }),
     );
-    let outcomes = navigate["result"]["structuredContent"]["outcomes"]
-        .as_array()
-        .unwrap();
-    assert_eq!(outcomes[0]["status"], "pending");
+    assert_eq!(outcome_show["result"]["structuredContent"]["outcome"]["status"], "pending");
 
     client.shutdown();
 }
