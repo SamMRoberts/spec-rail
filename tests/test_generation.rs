@@ -86,6 +86,80 @@ fn test_generate_creates_files_and_manifest_entries() {
 }
 
 #[test]
+fn test_generate_promotes_existing_planned_test_to_written() {
+    let dir = TempDir::new().unwrap();
+
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
+
+    specrail(&dir)
+        .args([
+            "feature", "new", "auth",
+            "--title", "Auth",
+            "--purpose", "Authenticate users.",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "auth", "outcome-1",
+            "--title", "Validation",
+            "--goal", "Validate credentials.",
+            "--order", "1",
+            "--test", "auth-outcome-1-validates-credentials",
+            "--test-file", "tests/auth/validate.rs",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "test", "add", "auth-outcome-1-validates-credentials",
+            "--feature", "auth",
+            "--outcome", "outcome-1",
+            "--path", "tests/auth/validate.rs",
+            "--kind", "unit",
+        ])
+        .assert()
+        .success();
+
+    fs::create_dir_all(dir.path().join(".specrail/agents")).unwrap();
+    fs::write(
+        dir.path().join(".specrail/agents/mock_existing_test_output.json"),
+        r##"{
+  "tests": [
+    {
+      "feature_id": "auth",
+      "outcome_id": "outcome-1",
+      "id": "auth-outcome-1-validates-credentials",
+      "name": "validates_credentials",
+      "path": "tests/auth/validate.rs",
+      "kind": "unit",
+      "purpose_refs": ["goal:Validate credentials."],
+      "content": "#[test]\nfn validates_credentials() {\n    assert!(true);\n}\n"
+    }
+  ]
+}"##,
+    )
+    .unwrap();
+
+    specrail(&dir)
+        .env("SPECRAIL_AGENT_CMD", "cat .specrail/agents/mock_existing_test_output.json")
+        .args(["test", "generate", "--agent", "generic-shell"])
+        .assert()
+        .success()
+        .stdout(contains("Generated 1 test file(s)"));
+
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.id == "auth-outcome-1-validates-credentials"
+            && test.name == "validates_credentials"
+            && test.path == "tests/auth/validate.rs"
+            && test.status == "written"
+    }));
+}
+
+#[test]
 fn test_generate_requires_declared_required_tests() {
     let dir = TempDir::new().unwrap();
 

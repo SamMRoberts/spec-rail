@@ -213,23 +213,11 @@ pub fn generate_scoped(
             );
         }
 
-        crate::commands::outcome::ensure_required_test_reference(
-            repo,
-            &generated.feature_id,
-            &generated.outcome_id,
-            &generated.id,
-            &generated.path,
-        )?;
-
         let kind = parse_generated_test_kind(&generated.kind)?;
-        let id = generated.id.clone();
-
-        write_file(&repo.root.join(&generated.path), &generated.content)?;
-
-        let _ = add_to_manifest(
+        let canonical_test_id = upsert_generated_test_in_manifest(
             &mut manifest,
             AddArgs {
-                id: id.clone(),
+                id: generated.id.clone(),
                 name: Some(generated.name.clone()),
                 feature_id: generated.feature_id.clone(),
                 outcome_id: generated.outcome_id.clone(),
@@ -240,10 +228,20 @@ pub fn generate_scoped(
             TestStatus::Written,
         )?;
 
+        write_file(&repo.root.join(&generated.path), &generated.content)?;
+
+        crate::commands::outcome::ensure_required_test_reference(
+            repo,
+            &generated.feature_id,
+            &generated.outcome_id,
+            &canonical_test_id,
+            &generated.path,
+        )?;
+
         let event = LedgerEvent::new(LedgerEventType::TestAdded)
             .with_feature(&generated.feature_id)
             .with_outcome(&generated.outcome_id)
-            .with_message(format!("test '{}' generated", id));
+            .with_message(format!("test '{}' generated", canonical_test_id));
         Ledger::append(&repo.ledger_path(), &event)?;
         generated_count = generated_count.saturating_add(1);
     }
@@ -633,6 +631,50 @@ fn add_to_manifest(manifest: &mut TestManifest, args: AddArgs, status: TestStatu
         status,
     });
 
+    Ok(id)
+}
+
+fn upsert_generated_test_in_manifest(
+    manifest: &mut TestManifest,
+    args: AddArgs,
+    status: TestStatus,
+) -> Result<String> {
+    if let Some(existing) = manifest.tests.iter_mut().find(|t| t.id == args.id) {
+        if existing.feature_id != args.feature_id || existing.outcome_id != args.outcome_id {
+            bail!(
+                "generated test '{}' belongs to '{}:{}' but manifest already has it for '{}:{}'",
+                args.id,
+                args.feature_id,
+                args.outcome_id,
+                existing.feature_id,
+                existing.outcome_id
+            );
+        }
+
+        if let Some(name) = args.name {
+            existing.name = name;
+        }
+        existing.path = args.path;
+        existing.kind = args.kind;
+        existing.purpose_refs = args.purpose_refs;
+        existing.status = status;
+        return Ok(existing.id.clone());
+    }
+
+    if let Some(existing) = manifest.tests.iter_mut().find(|t| {
+        t.feature_id == args.feature_id && t.outcome_id == args.outcome_id && t.path == args.path
+    }) {
+        if let Some(name) = args.name {
+            existing.name = name;
+        }
+        existing.kind = args.kind;
+        existing.purpose_refs = args.purpose_refs;
+        existing.status = status;
+        return Ok(existing.id.clone());
+    }
+
+    let id = args.id.clone();
+    let _ = add_to_manifest(manifest, args, status)?;
     Ok(id)
 }
 

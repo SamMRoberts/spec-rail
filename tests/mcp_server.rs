@@ -1131,6 +1131,116 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
 }
 
 #[test]
+fn mcp_test_generate_promotes_existing_planned_test_to_written() {
+    let dir = TempDir::new().unwrap();
+    fs::create_dir_all(dir.path().join(".specrail/agents")).unwrap();
+    fs::write(
+        dir.path().join(".specrail/agents/mock_existing_test_generate.json"),
+        r##"{
+  "tests": [
+    {
+      "feature_id": "auth",
+      "outcome_id": "login",
+      "id": "auth-login-valid-credentials",
+      "name": "logs_in",
+      "path": "tests/auth/login.rs",
+      "kind": "unit",
+      "purpose_refs": ["goal:Let a user sign in with valid credentials."],
+      "content": "#[test]\nfn logs_in() {\n    assert!(true);\n}\n"
+    }
+  ]
+}"##,
+    )
+    .unwrap();
+    let command = format!(
+        "cat {}",
+        dir.path()
+            .join(".specrail/agents/mock_existing_test_generate.json")
+            .display()
+    );
+
+    let mut client = McpClient::spawn_with_env(
+        dir.path(),
+        &[("SPECRAIL_AGENT_CMD", command.as_str())],
+    );
+    client.initialize();
+
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_init",
+            "arguments": {
+                "no_wizard": true
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_feature_new",
+            "arguments": {
+                "id": "auth",
+                "title": "Authentication",
+                "purpose": "Authenticate users before protected routes."
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_outcome_new",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "title": "User login",
+                "goal": "Let a user sign in with valid credentials.",
+                "order": 1,
+                "required_tests": ["auth-login-valid-credentials"],
+                "required_test_files": ["tests/auth/login.rs"]
+            }
+        }),
+    );
+    let _ = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_add",
+            "arguments": {
+                "id": "auth-login-valid-credentials",
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "path": "tests/auth/login.rs",
+                "kind": "unit",
+                "purpose_refs": []
+            }
+        }),
+    );
+
+    let generation = client.request(
+        "tools/call",
+        json!({
+            "name": "specrail_test_generate",
+            "arguments": {
+                "feature_id": "auth",
+                "outcome_id": "login",
+                "agent": "generic-shell"
+            }
+        }),
+    );
+
+    assert_eq!(generation["result"]["isError"], json!(false));
+
+    let tests = support::tests(&dir);
+    assert!(tests.iter().any(|test| {
+        test.id == "auth-login-valid-credentials"
+            && test.name == "logs_in"
+            && test.path == "tests/auth/login.rs"
+            && test.status == "written"
+    }));
+
+    client.shutdown();
+}
+
+#[test]
 fn mcp_outcome_add_required_test_promotes_undeclared_related_test() {
     let dir = TempDir::new().unwrap();
     let mut client = McpClient::spawn(dir.path());
