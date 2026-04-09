@@ -1596,6 +1596,13 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
         }),
     );
 
+    fs::create_dir_all(dir.path().join("tests/auth")).unwrap();
+    fs::write(
+        dir.path().join("tests/auth/login.rs"),
+        "#[test]\nfn auth_login_valid_credentials() {}\n",
+    )
+    .unwrap();
+
     let status_planned_tests = client.request(
         "tools/call",
         json!({
@@ -1633,6 +1640,13 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["recommended_skill"],
         "specrail-run-workflow"
+    );
+    assert!(
+        status_ready["result"]["structuredContent"]["workflow"]["next_tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|tool| tool == "specrail_outcome_test_review")
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["candidate_feature_id"],

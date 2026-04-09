@@ -17,7 +17,7 @@ Default sequence:
 4. Ask follow-up questions to determine which tests are required for each outcome if the user has not already provided them clearly.
 5. Work outcome-by-outcome and gather the expected unit, integration, or e2e tests for that outcome.
 6. For each missing outcome-required test, register it with `specrail_test_add`.
-7. If the user wants help creating the test files, use `specrail_test_generate` only for the tests required by that outcome.
+7. If the user wants help creating the test files, use `specrail_test_generate` only for the tests required by that outcome, and treat the generated files as a draft that still needs review.
 8. Once a test exists and is ready to be executed, update it from `planned` to `written` with `specrail_test_set_status`.
 9. After verification runs, update test statuses to reflect the latest known state when needed.
 10. Re-check `specrail_outcome_test_review`, `specrail_test_list`, and `specrail_status` to confirm that the outcome is no longer blocked by missing or `planned` tests.
@@ -28,7 +28,8 @@ Test planning rules:
 - At least one registered test should exist for each outcome before implementation.
 - Gather tests narrowly so each test clearly supports the current outcome.
 - Only register or generate tests that are explicitly required by the outcome or approved by the user for that same outcome.
-- Do not add speculative tests for future outcomes, refactors, or unrelated edge cases.
+- Allow justified regression coverage when shared code is being touched, but call out the justification explicitly instead of silently broadening scope.
+- Do not add speculative tests for future outcomes or unrelated edge cases.
 - Prefer asking for concrete examples, edge cases, and failure cases.
 - If the user gives broad test ideas, split them into distinct test cases.
 - Keep test IDs and paths stable and specific to the feature and outcome they support.

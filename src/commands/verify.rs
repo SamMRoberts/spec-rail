@@ -24,6 +24,11 @@ pub fn run(repo: &Repository) -> Result<()> {
         .context("no active outcome — run `specrail outcome activate <feature-id> <outcome-id>` first")?;
 
     let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
+    let manifest = repo.load_manifest()?;
+
+    crate::policy::outcome_gate::check_verify_gates(repo, &outcome, &manifest).with_context(
+        || format!("outcome gate check failed for outcome '{outcome_id}'"),
+    )?;
 
     println!("▶ Running verification for outcome '{outcome_id}'…");
     println!("  Test command: {}", config.test_command);

@@ -63,8 +63,8 @@ Additional commands:
 Important gating rules:
 
 - All commands except `init` require an existing `.specrail/` directory; discovery walks upward from the current directory.
-- `implement` requires an active feature, an active outcome, at least one registered test for that outcome, and no outcome tests left in `planned` status.
-- `verify` uses `project.yaml:test_command` from the project root and marks the outcome `verified` or `failed`.
+- `implement` requires an active feature, an active outcome, registered required tests and test files for that outcome, existing test files on disk, and no outcome tests left in `planned` status.
+- `verify` uses `project.yaml:test_command` from the project root, but it first enforces the same outcome test-readiness checks as `implement`, then marks the outcome `verified` or `failed`.
 - `advance` only works from a `verified` outcome and activates the outcome whose `order` is current `order + 1`.
 
 ## Coding conventions
@@ -109,7 +109,7 @@ These commands pass in the current repository state and are the baseline validat
 
 - Active state (active feature, active outcome, active component/project/solution) is stored in `specrail.db`, not in a `current.yaml` file.
 - Tests are registered in the database manifest; they are not auto-discovered from the filesystem.
-- `test add` records a path but does not verify that the file exists.
+- `test add` records a path, and `test set-status <id> written` now refuses to proceed unless that file exists on disk.
 - `prerequisites`, `dependencies`, and `required_tests` are modeled but not meaningfully enforced yet; do not assume they drive execution.
 - `ledger.jsonl` is append-only audit history, not the primary state store.
 

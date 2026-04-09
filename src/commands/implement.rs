@@ -30,7 +30,7 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     let manifest = repo.load_manifest()?;
 
     // Outcome gate checks
-    outcome_gate::check_implementation_gates(&outcome, &manifest).with_context(|| {
+    outcome_gate::check_implementation_gates(repo, &outcome, &manifest).with_context(|| {
         format!("outcome gate check failed for outcome '{outcome_id}'")
     })?;
 

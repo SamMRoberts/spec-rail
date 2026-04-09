@@ -305,4 +305,9 @@ fn test_add_syncs_required_test_into_outcome_yaml() {
         .success()
         .stdout(contains("auth-outcome-1-validate"))
         .stdout(contains("tests/auth/validate.rs"));
+
+    assert_eq!(
+        support::outcome_required_test_files(&dir, "auth", "outcome-1"),
+        vec!["tests/auth/validate.rs".to_string()]
+    );
 }
