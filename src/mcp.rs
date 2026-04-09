@@ -2946,7 +2946,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_status",
             "title": "Project Status",
             "description": "Direct MCP read action: get current project status, active workflow state, and recommended next action. Call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3085,7 +3085,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_outcome_test_review",
             "title": "Review Outcome Tests",
             "description": "Review one outcome's test health. Returns related manifest tests, missing required test IDs/files, planned required tests, undeclared tests, and suggested test paths to add or generate.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3100,7 +3100,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_list",
             "title": "List Tests",
             "description": "List tests from the specrail manifest. Filter by feature_id and/or outcome_id. Returns tests with their status (planned, written, passing, failing). Use to check whether tests are ready before implementation.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3114,7 +3114,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_suggest",
             "title": "Preview Test Suggestions",
             "description": "Prepare a delegated test-suggestion prompt for the current MCP client/agent. MCP returns the prompt and expected response schema but never spawns a nested agent or writes files.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3129,7 +3129,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_workflow_overview",
             "title": "Workflow Overview",
             "description": "Read-friendly compact board of features, outcomes, per-feature progress, and test readiness. Returns workflow plus outcome-level readiness summaries that hosts can render directly.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3141,7 +3141,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_workflow_next",
             "title": "Workflow Next Step",
             "description": "Return the single best next workflow action with rationale, plus the latest status payload and typed workflow actions.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3153,7 +3153,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_resume_point",
             "title": "Resume Point",
             "description": "Summarize the best place to resume the current Specrail workflow, including feature/outcome ids, recommended skill, and typed next actions.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3165,7 +3165,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_trace",
             "title": "Audit Ledger",
             "description": "Read the append-only specrail audit ledger showing the history of all project actions (features created, outcomes activated, tests updated, etc). Use limit to get recent events.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3482,7 +3482,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_generate",
             "title": "Generate Tests",
             "description": "Prepare a delegated test-generation prompt for the current MCP client/agent. MCP returns the prompt, allowed paths, and response schema; after the parent agent generates JSON test output, call specrail_test_apply_generated to persist it in-process.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3555,7 +3555,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_implement",
             "title": "Implement",
             "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns structuredContent.delegation.prompt plus path constraints, but never spawns a nested agent. The parent agent must apply that prompt in the current conversation, then call specrail_verify. If feature_id is provided, returns one delegated task per outcome in order.",
-            "annotations": { "readOnlyHint": true },
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
