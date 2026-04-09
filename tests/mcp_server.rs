@@ -235,7 +235,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("specrail.runMcpAction"));
+        .contains("workbench.action.chat.open"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
@@ -1351,30 +1351,26 @@ fn mcp_implement_runs_cli_implement_command() {
         }),
     );
 
-    // The CLI was actually invoked: structuredContent carries a CliToolResult shape.
+    // MCP implement must prepare an in-chat delegation instead of spawning the CLI agent.
     let sc = &implement["result"]["structuredContent"];
     assert!(
-        sc.get("command").is_some(),
-        "expected structuredContent.command (CliToolResult), got: {sc}"
+        sc.get("delegation").is_some(),
+        "expected structuredContent.delegation, got: {sc}"
     );
     assert!(
-        sc.get("stdout").is_some(),
-        "expected structuredContent.stdout (CliToolResult), got: {sc}"
+        sc["delegation"]["prompt"].as_str().unwrap_or("").contains("User login"),
+        "expected implementation prompt to mention the active outcome; got: {sc}"
     );
-    assert!(
-        sc.get("stderr").is_some(),
-        "expected structuredContent.stderr (CliToolResult), got: {sc}"
-    );
-    // generic-shell without SPECRAIL_AGENT_CMD must surface a meaningful error.
     assert_eq!(
-        sc["success"], json!(false),
-        "expected specrail implement to fail when SPECRAIL_AGENT_CMD is unset"
+        sc["delegation"]["agent"], json!("generic-shell")
     );
-    let stderr = sc["stderr"].as_str().unwrap_or("");
-    let stdout = sc["stdout"].as_str().unwrap_or("");
     assert!(
-        stderr.contains("SPECRAIL_AGENT_CMD") || stdout.contains("SPECRAIL_AGENT_CMD"),
-        "expected error to mention SPECRAIL_AGENT_CMD; stderr={stderr:?} stdout={stdout:?}"
+        implement["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or("")
+            .contains("current VS Code chat"),
+        "expected implement text to describe in-chat delegation; got: {}",
+        implement["result"]["content"][0]["text"]
     );
 
     client.shutdown();

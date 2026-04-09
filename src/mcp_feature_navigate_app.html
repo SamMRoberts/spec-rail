@@ -2089,6 +2089,23 @@
                         appendLog(title + " failed: " + (text || "Unknown error"), "error");
                         state.runningAction = null; render(); return;
                     }
+                    if (name === "specrail_implement") {
+                        var remembered = rememberImplementationDelegation(result, args);
+                        if (remembered) {
+                            var scImplement = result && result.structuredContent;
+                            var delegation = scImplement && scImplement.delegation;
+                            if (!delegation && scImplement && Array.isArray(scImplement.delegations) && scImplement.delegations.length === 1) {
+                                delegation = scImplement.delegations[0];
+                            }
+                            if (text) appendLog(title + ": " + text, "success");
+                            else appendLog(title + " prepared a chat prompt.", "success");
+                            if (delegation) {
+                                await startChatForDelegation(delegation);
+                            }
+                            if (refresh) await refreshView();
+                            state.runningAction = null; render(); return;
+                        }
+                    }
                     // Clear cached implementation prompt state when the outcome is verified or advanced
                     if (name === "specrail_verify" || name === "specrail_advance") {
                         var sc2 = state.toolResult && state.toolResult.structuredContent;
@@ -2715,6 +2732,7 @@
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
                 var prompt = String(delegation.prompt || "");
+                var builtInChatCommand = "workbench.action.chat.open";
                 var chatBridgeCommand = "specrail.runMcpAction";
                 var copied = false;
                 if (prompt) {
@@ -2724,17 +2742,22 @@
                     } catch (_) { }
                 }
 
+                if (invokeCommandUri(builtInChatCommand, [{ query: prompt, isPartialQuery: false }])) {
+                    appendLog("Requested built-in VS Code chat with the implementation prompt.", "success");
+                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                }
+
                 if (invokeCommandUri(chatBridgeCommand, [{ prompt: prompt }])) {
-                    appendLog("Requested VS Code command 'specrail.runMcpAction' with the implementation prompt.", "success");
+                    appendLog("Requested fallback VS Code command 'specrail.runMcpAction' with the implementation prompt.", "success");
                     return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction" };
                 }
 
                 if (invokeCommandUri(chatBridgeCommand, [])) {
-                    appendLog("Requested VS Code command 'specrail.runMcpAction' without arguments.", "warn");
+                    appendLog("Requested fallback VS Code command 'specrail.runMcpAction' without arguments.", "warn");
                     return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction-empty" };
                 }
 
-                appendLog("Command handoff unavailable. Ensure the VS Code command 'specrail.runMcpAction' is registered, then retry.", "warn");
+                appendLog("Command handoff unavailable. The built-in chat command was not accepted, and no fallback bridge is available.", "warn");
                 return { opened: false, copied: copied };
             }
 

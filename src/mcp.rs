@@ -29,6 +29,19 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     "2024-11-05",
 ];
 
+#[derive(Debug, Clone, Serialize)]
+struct ImplementationBlockedOutcome {
+    feature_id: String,
+    outcome_id: String,
+    outcome_title: String,
+    reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct DelegationInstructions {
+    steps: Vec<String>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum McpLogLevel {
     Error,
@@ -2053,13 +2066,96 @@ fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
-    let cwd = resolve_cwd(arguments)?;
-    let mut args = vec!["implement".to_string()];
-    if let Some(agent) = optional_string(arguments, "agent") {
-        args.push("--agent".to_string());
-        args.push(agent);
+    let repo = discover_repo(arguments)?;
+    let feature_id = optional_string(arguments, "feature_id");
+    let agent = optional_string(arguments, "agent");
+
+    if let Some(feature_id) = feature_id {
+        return tool_implement_feature(&repo, &feature_id, agent.as_deref());
     }
-    run_cli_tool(&cwd, args)
+
+    let delegation = commands::implement::prepare_request(&repo, agent.as_deref())?;
+    Ok(tool_success_payload(
+        format!(
+            "Prepared delegated implementation for {}:{} in the current VS Code chat. Apply the prompt there, then call {}.",
+            delegation.feature_id, delegation.outcome_id, delegation.verify_tool
+        ),
+        Some(json!({
+            "delegation": delegation,
+            "instructions": implementation_delegation_instructions(false),
+        })),
+    ))
+}
+
+fn tool_implement_feature(repo: &Repository, feature_id: &str, agent: Option<&str>) -> Result<Value> {
+    repo.load_feature(feature_id)?;
+    let outcomes = repo.list_outcomes(feature_id)?;
+    if outcomes.is_empty() {
+        bail!("feature '{}' has no outcomes to implement", feature_id);
+    }
+
+    let mut delegations = Vec::new();
+    let mut blocked = Vec::new();
+
+    for outcome in outcomes {
+        match commands::implement::prepare_request_for_outcome(repo, feature_id, &outcome.id, agent) {
+            Ok(delegation) => delegations.push(delegation),
+            Err(error) => blocked.push(ImplementationBlockedOutcome {
+                feature_id: feature_id.to_string(),
+                outcome_id: outcome.id,
+                outcome_title: outcome.title,
+                reason: error.to_string(),
+            }),
+        }
+    }
+
+    let text = if delegations.is_empty() {
+        format!(
+            "No implementation prompt is ready for feature '{}'. Resolve the blocked outcomes first, then retry.",
+            feature_id
+        )
+    } else if blocked.is_empty() {
+        format!(
+            "Prepared {} delegated implementation prompt(s) for feature '{}' in the current VS Code chat.",
+            delegations.len(),
+            feature_id
+        )
+    } else {
+        format!(
+            "Prepared {} delegated implementation prompt(s) for feature '{}'. {} outcome(s) are still blocked by gates.",
+            delegations.len(),
+            feature_id,
+            blocked.len()
+        )
+    };
+
+    Ok(tool_payload(
+        text,
+        Some(json!({
+            "feature_id": feature_id,
+            "delegations": delegations,
+            "blocked": blocked,
+            "instructions": implementation_delegation_instructions(true),
+        })),
+        false,
+    ))
+}
+
+fn implementation_delegation_instructions(feature_scope: bool) -> DelegationInstructions {
+    let mut steps = vec![
+        "Open the implementation prompt in the current VS Code chat and apply the requested code changes without spawning an external CLI agent.".to_string(),
+        "Keep edits inside the allowed paths and avoid forbidden paths listed in the delegation payload.".to_string(),
+        "After the code changes are complete, call specrail_verify for the active outcome.".to_string(),
+    ];
+
+    if feature_scope {
+        steps.insert(
+            1,
+            "If multiple outcome prompts are returned, work through them in order and verify each outcome after applying its prompt.".to_string(),
+        );
+    }
+
+    DelegationInstructions { steps }
 }
 
 fn tool_verify(arguments: &Map<String, Value>) -> Result<Value> {
