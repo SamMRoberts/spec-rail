@@ -1,4 +1,5 @@
 use anyhow::{bail, Context, Result};
+use serde::Serialize;
 
 use crate::{
     agents,
@@ -11,52 +12,48 @@ use crate::{
     prompts::builder,
 };
 
+const VERIFY_TOOL: &str = "specrail_verify";
+const ADVANCE_TOOL: &str = "specrail_advance";
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ImplementationRequest {
+    pub agent: String,
+    pub feature_id: String,
+    pub feature_title: String,
+    pub outcome_id: String,
+    pub outcome_title: String,
+    pub prompt: String,
+    pub allowed_paths: Vec<String>,
+    pub forbidden_paths: Vec<String>,
+    pub verify_tool: String,
+    pub advance_tool: String,
+}
+
 pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
-    let state = repo.load_state()?;
-    let config = repo.effective_config()?;
+    let request = prepare_request(repo, agent_override)?;
 
-    let feature_id = state
-        .active_feature
-        .as_deref()
-        .context("no active feature — run `specrail feature activate <id>` first")?;
-
-    let outcome_id = state
-        .active_outcome
-        .as_deref()
-        .context("no active outcome — run `specrail outcome activate <feature-id> <outcome-id>` first")?;
-
-    let feature = repo.load_feature(feature_id)?;
-    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
-    let manifest = repo.load_manifest()?;
-
-    // Outcome gate checks
-    outcome_gate::check_implementation_gates(repo, &outcome, &manifest).with_context(|| {
-        format!("outcome gate check failed for outcome '{outcome_id}'")
-    })?;
-
-    let agent_name = agent_override.unwrap_or(&config.default_agent);
-
-    if agent_name == "generic-shell" && std::env::var_os("SPECRAIL_AGENT_CMD").is_none() {
+    if request.agent == "generic-shell" && std::env::var_os("SPECRAIL_AGENT_CMD").is_none() {
         bail!(
             "generic-shell is selected but SPECRAIL_AGENT_CMD is not set. Configure SPECRAIL_AGENT_CMD to your coding agent command (for example: `export SPECRAIL_AGENT_CMD='copilot -p \"$SPECRAIL_PROMPT\"'`) or use --agent copilot/--agent codex."
         );
     }
 
-    let prompt = builder::build_implementation_prompt(&feature, &outcome, &manifest);
-
     let task = AgentTask {
-        feature_id: feature_id.to_string(),
-        outcome_id: outcome_id.to_string(),
-        agent: agent_name.to_string(),
-        prompt,
-        allowed_paths: outcome.allowed_paths.clone(),
-        forbidden_paths: outcome.forbidden_paths.clone(),
+        feature_id: request.feature_id.clone(),
+        outcome_id: request.outcome_id.clone(),
+        agent: request.agent.clone(),
+        prompt: request.prompt.clone(),
+        allowed_paths: request.allowed_paths.clone(),
+        forbidden_paths: request.forbidden_paths.clone(),
     };
 
-    println!("▶ Running agent '{agent_name}' for outcome '{outcome_id}'…");
+    println!(
+        "▶ Running agent '{}' for outcome '{}'…",
+        request.agent, request.outcome_id
+    );
     println!("{}", "─".repeat(60));
 
-    let result = agents::run_task(agent_name, &task, Some(&repo.root))?;
+    let result = agents::run_task(&request.agent, &task, Some(&repo.root))?;
 
     println!("stdout:\n{}", result.stdout);
     if !result.stderr.is_empty() {
@@ -64,16 +61,16 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     }
     println!("{}", "─".repeat(60));
 
-    // Update outcome status to Active if still Pending
+    let mut outcome = repo.load_outcome(&request.feature_id, &request.outcome_id)?;
     if outcome.status == OutcomeStatus::Pending {
         outcome.status = OutcomeStatus::Active;
         repo.save_outcome(&outcome)?;
     }
 
     let event = LedgerEvent::new(LedgerEventType::ImplementationRun)
-        .with_feature(feature_id)
-        .with_outcome(outcome_id)
-        .with_agent(agent_name)
+        .with_feature(&request.feature_id)
+        .with_outcome(&request.outcome_id)
+        .with_agent(&request.agent)
         .with_success(result.success);
     Ledger::append(repo, &event)?;
 
@@ -85,4 +82,54 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn prepare_request(repo: &Repository, agent_override: Option<&str>) -> Result<ImplementationRequest> {
+    let state = repo.load_state()?;
+
+    let feature_id = state
+        .active_feature
+        .as_deref()
+        .context("no active feature — run `specrail feature activate <id>` first")?;
+
+    let outcome_id = state
+        .active_outcome
+        .as_deref()
+        .context("no active outcome — run `specrail outcome activate <feature-id> <outcome-id>` first")?;
+
+    prepare_request_for_outcome(repo, feature_id, outcome_id, agent_override)
+}
+
+pub fn prepare_request_for_outcome(
+    repo: &Repository,
+    feature_id: &str,
+    outcome_id: &str,
+    agent_override: Option<&str>,
+) -> Result<ImplementationRequest> {
+    let config = repo.effective_config()?;
+    let feature = repo.load_feature(feature_id)?;
+    let outcome = repo.load_outcome(feature_id, outcome_id)?;
+    let manifest = repo.load_manifest()?;
+
+    // Outcome gate checks
+    outcome_gate::check_implementation_gates(repo, &outcome, &manifest).with_context(|| {
+        format!("outcome gate check failed for outcome '{outcome_id}'")
+    })?;
+
+    let agent_name = agent_override.unwrap_or(&config.default_agent);
+
+    let prompt = builder::build_implementation_prompt(&feature, &outcome, &manifest);
+
+    Ok(ImplementationRequest {
+        agent: agent_name.to_string(),
+        feature_id: feature_id.to_string(),
+        feature_title: feature.title.clone(),
+        outcome_id: outcome_id.to_string(),
+        outcome_title: outcome.title.clone(),
+        prompt,
+        allowed_paths: outcome.allowed_paths.clone(),
+        forbidden_paths: outcome.forbidden_paths.clone(),
+        verify_tool: VERIFY_TOOL.to_string(),
+        advance_tool: ADVANCE_TOOL.to_string(),
+    })
 }

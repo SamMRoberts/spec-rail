@@ -361,6 +361,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_test_add" => tool_test_add(arguments),
         "specrail_test_suggest" => tool_test_suggest(arguments),
         "specrail_test_generate" => tool_test_generate(arguments),
+        "specrail_test_apply_generated" => tool_test_apply_generated(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
         "specrail_implement" => tool_implement(arguments),
         "specrail_verify" => tool_verify(arguments),
@@ -1931,43 +1932,11 @@ fn tool_test_add(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
-    let feature_id = optional_string(arguments, "feature_id");
-    let outcome_id = optional_string(arguments, "outcome_id");
-    let agent = optional_string(arguments, "agent");
-
-    if feature_id.is_some() || outcome_id.is_some() {
-        let repo = discover_repo(arguments)?;
-        let summary = commands::test::generate_scoped(
-            &repo,
-            feature_id.as_deref(),
-            outcome_id.as_deref(),
-            agent.as_deref(),
-        )?;
-
-        return Ok(tool_success_payload(
-            format!(
-                "Generated {} test file(s) for {} with agent '{}'.",
-                summary.generated_count, summary.scope_label, summary.agent
-            ),
-            Some(json!({ "generation": summary })),
-        ));
-    }
-
-    let cwd = resolve_cwd(arguments)?;
-    let mut args = vec!["test".to_string(), "generate".to_string()];
-    if let Some(agent) = agent {
-        args.push("--agent".to_string());
-        args.push(agent);
-    }
-    run_cli_tool(&cwd, args)
-}
-
-fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     let feature_id = optional_string(arguments, "feature_id");
     let outcome_id = optional_string(arguments, "outcome_id");
     let agent = optional_string(arguments, "agent");
-    let preview = commands::test::preview(
+    let delegation = commands::test::prepare_generation_delegation(
         &repo,
         feature_id.as_deref(),
         outcome_id.as_deref(),
@@ -1976,12 +1945,61 @@ fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
 
     Ok(tool_success_payload(
         format!(
-            "Previewed {} suggested test file(s) with agent '{}' for {}.",
-            preview.suggestions.len(),
-            preview.agent,
-            preview.scope_label
+            "Prepared delegated test generation for {}. Have the current MCP client/agent generate JSON matching response_schema, then call the apply tool `{}` to persist it.",
+            delegation.scope_label, delegation.apply_tool
         ),
-        Some(json!({ "preview": preview })),
+        Some(json!({ "delegation": delegation })),
+    ))
+}
+
+fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+    let delegation = commands::test::prepare_generation_delegation(
+        &repo,
+        feature_id.as_deref(),
+        outcome_id.as_deref(),
+        agent.as_deref(),
+    )?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Prepared delegated test suggestion prompt for {}. Have the current MCP client/agent return JSON matching response_schema without writing files.",
+            delegation.scope_label
+        ),
+        Some(json!({ "delegation": delegation })),
+    ))
+}
+
+fn tool_test_apply_generated(arguments: &Map<String, Value>) -> Result<Value> {
+    let repo = discover_repo(arguments)?;
+    let feature_id = optional_string(arguments, "feature_id");
+    let outcome_id = optional_string(arguments, "outcome_id");
+    let agent = optional_string(arguments, "agent");
+    let generated_tests = arguments
+        .get("generated_tests")
+        .cloned()
+        .context("missing generated_tests")?;
+    let response = serde_json::from_value::<commands::test::GeneratedTestsResponse>(json!({
+        "tests": generated_tests
+    }))
+    .context("parsing generated_tests")?;
+    let summary = commands::test::apply_generated_tests(
+        &repo,
+        feature_id.as_deref(),
+        outcome_id.as_deref(),
+        agent.as_deref(),
+        response,
+    )?;
+
+    Ok(tool_success_payload(
+        format!(
+            "Persisted {} generated test file(s) for {} with agent '{}'.",
+            summary.generated_count, summary.scope_label, summary.agent
+        ),
+        Some(json!({ "generation": summary })),
     ))
 }
 
@@ -1996,14 +2014,14 @@ fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
-    let cwd = resolve_cwd(arguments)?;
-    let repo = Repository::discover(&cwd)?;
+    let repo = discover_repo(arguments)?;
     let agent_override = optional_string(arguments, "agent");
     let feature_id = optional_string(arguments, "feature_id");
 
-    // If feature_id is provided, run implement on all outcomes in order
+    // If feature_id is provided, prepare implementation for all outcomes in order
     if let Some(feature_id) = feature_id {
-        let outcomes = repo.list_outcomes(&feature_id)?;
+        let mut outcomes = repo.list_outcomes(&feature_id)?;
+        outcomes.sort_by_key(|outcome| outcome.order);
         if outcomes.is_empty() {
             return Ok(tool_success_payload(
                 format!("No outcomes found for feature '{feature_id}'."),
@@ -2015,44 +2033,44 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
             ));
         }
 
-        let mut results = Vec::new();
-        let mut success_count = 0usize;
-        let mut failure_count = 0usize;
+        let mut delegations = Vec::new();
+        let mut blocked = Vec::new();
 
         for outcome in &outcomes {
-            // Activate outcome
-            commands::outcome::activate_outcome(&repo, &feature_id, &outcome.id)?;
-
-            // Run implement
-            let mut args = vec!["implement".to_string()];
-            if let Some(agent) = agent_override.as_deref() {
-                args.push("--agent".to_string());
-                args.push(agent.to_string());
-            }
-            let result = run_cli_tool_quiet(&cwd, args)?;
-            let success = !std_json_result_is_error(&result);
-
-            results.push(json!({
-                "outcome_id": outcome.id,
-                "outcome_title": outcome.title,
-                "order": outcome.order,
-                "success": success,
-                "message": tool_text(&result).unwrap_or_else(|| "No output".to_string())
-            }));
-
-            if success {
-                success_count += 1;
-            } else {
-                failure_count += 1;
+            match commands::implement::prepare_request_for_outcome(
+                &repo,
+                &feature_id,
+                &outcome.id,
+                agent_override.as_deref(),
+            ) {
+                Ok(delegation) => delegations.push(json!({
+                    "order": outcome.order,
+                    "feature_id": delegation.feature_id,
+                    "feature_title": delegation.feature_title,
+                    "outcome_id": delegation.outcome_id,
+                    "outcome_title": delegation.outcome_title,
+                    "agent": delegation.agent,
+                    "prompt": delegation.prompt,
+                    "allowed_paths": delegation.allowed_paths,
+                    "forbidden_paths": delegation.forbidden_paths,
+                    "activate_tool": "specrail_outcome_activate",
+                    "verify_tool": delegation.verify_tool,
+                    "advance_tool": delegation.advance_tool,
+                })),
+                Err(error) => blocked.push(json!({
+                    "order": outcome.order,
+                    "outcome_id": outcome.id,
+                    "outcome_title": outcome.title,
+                    "error": error.to_string(),
+                })),
             }
         }
 
         let text = format!(
-            "Implemented {} outcome(s) in feature '{}': {} succeeded, {} failed.",
-            outcomes.len(),
+            "Prepared {} delegated implementation task(s) for feature '{}'; {} outcome(s) are blocked by gates.",
+            delegations.len(),
             feature_id,
-            success_count,
-            failure_count
+            blocked.len()
         );
 
         return Ok(tool_success_payload(
@@ -2060,20 +2078,23 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
             Some(json!({
                 "feature_id": feature_id,
                 "outcome_count": outcomes.len(),
-                "success_count": success_count,
-                "failure_count": failure_count,
-                "results": results
+                "delegations": delegations,
+                "blocked": blocked,
+                "activate_tool": "specrail_outcome_activate",
+                "verify_tool": "specrail_verify",
+                "advance_tool": "specrail_advance"
             })),
         ));
     }
 
-    // Otherwise, run implement on the active outcome (original behavior)
-    let mut args = vec!["implement".to_string()];
-    if let Some(agent) = agent_override {
-        args.push("--agent".to_string());
-        args.push(agent);
-    }
-    run_cli_tool(&cwd, args)
+    let delegation = commands::implement::prepare_request(&repo, agent_override.as_deref())?;
+    Ok(tool_success_payload(
+        format!(
+            "Prepared delegated implementation for {}:{} using agent '{}'. Have the current MCP client/agent apply the prompt in this conversation, then run {}.",
+            delegation.feature_id, delegation.outcome_id, delegation.agent, delegation.verify_tool
+        ),
+        Some(json!({ "delegation": delegation })),
+    ))
 }
 
 fn tool_verify(arguments: &Map<String, Value>) -> Result<Value> {
@@ -2087,36 +2108,6 @@ fn tool_advance(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn run_cli_tool(cwd: &Path, args: Vec<String>) -> Result<Value> {
-    let executable = std::env::current_exe().context("resolving specrail executable path")?;
-    let output = Command::new(&executable)
-        .args(&args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .output()
-        .with_context(|| format!("running specrail {}", args.join(" ")))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
-    let success = output.status.success();
-    let exit_code = output.status.code();
-    let command = format!("{} {}", executable.display(), args.join(" "));
-    let text = build_cli_tool_text(success, exit_code, &stdout, &stderr);
-
-    Ok(tool_payload(
-        text,
-        Some(json!(CliToolResult {
-            command,
-            cwd: cwd.display().to_string(),
-            success,
-            exit_code,
-            stdout,
-            stderr,
-        })),
-        !success,
-    ))
-}
-
-fn run_cli_tool_quiet(cwd: &Path, args: Vec<String>) -> Result<Value> {
     let executable = std::env::current_exe().context("resolving specrail executable path")?;
     let output = Command::new(&executable)
         .args(&args)
@@ -2566,21 +2557,6 @@ fn push_repeated_flag(args: &mut Vec<String>, flag: &str, values: Vec<String>) {
     }
 }
 
-fn tool_text(result: &Value) -> Option<String> {
-    result
-        .get("content")?
-        .as_array()?
-        .iter()
-        .find(|item| item.get("type").and_then(Value::as_str) == Some("text"))?
-        .get("text")?
-        .as_str()
-        .map(String::from)
-}
-
-fn std_json_result_is_error(result: &Value) -> bool {
-    result.get("isError").and_then(Value::as_bool).unwrap_or(false)
-}
-
 fn tool_success_payload(text: String, structured_content: Option<Value>) -> Value {
     tool_payload(text, structured_content, false)
 }
@@ -2833,7 +2809,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_suggest",
             "title": "Preview Test Suggestions",
-            "description": "Preview agent-generated required test suggestions without writing files or changing the manifest. Can be scoped to one feature and outcome to inspect missing test ideas safely before generation.",
+            "description": "Prepare a delegated test-suggestion prompt for the current MCP client/agent. MCP returns the prompt and expected response schema but never spawns a nested agent or writes files.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3163,7 +3139,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
-            "description": "Direct MCP mutation action: use the configured AI agent to generate test files for planned or missing required tests. For a scoped outcome with incomplete metadata, the agent can bootstrap initial required test IDs, test names, and file paths and specrail will persist them.",
+            "description": "Prepare a delegated test-generation prompt for the current MCP client/agent. MCP returns the prompt, allowed paths, and response schema; after the parent agent generates JSON test output, call specrail_test_apply_generated to persist it in-process.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3172,6 +3148,39 @@ fn tool_definitions() -> Vec<Value> {
                     "outcome_id": { "type": "string", "description": "Optional outcome ID to scope generation to a specific outcome. Requires feature_id." },
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
+            }
+        }),
+        json!({
+            "name": "specrail_test_apply_generated",
+            "title": "Apply Generated Tests",
+            "description": "Direct MCP mutation action: persist test files and manifest updates from JSON generated by the current MCP client/agent after specrail_test_generate. Validates the generated tests against the scoped outcome metadata before writing files.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature ID matching the earlier specrail_test_generate scope." },
+                    "outcome_id": { "type": "string", "description": "Optional outcome ID matching the earlier specrail_test_generate scope. Requires feature_id." },
+                    "agent": { "type": "string", "description": "Optional advisory agent label to store with the generation run." },
+                    "generated_tests": {
+                        "type": "array",
+                        "description": "Generated tests produced by the current MCP client/agent.",
+                        "items": {
+                            "type": "object",
+                            "required": ["feature_id", "outcome_id", "id", "name", "path", "kind", "content"],
+                            "properties": {
+                                "feature_id": { "type": "string" },
+                                "outcome_id": { "type": "string" },
+                                "id": { "type": "string" },
+                                "name": { "type": "string" },
+                                "path": { "type": "string" },
+                                "kind": { "type": "string", "enum": ["unit", "integration", "e2e"] },
+                                "purpose_refs": { "type": "array", "items": { "type": "string" } },
+                                "content": { "type": "string" }
+                            }
+                        }
+                    }
+                },
+                "required": ["generated_tests"]
             }
         }),
         json!({
@@ -3191,12 +3200,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_implement",
             "title": "Implement",
-            "description": "Direct MCP mutation action: run the AI implementation agent. If feature_id is provided, runs implement on all outcomes in the feature in order. Otherwise requires active outcome and runs on that. After implementing, run specrail_verify.",
+            "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns the prompt and path constraints but never spawns a nested agent. If feature_id is provided, returns one delegated task per outcome in order.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
-                    "feature_id": { "type": "string", "description": "Optional feature identifier. When provided, runs implement on all outcomes in this feature in order. When omitted, runs on the active outcome." },
+                    "feature_id": { "type": "string", "description": "Optional feature identifier. When provided, prepares implementation for all outcomes in this feature in order. When omitted, prepares implementation for the active outcome." },
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }
