@@ -72,7 +72,7 @@ function activate(context) {
     }
 
     if (autoSubmit) {
-      await delay(75);
+      await delay(250);
       await submitChatIfPossible();
     }
   });

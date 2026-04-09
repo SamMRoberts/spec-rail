@@ -2774,6 +2774,18 @@
                 appendLog("Submitting to chat: " + commandText, "action");
                 render();
                 try {
+                    var bridgeSubmitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{
+                        prompt: commandText,
+                        mode: "agent",
+                        autoSubmit: true
+                    }]));
+                    if (bridgeSubmitted) {
+                        appendLog(title + " submitted to VS Code chat as " + commandText + ".", "success");
+                        state.runningAction = null;
+                        render();
+                        return;
+                    }
+
                     var drafted = await sendRequestWithTimeout("ui/message", {
                         content: [{ type: "text", text: commandText }]
                     }, 1500);
