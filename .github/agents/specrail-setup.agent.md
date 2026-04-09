@@ -30,15 +30,6 @@ You handle only repository bootstrap for SpecRail.
 - Only delegate forward to `Specrail Plan`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan Features` handoff once setup is complete.
 
-## Decision picker requirement
-
-- Anytime you choose a solution, project, feature, outcome, or test direction, show a picker before continuing.
-- Picker options must include:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not run handoffs or mutating MCP calls until the user chooses one picker option or provides custom text.
-
 ## Output
 
 - State whether the repository was already initialized or was initialized during this run.

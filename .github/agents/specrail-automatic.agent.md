@@ -1,6 +1,6 @@
 ---
-name: Specrail
-description: "Use when working in a SpecRail repository and you want a coordinator for continue workflow, resume work, initialize SpecRail, plan features, prepare tests, or run implement/verify/advance with phase subagents."
+name: Specrail Automatic
+description: "Automatic mode: use when working in a SpecRail repository and you want the workflow to continue through setup, planning, test prep, execution, and resume with minimal pauses."
 tools: [agent, read, search, todo, specrail-mcp/*]
 agents: ["Specrail Setup", "Specrail Plan", "Specrail Test Prep", "Specrail Execute", "Specrail Resume"]
 user-invocable: true
@@ -92,16 +92,6 @@ You are the Specrail workflow coordinator. Your job is to keep the repository al
 - Name the recommended next stage and explain why it follows from `workflow.recommended_skill`.
 - When relevant, name the worker agent and MCP tool that will be used next.
 - When moving into testing or implementation, restate the scope boundary: only the declared outcome tests, then only the code required to satisfy those tests.
-
-## Decision picker requirement
-
-- Anytime you make a decision about a solution, project, feature, outcome, or test, present a picker before acting.
-- The picker must include exactly these option types:
-  - Current suggestion (the primary recommendation)
-  - 1-3 alternate suggestions
-  - Custom free-text option for the user to type their own choice
-- Do not execute handoffs, activation changes, creation commands, or status-mutating MCP calls until the user selects from the picker or provides custom text.
-- After the user selects, continue execution using the chosen option.
 
 ## Delegation rules
 

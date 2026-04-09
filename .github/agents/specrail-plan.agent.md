@@ -38,15 +38,6 @@ You handle feature and outcome planning for SpecRail.
 - Only delegate to `Specrail Setup` or `Specrail Test Prep`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Prepare Tests` handoff once the feature and outcome are created.
 
-## Decision picker requirement
-
-- Anytime you decide which solution, project, feature, outcome, or test plan to proceed with, present a picker first.
-- Picker options must include:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not create or update entities and do not hand off until the user confirms one picker option or enters custom text.
-
 ## Output
 
 - Present the proposed feature and outcome structure in a compact form for confirmation.

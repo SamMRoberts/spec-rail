@@ -42,15 +42,6 @@ You execute the active SpecRail outcome from implementation through verification
 - Do not stop after one outcome is advanced. Check `specrail_status` to see if there are more outcomes for the same feature, and if so, continue looping through test prep and execution.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan Next Slice` handoff once an outcome is advanced, or continue with the next outcome if more exist for the active feature.
 
-## Decision picker requirement
-
-- Anytime you decide on a solution, project, feature, outcome, or test-related path, present a picker before acting.
-- Picker options must include:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not run implement, verify, advance, activation changes, or handoffs until the user confirms one picker option or enters a custom direction.
-
 ## Output
 
 - State which feature and outcome are active.

@@ -41,15 +41,6 @@ You determine the correct resume point for an existing SpecRail workflow before 
 - Only delegate to `Specrail Plan`, `Specrail Test Prep`, or `Specrail Execute`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute an immediate handoff based on the determined resume point.
 
-## Decision picker requirement
-
-- Anytime you decide the next solution, project, feature, outcome, or test phase, present a picker before handing off.
-- Picker options must include:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not hand off until the user confirms one picker option or provides custom text.
-
 ## Output
 
 - Before handing off, briefly state what is complete, what is active, what is blocked, and which phase you are resuming.
