@@ -115,7 +115,7 @@ pub fn add(repo: &Repository, args: AddArgs) -> Result<()> {
         .with_feature(&feature_id)
         .with_outcome(&outcome_id)
         .with_message(format!("test '{}' added", required_test_id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     println!("✓ Test '{}' added to manifest.", required_test_id);
     println!("  Path:    {}", path);
@@ -154,7 +154,7 @@ pub fn generate_scoped(
     let run_event = LedgerEvent::new(LedgerEventType::TestGenerationRun)
         .with_agent(agent_name)
         .with_success(agent_output.result.success);
-    Ledger::append(&repo.ledger_path(), &run_event)?;
+    Ledger::append(repo, &run_event)?;
 
     if !agent_output.result.success {
         println!("stdout:\n{}", agent_output.result.stdout);
@@ -242,7 +242,7 @@ pub fn generate_scoped(
             .with_feature(&generated.feature_id)
             .with_outcome(&generated.outcome_id)
             .with_message(format!("test '{}' generated", canonical_test_id));
-        Ledger::append(&repo.ledger_path(), &event)?;
+        Ledger::append(repo, &event)?;
         generated_count = generated_count.saturating_add(1);
     }
 

@@ -81,10 +81,6 @@ impl Repository {
         self.projects_config_dir().join(format!("{project_id}.yaml"))
     }
 
-    pub fn ledger_path(&self) -> PathBuf {
-        self.state_dir().join("ledger.jsonl")
-    }
-
     // ── Load helpers ───────────────────────────────────────────────────────
 
     pub fn load_config(&self) -> Result<ProjectConfig> {
@@ -298,11 +294,11 @@ impl Repository {
         self.database().map(|_| ())
     }
 
-    fn database(&self) -> Result<Database> {
+    pub(crate) fn database(&self) -> Result<Database> {
         Database::open(&self.db_path())
     }
 
-    fn database_mut(&self) -> Result<Database> {
+    pub(crate) fn database_mut(&self) -> Result<Database> {
         Database::open(&self.db_path())
     }
 

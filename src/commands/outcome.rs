@@ -65,7 +65,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<OutcomeSpec> {
     let event = LedgerEvent::new(LedgerEventType::OutcomeCreated)
         .with_feature(&args.feature_id)
         .with_outcome(&args.outcome_id);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(outcome)
 }
@@ -205,7 +205,7 @@ pub(crate) fn edit_outcome(repo: &Repository, args: EditArgs) -> Result<OutcomeS
     let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
         .with_feature(&outcome.feature_id)
         .with_outcome(&outcome.id);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(outcome)
 }
@@ -229,7 +229,7 @@ pub(crate) fn ensure_required_test(
         .with_feature(feature_id)
         .with_outcome(outcome_id)
         .with_message(format!("required test '{}' added", test_id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(true)
 }
@@ -282,7 +282,7 @@ pub(crate) fn reset_status_to_pending(
     let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
         .with_feature(feature_id)
         .with_outcome(outcome_id);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(outcome)
 }
@@ -318,7 +318,7 @@ pub(crate) fn activate_outcome(
     let event = LedgerEvent::new(LedgerEventType::OutcomeActivated)
         .with_feature(feature_id)
         .with_outcome(outcome_id);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(())
 }

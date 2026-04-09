@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::core::{ledger::Ledger, models::LedgerEventType, repository::Repository};
 
 pub fn run(repo: &Repository, limit: Option<usize>) -> Result<()> {
-    let events = Ledger::read_all(&repo.ledger_path())?;
+    let events = Ledger::read_all(repo)?;
 
     if events.is_empty() {
         println!("No ledger events recorded yet.");

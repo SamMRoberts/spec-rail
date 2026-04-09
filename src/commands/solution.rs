@@ -32,7 +32,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<SolutionSpec> {
 
     let event = LedgerEvent::new(LedgerEventType::SolutionCreated)
         .with_message(format!("solution '{}' created", solution.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(solution)
 }
@@ -78,7 +78,7 @@ pub(crate) fn edit_solution(repo: &Repository, args: EditArgs) -> Result<Solutio
 
     let event = LedgerEvent::new(LedgerEventType::SolutionEdited)
         .with_message(format!("solution '{}' updated", solution.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(solution)
 }
@@ -102,7 +102,7 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
 
     let event = LedgerEvent::new(LedgerEventType::SolutionActivated)
         .with_message(format!("solution '{}' activated", id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     println!("✓ Solution '{id}' is now active.");
     Ok(())

@@ -4,6 +4,8 @@ use serde_yaml::Value;
 use std::fs;
 use tempfile::TempDir;
 
+mod support;
+
 fn specrail(dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("specrail").unwrap();
     cmd.current_dir(dir.path());
@@ -24,7 +26,6 @@ fn init_creates_directory_structure() {
     assert!(base.join("project.yaml").exists(), "project.yaml missing");
     assert!(base.join("specrail.db").exists(), "specrail.db missing");
     assert!(base.join("state").is_dir(), "state/ missing");
-    assert!(base.join("state/ledger.jsonl").exists(), "ledger.jsonl missing");
     assert!(base.join("agents").is_dir(), "agents/ missing");
     assert!(!base.join("features").exists(), "features/ should not exist");
     assert!(!base.join("outcomes").exists(), "outcomes/ should not exist");
@@ -110,12 +111,8 @@ fn init_ledger_gets_project_initialized_event() {
     let dir = TempDir::new().unwrap();
     specrail(&dir).args(["init", "--no-wizard"]).assert().success();
 
-    let ledger =
-        fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(
-        ledger.contains("project_initialized"),
-        "ledger should contain project_initialized event"
-    );
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "project_initialized"));
 }
 
 #[test]

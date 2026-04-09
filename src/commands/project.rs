@@ -48,7 +48,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ProjectSpec> {
 
     let event = LedgerEvent::new(LedgerEventType::ProjectCreated)
         .with_message(format!("project '{}' created", project.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(project)
 }
@@ -106,7 +106,7 @@ pub(crate) fn edit_project(repo: &Repository, args: EditArgs) -> Result<ProjectS
 
     let event = LedgerEvent::new(LedgerEventType::ProjectEdited)
         .with_message(format!("project '{}' updated", project.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(project)
 }
@@ -130,7 +130,7 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
 
     let event = LedgerEvent::new(LedgerEventType::ProjectActivated)
         .with_message(format!("project '{}' activated", id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     println!("✓ Project '{id}' is now active.");
     Ok(())

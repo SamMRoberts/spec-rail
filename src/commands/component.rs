@@ -37,7 +37,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ComponentSpec> 
 
     let event = LedgerEvent::new(LedgerEventType::ComponentCreated)
         .with_message(format!("component '{}' created", component.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(component)
 }
@@ -85,7 +85,7 @@ pub(crate) fn edit_component(repo: &Repository, args: EditArgs) -> Result<Compon
 
     let event = LedgerEvent::new(LedgerEventType::ComponentEdited)
         .with_message(format!("component '{}' updated", component.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(component)
 }
@@ -109,7 +109,7 @@ pub fn activate(repo: &Repository, id: &str) -> Result<()> {
 
     let event = LedgerEvent::new(LedgerEventType::ComponentActivated)
         .with_message(format!("component '{}' activated", id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     println!("✓ Component '{id}' is now active.");
     Ok(())

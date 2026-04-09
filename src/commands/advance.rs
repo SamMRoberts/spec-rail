@@ -44,7 +44,7 @@ pub fn run(repo: &Repository) -> Result<()> {
                 .map(|no| format!("advanced to {}", no.id))
                 .unwrap_or_else(|| "feature complete".into()),
         );
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     match next_outcome {
         Some(mut next) => {

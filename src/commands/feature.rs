@@ -57,7 +57,7 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<FeatureSpec> {
     let event = LedgerEvent::new(LedgerEventType::FeatureCreated)
         .with_feature(&args.id)
         .with_message(format!("feature '{}' created", args.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(feature)
 }
@@ -149,7 +149,7 @@ pub(crate) fn edit_feature(repo: &Repository, args: EditArgs) -> Result<FeatureS
     let event = LedgerEvent::new(LedgerEventType::FeatureEdited)
         .with_feature(&feature.id)
         .with_message(format!("feature '{}' updated", feature.id));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(feature)
 }
@@ -177,7 +177,7 @@ pub(crate) fn activate_feature(repo: &Repository, id: &str) -> Result<()> {
     repo.save_state(&state)?;
 
     let event = LedgerEvent::new(LedgerEventType::FeatureActivated).with_feature(id);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     Ok(())
 }

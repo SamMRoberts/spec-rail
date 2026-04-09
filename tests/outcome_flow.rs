@@ -2,7 +2,6 @@ mod support;
 
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::TempDir;
 
 fn setup(dir: &TempDir) {
@@ -70,10 +69,11 @@ fn outcome_new_records_ledger_event() {
         .assert()
         .success();
 
-    let ledger =
-        fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("outcome_created"));
-    assert!(ledger.contains("outcome-1-domain"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| {
+        event.event_type == "outcome_created"
+            && event.outcome_id.as_deref() == Some("outcome-1-domain")
+    }));
 }
 
 #[test]
@@ -281,8 +281,8 @@ fn outcome_edit_updates_existing_record() {
         .stdout(contains("src/auth/**"))
         .stdout(contains("No required test file paths set."));
 
-    let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("outcome_edited"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "outcome_edited"));
 }
 
 #[test]

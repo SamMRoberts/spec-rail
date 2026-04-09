@@ -74,7 +74,7 @@ pub fn run(repo: &Repository) -> Result<()> {
         .with_outcome(outcome_id)
         .with_success(success)
         .with_message(format!("exit_code={}", exit_code.unwrap_or(-1)));
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     let outcome_event_type = if success {
         LedgerEventType::OutcomeVerified
@@ -85,7 +85,7 @@ pub fn run(repo: &Repository) -> Result<()> {
         .with_feature(feature_id)
         .with_outcome(outcome_id)
         .with_success(success);
-    Ledger::append(&repo.ledger_path(), &outcome_event)?;
+    Ledger::append(repo, &outcome_event)?;
 
     // Suppress unused variable warning — result is persisted via ledger
     let _ = verification;

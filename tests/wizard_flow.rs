@@ -1,6 +1,5 @@
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::TempDir;
 
 mod support;
@@ -101,11 +100,11 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
     assert_eq!(state.active_feature.as_deref(), Some("auth"));
     assert_eq!(state.active_outcome.as_deref(), Some("outcome-2"));
 
-    let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("feature_created"));
-    assert!(ledger.contains("outcome_created"));
-    assert!(ledger.contains("feature_activated"));
-    assert!(ledger.contains("outcome_activated"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "feature_created"));
+    assert!(history.iter().any(|event| event.event_type == "outcome_created"));
+    assert!(history.iter().any(|event| event.event_type == "feature_activated"));
+    assert!(history.iter().any(|event| event.event_type == "outcome_activated"));
 }
 
 #[test]

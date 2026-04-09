@@ -80,9 +80,13 @@ fn test_generate_creates_files_and_manifest_entries() {
         vec!["auth-outcome-1-validates-credentials".to_string()]
     );
 
-    let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("test_generation_run"));
-    assert!(ledger.contains("generated"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "test_generation_run"));
+    assert!(history.iter().any(|event| {
+        event.message
+            .as_deref()
+            .is_some_and(|message| message.contains("generated"))
+    }));
 }
 
 #[test]

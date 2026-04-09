@@ -69,7 +69,7 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
         .with_outcome(outcome_id)
         .with_agent(agent_name)
         .with_success(result.success);
-    Ledger::append(&repo.ledger_path(), &event)?;
+    Ledger::append(repo, &event)?;
 
     if result.success {
         println!("✓ Agent run complete. Now run `specrail verify` to check the tests.");

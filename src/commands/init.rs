@@ -48,12 +48,6 @@ pub fn run(repo: &Repository, no_wizard: bool) -> Result<InitOutcome> {
         println!("  created  .specrail/project.yaml");
     }
 
-    // state/ledger.jsonl
-    let ledger_path = repo.ledger_path();
-    if write_if_missing(&ledger_path, "")? {
-        println!("  created  .specrail/state/ledger.jsonl");
-    }
-
     if no_wizard {
         repo.ensure_hierarchy()?;
     }
@@ -61,7 +55,7 @@ pub fn run(repo: &Repository, no_wizard: bool) -> Result<InitOutcome> {
     // Record the init event
     let event = LedgerEvent::new(LedgerEventType::ProjectInitialized)
         .with_message("specrail project initialized");
-    Ledger::append(&ledger_path, &event)?;
+    Ledger::append(repo, &event)?;
 
     let should_start_wizard = repo.list_features()?.is_empty();
 

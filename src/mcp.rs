@@ -1050,7 +1050,7 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         .flat_map(|project| repo.list_components(&project.id).unwrap_or_default())
         .collect();
     let manifest = repo.load_manifest()?;
-    let ledger_events = Ledger::read_all(&repo.ledger_path()).unwrap_or_default();
+    let ledger_events = Ledger::read_all(&repo).unwrap_or_default();
     let implementation_results = latest_implementation_results(&ledger_events);
     let active_solution_id = state.active_solution.clone();
     let active_project_id = state.active_project.clone();
@@ -1429,7 +1429,7 @@ fn tool_test_list(arguments: &Map<String, Value>) -> Result<Value> {
 fn tool_trace(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     let limit = optional_usize(arguments, "limit")?;
-    let events = Ledger::read_all(&repo.ledger_path())?;
+    let events = Ledger::read_all(&repo)?;
     let events = match limit {
         Some(limit) => {
             let mut recent: Vec<_> = events.into_iter().rev().take(limit).collect();

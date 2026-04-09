@@ -23,6 +23,14 @@ pub struct TestRecord {
     pub status: String,
 }
 
+#[derive(Debug)]
+pub struct HistoryRecord {
+    pub event_type: String,
+    pub feature_id: Option<String>,
+    pub outcome_id: Option<String>,
+    pub message: Option<String>,
+}
+
 fn open_db(dir: &TempDir) -> Connection {
     Connection::open(dir.path().join(".specrail/specrail.db")).unwrap()
 }
@@ -119,6 +127,27 @@ pub fn tests(dir: &TempDir) -> Vec<TestRecord> {
                 path: row.get(4)?,
                 kind: row.get(5)?,
                 status: row.get(6)?,
+            })
+        })
+        .unwrap();
+
+    rows.map(|row| row.unwrap()).collect()
+}
+
+pub fn history(dir: &TempDir) -> Vec<HistoryRecord> {
+    let conn = open_db(dir);
+    let mut stmt = conn
+        .prepare(
+            "SELECT event_type, feature_id, outcome_id, message FROM history ORDER BY id",
+        )
+        .unwrap();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(HistoryRecord {
+                event_type: row.get(0)?,
+                feature_id: row.get(1)?,
+                outcome_id: row.get(2)?,
+                message: row.get(3)?,
             })
         })
         .unwrap();

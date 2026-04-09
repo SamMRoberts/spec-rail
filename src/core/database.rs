@@ -1,14 +1,15 @@
 use anyhow::{bail, Context, Result};
+use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Serialize};
 use std::path::Path;
 
 use super::models::{
-    ComponentSpec, FeatureSpec, OutcomeSpec, ProjectSpec, ProjectState, SolutionSpec,
-    TestManifest, TestSpec,
+    ComponentSpec, FeatureSpec, LedgerEvent, LedgerEventType, OutcomeSpec, ProjectSpec,
+    ProjectState, SolutionSpec, TestManifest, TestSpec,
 };
 
-const SCHEMA_VERSION: i64 = 6;
+const SCHEMA_VERSION: i64 = 7;
 
 pub struct Database {
     conn: Connection,
@@ -21,16 +22,16 @@ impl Database {
                 .with_context(|| format!("creating database directory {}", parent.display()))?;
         }
 
-        let conn = Connection::open(path)
+        let mut conn = Connection::open(path)
             .with_context(|| format!("opening database {}", path.display()))?;
         conn.pragma_update(None, "foreign_keys", "ON")
             .context("enabling sqlite foreign keys")?;
-        Self::initialize_schema(&conn)?;
+        Self::initialize_schema(path, &mut conn)?;
 
         Ok(Self { conn })
     }
 
-    fn initialize_schema(conn: &Connection) -> Result<()> {
+    fn initialize_schema(path: &Path, conn: &mut Connection) -> Result<()> {
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .context("reading sqlite schema version")?;
@@ -119,6 +120,23 @@ impl Database {
                 active_feature TEXT,
                 active_outcome TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                feature_id TEXT,
+                outcome_id TEXT,
+                agent TEXT,
+                success INTEGER,
+                message TEXT,
+                CHECK(outcome_id IS NULL OR feature_id IS NOT NULL),
+                FOREIGN KEY(feature_id) REFERENCES features(id) ON DELETE SET NULL,
+                FOREIGN KEY(feature_id, outcome_id) REFERENCES outcomes(feature_id, id) ON DELETE SET NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_history_feature ON history(feature_id);
+            CREATE INDEX IF NOT EXISTS idx_history_feature_outcome ON history(feature_id, outcome_id);
             ",
         )
         .context("initializing sqlite schema")?;
@@ -166,6 +184,14 @@ impl Database {
                 "
             )
             .context("clearing tests.name values that mirror test ids")?;
+        }
+
+        if version > 0 && version < 7 {
+            let ledger_path = path
+                .parent()
+                .map(|specrail_dir| specrail_dir.join("state").join("ledger.jsonl"))
+                .context("resolving legacy ledger path")?;
+            migrate_legacy_ledger(&ledger_path, conn)?;
         }
 
         if version < SCHEMA_VERSION {
@@ -603,6 +629,63 @@ impl Database {
         Ok(())
     }
 
+    pub fn append_history_event(&self, event: &LedgerEvent) -> Result<()> {
+        self.conn
+            .execute(
+                "
+                INSERT INTO history (timestamp, event_type, feature_id, outcome_id, agent, success, message)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                ",
+                params![
+                    event.timestamp.to_rfc3339(),
+                    encode_enum(&event.event_type)?,
+                    event.feature_id,
+                    event.outcome_id,
+                    event.agent,
+                    event.success,
+                    event.message,
+                ],
+            )
+            .context("saving history event")?;
+        Ok(())
+    }
+
+    pub fn read_history_events(&self) -> Result<Vec<LedgerEvent>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "
+                SELECT timestamp, event_type, feature_id, outcome_id, agent, success, message
+                FROM history
+                ORDER BY id
+                ",
+            )
+            .context("preparing history query")?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(HistoryRow {
+                    timestamp: row.get(0)?,
+                    event_type: row.get(1)?,
+                    feature_id: row.get(2)?,
+                    outcome_id: row.get(3)?,
+                    agent: row.get(4)?,
+                    success: row.get(5)?,
+                    message: row.get(6)?,
+                })
+            })
+            .context("querying history events")?;
+
+        let mut events = Vec::new();
+        for row in rows {
+            events.push(TryInto::<LedgerEvent>::try_into(
+                row.context("reading history row")?,
+            )?);
+        }
+
+        Ok(events)
+    }
+
     pub fn list_outcomes(&self, feature_id: &str) -> Result<Vec<OutcomeSpec>> {
         let mut stmt = self
             .conn
@@ -871,6 +954,16 @@ struct TestRow {
     status: String,
 }
 
+struct HistoryRow {
+    timestamp: String,
+    event_type: String,
+    feature_id: Option<String>,
+    outcome_id: Option<String>,
+    agent: Option<String>,
+    success: Option<bool>,
+    message: Option<String>,
+}
+
 impl TryFrom<TestRow> for TestSpec {
     type Error = anyhow::Error;
 
@@ -904,6 +997,26 @@ impl TryFrom<OutcomeRow> for OutcomeSpec {
             required_tests: decode_json(&value.required_tests)?,
             required_test_files: Vec::new(),
             status: decode_enum(&value.status)?,
+        })
+    }
+}
+
+impl TryFrom<HistoryRow> for LedgerEvent {
+    type Error = anyhow::Error;
+
+    fn try_from(value: HistoryRow) -> Result<Self> {
+        let timestamp = DateTime::parse_from_rfc3339(&value.timestamp)
+            .with_context(|| format!("parsing history timestamp '{}'", value.timestamp))?
+            .with_timezone(&Utc);
+
+        Ok(Self {
+            timestamp,
+            event_type: decode_enum::<LedgerEventType>(&value.event_type)?,
+            feature_id: value.feature_id,
+            outcome_id: value.outcome_id,
+            agent: value.agent,
+            success: value.success,
+            message: value.message,
         })
     }
 }
@@ -954,4 +1067,57 @@ fn encode_enum<T: Serialize>(value: &T) -> Result<String> {
 fn decode_enum<T: DeserializeOwned>(value: &str) -> Result<T> {
     serde_json::from_value(serde_json::Value::String(value.to_string()))
         .with_context(|| format!("parsing enum value '{value}'"))
+}
+
+fn migrate_legacy_ledger(ledger_path: &Path, conn: &mut Connection) -> Result<()> {
+    if !ledger_path.exists() {
+        return Ok(());
+    }
+
+    let existing_history_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
+        .context("counting existing history rows")?;
+
+    if existing_history_count > 0 {
+        return Ok(());
+    }
+
+    let content = std::fs::read_to_string(ledger_path)
+        .with_context(|| format!("reading legacy ledger from {}", ledger_path.display()))?;
+    let tx = conn.transaction().context("starting history migration transaction")?;
+
+    for (line_num, line) in content.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let event: LedgerEvent = serde_json::from_str(trimmed).with_context(|| {
+            format!(
+                "parsing legacy ledger line {} in {}",
+                line_num + 1,
+                ledger_path.display()
+            )
+        })?;
+
+        tx.execute(
+            "
+            INSERT INTO history (timestamp, event_type, feature_id, outcome_id, agent, success, message)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            ",
+            params![
+                event.timestamp.to_rfc3339(),
+                encode_enum(&event.event_type)?,
+                event.feature_id,
+                event.outcome_id,
+                event.agent,
+                event.success,
+                event.message,
+            ],
+        )
+        .with_context(|| format!("migrating legacy ledger line {}", line_num + 1))?;
+    }
+
+    tx.commit().context("committing history migration transaction")?;
+    Ok(())
 }

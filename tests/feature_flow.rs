@@ -2,7 +2,6 @@ mod support;
 
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::TempDir;
 
 fn init(dir: &TempDir) {
@@ -56,10 +55,10 @@ fn feature_new_records_ledger_event() {
         .assert()
         .success();
 
-    let ledger =
-        fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("feature_created"));
-    assert!(ledger.contains("auth-login"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| {
+        event.event_type == "feature_created" && event.feature_id.as_deref() == Some("auth-login")
+    }));
 }
 
 #[test]
@@ -187,6 +186,6 @@ fn feature_edit_updates_existing_record() {
         .stdout(contains("Fast query results"))
         .stdout(contains("Stay under 200ms"));
 
-    let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("feature_edited"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "feature_edited"));
 }

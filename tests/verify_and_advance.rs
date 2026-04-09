@@ -291,10 +291,9 @@ fn verify_and_advance_happy_path() {
     assert_eq!(state.active_outcome.as_deref(), Some("outcome-2"));
 
     // Ledger should show advancement
-    let ledger =
-        fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
-    assert!(ledger.contains("outcome_advanced"));
-    assert!(ledger.contains("outcome_verified"));
+    let history = support::history(&dir);
+    assert!(history.iter().any(|event| event.event_type == "outcome_advanced"));
+    assert!(history.iter().any(|event| event.event_type == "outcome_verified"));
 }
 
 /// Test that verify marks outcome as failed when test_command exits non-zero.
