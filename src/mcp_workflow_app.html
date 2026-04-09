@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Specrail Workflow UI</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: canvas;
+      color: canvasText;
+    }
+    .app {
+      border: 1px solid color-mix(in srgb, canvasText 16%, transparent);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .muted { opacity: 0.72; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: color-mix(in srgb, canvasText 10%, transparent);
+      font-size: 12px;
+    }
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      background: color-mix(in srgb, canvasText 8%, transparent);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div>
+      <strong>Hi from Specrail @mcp-ui</strong>
+      <div class="muted">This panel can render `specrail_status`, `specrail_workflow_overview`, test review, and delegation payloads.</div>
+    </div>
+    <div class="chips" id="summary"></div>
+    <pre id="payload">Call specrail_status or specrail_workflow_overview to populate this panel.</pre>
+  </div>
+  <script>
+    const payloadEl = document.getElementById('payload');
+    const summaryEl = document.getElementById('summary');
+
+    function addChip(text) {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = text;
+      summaryEl.appendChild(chip);
+    }
+
+    function render(raw) {
+      const payload = raw?.structuredContent ?? raw ?? {};
+      summaryEl.innerHTML = '';
+
+      const workflow = payload.workflow || payload.status?.workflow;
+      if (workflow) {
+        addChip(`stage: ${workflow.stage ?? 'unknown'}`);
+        addChip(`skill: ${workflow.recommended_skill ?? 'n/a'}`);
+        const progress = workflow.progress || {};
+        if (typeof progress.outcome_verified === 'number' && typeof progress.outcome_total === 'number') {
+          addChip(`outcomes: ${progress.outcome_verified}/${progress.outcome_total}`);
+        }
+      }
+
+      if (payload.review) {
+        addChip(payload.review.has_gaps ? 'tests blocked' : 'tests ready');
+      }
+
+      if (payload.delegation) {
+        addChip(`delegation: ${payload.delegation.scope_label || payload.delegation.outcome_id || 'ready'}`);
+      }
+
+      payloadEl.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    window.addEventListener('message', (event) => render(event.data));
+
+    if (window.__MCP_UI_PAYLOAD__) {
+      render(window.__MCP_UI_PAYLOAD__);
+    }
+  </script>
+</body>
+</html>

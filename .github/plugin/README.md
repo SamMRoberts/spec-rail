@@ -38,6 +38,15 @@ If the project is already partway through the workflow, `specrail-tdd` should ca
 
 Skills are the guided user-facing workflows. The `specrail_*` MCP tools are the direct executable actions that the skills call.
 
+Newer MCP hosts can also use:
+
+- `specrail_workflow_overview` for a compact feature/outcome board
+- `specrail_workflow_next` for the single best next action plus rationale
+- `specrail_resume_point` for explicit resume guidance
+- `specrail_activate_next` to safely activate the next eligible outcome
+
+The MCP server also exposes a small `@mcp-ui` resource at `ui://specrail/workflow` so hosts can render status, review, overview, and delegation payloads visually instead of relying on text alone.
+
 ## MCP Logging Configuration
 
 Set `SPECRAIL_MCP_LOG_LEVEL` in MCP server env to control log verbosity:
