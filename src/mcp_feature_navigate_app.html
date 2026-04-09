@@ -2774,18 +2774,6 @@
                 appendLog("Submitting to chat: " + commandText, "action");
                 render();
                 try {
-                    var bridgeSubmitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{
-                        prompt: commandText,
-                        mode: "agent",
-                        autoSubmit: true
-                    }]));
-                    if (bridgeSubmitted) {
-                        appendLog(title + " submitted to VS Code chat as " + commandText + ".", "success");
-                        state.runningAction = null;
-                        render();
-                        return;
-                    }
-
                     var drafted = await sendRequestWithTimeout("ui/message", {
                         content: [{ type: "text", text: commandText }]
                     }, 1500);
@@ -2793,11 +2781,18 @@
                         throw new Error("Host rejected the chat command draft.");
                     }
 
-                    await new Promise(function (resolve) { setTimeout(resolve, 75); });
+                    appendLog("Drafted the chat command into the current conversation.", "success");
+
+                    await new Promise(function (resolve) { setTimeout(resolve, 150); });
 
                     var submitted = await requestHostOpenLink(buildCommandUri("workbench.action.chat.submit", []));
                     if (!submitted) {
+                        await new Promise(function (resolve) { setTimeout(resolve, 150); });
                         submitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{ autoSubmit: true }]));
+                    }
+                    if (!submitted) {
+                        await new Promise(function (resolve) { setTimeout(resolve, 250); });
+                        submitted = await requestHostOpenLink(buildCommandUri("workbench.action.chat.submit", []));
                     }
                     if (!submitted) {
                         appendLog(title + " drafted `" + commandText + "` into chat, but automatic submit was unavailable.", "warn");
