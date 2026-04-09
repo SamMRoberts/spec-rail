@@ -2781,7 +2781,12 @@
                         throw new Error("Host rejected the chat command draft.");
                     }
 
-                    var submitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{ autoSubmit: true }]));
+                    await new Promise(function (resolve) { setTimeout(resolve, 75); });
+
+                    var submitted = await requestHostOpenLink(buildCommandUri("workbench.action.chat.submit", []));
+                    if (!submitted) {
+                        submitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{ autoSubmit: true }]));
+                    }
                     if (!submitted) {
                         appendLog(title + " drafted `" + commandText + "` into chat, but automatic submit was unavailable.", "warn");
                         state.runningAction = null;
