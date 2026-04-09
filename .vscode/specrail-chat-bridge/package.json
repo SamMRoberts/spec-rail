@@ -1,0 +1,25 @@
+{
+    "name": "specrail-chat-bridge",
+    "displayName": "Specrail Chat Bridge",
+    "description": "Registers a command bridge for Specrail MCP navigator chat handoff.",
+    "version": "0.0.1",
+    "publisher": "sammroberts",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:specrail.runMcpAction"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "specrail.runMcpAction",
+                "title": "Specrail: Run MCP Action"
+            }
+        ]
+    }
+}

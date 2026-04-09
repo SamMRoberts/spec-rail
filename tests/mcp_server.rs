@@ -235,11 +235,11 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("workbench.action.chat.open"));
+        .contains("specrail.runMcpAction"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("isPartialQuery"));
+        .contains("Implementation prompt copied to clipboard."));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()

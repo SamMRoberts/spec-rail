@@ -2723,6 +2723,7 @@
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
                 var prompt = String(delegation.prompt || "");
+                var chatBridgeCommand = "specrail.runMcpAction";
                 var copied = false;
                 if (prompt) {
                     try {
@@ -2731,17 +2732,17 @@
                     } catch (_) { }
                 }
 
-                if (invokeCommandUri("workbench.action.chat.open", [{ query: prompt, isPartialQuery: false }])) {
-                    appendLog("Opened chat with the implementation prompt. Review and submit it in chat if the host did not auto-run it.", "success");
-                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                if (invokeCommandUri(chatBridgeCommand, [{ prompt: prompt }])) {
+                    appendLog("Requested VS Code command 'specrail.runMcpAction' with the implementation prompt.", "success");
+                    return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction" };
                 }
 
-                if (invokeCommandUri("workbench.action.chat.open", [])) {
-                    appendLog("Opened chat without a prefilled prompt. Paste the copied implementation prompt into chat.", "warn");
-                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open-empty" };
+                if (invokeCommandUri(chatBridgeCommand, [])) {
+                    appendLog("Requested VS Code command 'specrail.runMcpAction' without arguments.", "warn");
+                    return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction-empty" };
                 }
 
-                appendLog("Chat handoff unavailable from this host. Use the copied prompt or the implementation prompt panel below.", "warn");
+                appendLog("Command handoff unavailable. Ensure the VS Code command 'specrail.runMcpAction' is registered, then retry.", "warn");
                 return { opened: false, copied: copied };
             }
 
