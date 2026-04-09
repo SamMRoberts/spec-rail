@@ -4,14 +4,19 @@
     "description": "Registers a command bridge for Specrail MCP navigator chat handoff.",
     "version": "0.0.1",
     "publisher": "sammroberts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SamMRoberts/spec-rail.git"
+    },
+    "files": [
+        "extension.js",
+        "package.json"
+    ],
     "engines": {
         "vscode": "^1.90.0"
     },
     "categories": [
         "Other"
-    ],
-    "activationEvents": [
-        "onCommand:specrail.runMcpAction"
     ],
     "main": "./extension.js",
     "contributes": {

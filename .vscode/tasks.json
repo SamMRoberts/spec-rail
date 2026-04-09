@@ -113,13 +113,29 @@
         },
         {
             "label": "Package VSCode Extension",
-            "command": "npx",
-            "args": [
-                "@vscode/vsce",
-                "package"
-            ],
+            "type": "shell",
+            "command": "printf 'y\\n' | npx @vscode/vsce package",
             "options": {
                 "cwd": "${workspaceFolder}/.vscode/specrail-chat-bridge"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Specrail Chat Bridge",
+            "type": "shell",
+            "command": "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+            "args": [
+                "--install-extension",
+                "${workspaceFolder}/.vscode/specrail-chat-bridge/specrail-chat-bridge-0.0.1.vsix",
+                "--force"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
             },
             "presentation": {
                 "reveal": "always",
