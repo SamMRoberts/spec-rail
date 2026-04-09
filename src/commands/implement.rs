@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::{
     agents,
@@ -35,6 +35,12 @@ pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     })?;
 
     let agent_name = agent_override.unwrap_or(&config.default_agent);
+
+    if agent_name == "generic-shell" && std::env::var_os("SPECRAIL_AGENT_CMD").is_none() {
+        bail!(
+            "generic-shell is selected but SPECRAIL_AGENT_CMD is not set. Configure SPECRAIL_AGENT_CMD to your coding agent command (for example: `export SPECRAIL_AGENT_CMD='copilot -p \"$SPECRAIL_PROMPT\"'`) or use --agent copilot/--agent codex."
+        );
+    }
 
     let prompt = builder::build_implementation_prompt(&feature, &outcome, &manifest);
 
