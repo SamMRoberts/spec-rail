@@ -79,7 +79,9 @@
             flex-direction: column;
             width: 100%;
             max-width: 760px;
+            min-height: 320px;
             height: 680px;
+            max-height: 900px;
             margin: 0 auto;
             position: relative;
             isolation: isolate;
@@ -1498,6 +1500,43 @@
                 order: -1;
             }
         }
+
+        /* Status bar */
+        .app-status-bar {
+            flex-shrink: 0;
+            height: 26px;
+            min-height: 26px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 12px;
+            background: light-dark(rgba(15, 23, 42, 0.055), rgba(0, 0, 0, 0.32));
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--fg-muted);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            user-select: none;
+        }
+
+        .app-status-bar .sb-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--fg-dim);
+        }
+
+        .app-status-bar.sb-action .sb-dot { background: var(--accent); }
+        .app-status-bar.sb-success .sb-dot { background: var(--verified-border); }
+        .app-status-bar.sb-error .sb-dot { background: var(--failed-border); }
+        .app-status-bar.sb-warn .sb-dot { background: var(--active-border); }
+        .app-status-bar.sb-action { color: var(--fg); }
+        .app-status-bar.sb-success { color: var(--verified-fg); }
+        .app-status-bar.sb-error { color: var(--failed-fg); }
+        .app-status-bar.sb-warn { color: var(--active-fg); }
     </style>
 </head>
 
@@ -1519,6 +1558,10 @@
                 <div class="empty-title">Specrail</div>
                 <div>Connecting&hellip;</div>
             </div>
+        </div>
+        <div id="appStatusBar" class="app-status-bar" aria-live="polite" aria-label="Status">
+            <span class="sb-dot"></span>
+            <span id="appStatusText">Ready</span>
         </div>
     </div>
 
@@ -1543,7 +1586,15 @@
             let nextId = 1;
             const pending = new Map();
 
-            function appendLog() { }
+            // appendLog(message, level) — level: 'action' | 'success' | 'error' | 'warn' | 'muted' | 'info'
+            function appendLog(message, level) {
+                var bar = document.getElementById("appStatusBar");
+                var text = document.getElementById("appStatusText");
+                if (!bar || !text) return;
+                var lvl = level || "muted";
+                bar.className = "app-status-bar" + (lvl !== "muted" && lvl !== "info" ? " sb-" + lvl : "");
+                text.textContent = String(message == null ? "" : message);
+            }
 
             // IPC
             function sendRequest(m, p) {
@@ -1579,7 +1630,7 @@
                 return sendRequestWithTimeout("ui/requests/execute-command", {
                     command: command,
                     args: Array.isArray(args) ? args : []
-                }, 900);
+                }, 2500);
             }
 
             // Utilities
@@ -2027,6 +2078,16 @@
                         var sc = result && result.structuredContent;
                         if (sc && sc.delegation && typeof sc.delegation === "object") {
                             await startChatForDelegation(sc.delegation);
+                        }
+                    }
+                    // Clear cached implementation delegation when the outcome is verified or advanced
+                    if (name === "specrail_verify" || name === "specrail_advance") {
+                        var sc2 = state.toolResult && state.toolResult.structuredContent;
+                        var fid = sc2 && sc2.selectedFeatureId;
+                        var oid = sc2 && sc2.activeOutcomeId;
+                        if (fid && oid) {
+                            delete state.implementationDelegations[implementationDelegationKey(fid, oid)];
+                            delete state.implementationDelegations[implementationDelegationKey(fid, "*")];
                         }
                     }
                     if (text) appendLog(title + ": " + text, "success");
@@ -2513,7 +2574,7 @@
                 render();
 
                 try {
-                    var result = await sendRequestWithTimeout("ui/requests/open-file", params, 900);
+                    var result = await sendRequestWithTimeout("ui/requests/open-file", params, 2500);
                     if (result && result.opened === false) {
                         throw new Error(result.message || "Host declined the file-open request.");
                     }
@@ -2638,35 +2699,56 @@
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
                 var prompt = String(delegation.prompt || "");
-                var copied = false;
-                if (prompt) {
-                    await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
-                    copied = true;
-                }
 
+                // Try editor chat with inline prompt first (VS Code ≥ 1.90)
                 try {
-                    await requestExecuteCommand("vscode.editorChat.start", []);
-                    appendLog("Opened editor chat. Paste the copied implementation prompt into the new chat session.", "success");
-                    return { opened: true, copied: copied, method: "request:vscode.editorChat.start" };
+                    await requestExecuteCommand("vscode.editorChat.start", [{ initialPrompt: prompt, isPartialQuery: false }]);
+                    appendLog("Opened editor chat with implementation prompt. Review and run it.", "success");
+                    return { opened: true, copied: false, method: "editor-chat-with-prompt" };
                 } catch (editorChatError) {
                     try {
-                        await requestExecuteCommand("workbench.action.chat.open", []);
-                        appendLog("Opened chat view. Paste the copied implementation prompt into the chat input.", "success");
-                        return { opened: true, copied: copied, method: "request:workbench.action.chat.open" };
+                        // Fall back to panel chat with inline query
+                        await requestExecuteCommand("workbench.action.chat.open", [{ query: prompt, isPartialQuery: false }]);
+                        appendLog("Opened panel chat with implementation prompt.", "success");
+                        return { opened: true, copied: false, method: "chat-panel-with-query" };
                     } catch (chatViewError) {
+                        // Copy prompt to clipboard then try to open chat without pre-fill
+                        var copied = false;
+                        if (prompt) {
+                            try {
+                                await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
+                                copied = true;
+                            } catch (_) { }
+                        }
+
+                        try {
+                            await requestExecuteCommand("vscode.editorChat.start", []);
+                            appendLog("Opened editor chat. Paste the copied implementation prompt.", "success");
+                            return { opened: true, copied: copied, method: "editor-chat-empty" };
+                        } catch (_) { }
+
+                        try {
+                            await requestExecuteCommand("workbench.action.chat.open", []);
+                            appendLog("Opened chat view. Paste the copied implementation prompt.", "success");
+                            return { opened: true, copied: copied, method: "chat-panel-empty" };
+                        } catch (_) { }
+
                         if (invokeCommandUri("vscode.editorChat.start")) {
-                            appendLog("Attempted to open editor chat via command URI. Paste the copied implementation prompt if the chat appears.", "warn");
-                            return { opened: true, copied: copied, method: "command-uri:vscode.editorChat.start" };
+                            appendLog("Attempted to open editor chat via command URI. Paste the copied prompt if chat appears.", "warn");
+                            return { opened: true, copied: copied, method: "command-uri:editor-chat" };
                         }
                         if (invokeCommandUri("workbench.action.chat.open")) {
-                            appendLog("Attempted to open chat view via command URI. Paste the copied implementation prompt if the chat appears.", "warn");
-                            return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                            appendLog("Attempted to open chat view via command URI. Paste the copied prompt if chat appears.", "warn");
+                            return { opened: true, copied: copied, method: "command-uri:chat-panel" };
                         }
                     }
                 }
 
-                appendLog("Chat handoff is not available from this host. Use the copied prompt or the delegation panel below.", "warn");
-                return { opened: false, copied: copied };
+                if (prompt) {
+                    try { await copyTextToClipboard(prompt, "Implementation prompt copied — paste it into a chat session."); } catch (_) { }
+                }
+                appendLog("Chat handoff unavailable from this host. Use the copied prompt or the delegation panel below.", "warn");
+                return { opened: false, copied: !!prompt };
             }
 
             function getSuggestionPreview(featureId, outcomeId) {
@@ -3118,12 +3200,12 @@
                                 tool: "specrail_outcome_add_required_test",
                                 args: { feature_id: featureId, outcome_id: outcome.id, test_id: test.id, path: test.path },
                                 refresh: true,
+                                source: "related-tests",
                             });
                             item.appendChild(actions);
                         }
 
-                        source: "next-banner",
-                            list.appendChild(item);
+                        list.appendChild(item);
                     });
                     section.appendChild(list);
                 }
@@ -4033,7 +4115,19 @@
             }
 
             function reportSize() {
-                sendNotification("ui/notifications/size-changed", { width: 680, height: 680 });
+                var appBody = document.getElementById("root");
+                var headerEl = document.querySelector(".app-header");
+                var statusEl = document.getElementById("appStatusBar");
+                var headerH = headerEl ? headerEl.offsetHeight : 0;
+                var statusH = statusEl ? statusEl.offsetHeight : 0;
+                // .app-body has padding: 16px top + 18px bottom (34px total) — keep in sync with CSS
+                var bodyPad = 16 + 18;
+                var contentH = appBody ? appBody.scrollHeight : 600;
+                var needed = headerH + contentH + statusH + bodyPad;
+                var h = Math.max(320, Math.min(900, needed));
+                var appEl = document.querySelector(".app");
+                if (appEl) appEl.style.height = h + "px";
+                sendNotification("ui/notifications/size-changed", { width: 680, height: h });
             }
 
             window.addEventListener("message", function (event) {
