@@ -46,7 +46,54 @@ impl ProjectConfig {
     }
 }
 
-fn detect_test_command(root: &Path) -> String {
+/// Per-project settings stored at `.specrail/projects/<id>.yaml`.
+///
+/// Each specrail project maps to one software project (e.g. a `.csproj`, a
+/// `Cargo.toml` workspace member, or a `package.json`). Storing the
+/// `test_command` here lets every project point at its own test runner so
+/// that `specrail verify` runs the right suite regardless of which project is
+/// currently active.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectSettings {
+    pub test_command: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_agent: Option<String>,
+}
+
+impl Default for ProjectSettings {
+    fn default() -> Self {
+        Self {
+            test_command: String::from("cargo test"),
+            default_agent: None,
+        }
+    }
+}
+
+impl ProjectSettings {
+    pub fn for_project(root: &Path) -> Self {
+        Self {
+            test_command: detect_test_command(root),
+            default_agent: None,
+        }
+    }
+
+    pub fn load(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("reading project settings from {}", path.display()))?;
+        let settings: Self = serde_yaml::from_str(&content)
+            .with_context(|| format!("parsing {}", path.display()))?;
+        Ok(settings)
+    }
+
+    pub fn save(&self, path: &Path) -> Result<()> {
+        let content = serde_yaml::to_string(self)?;
+        std::fs::write(path, content)
+            .with_context(|| format!("writing project settings to {}", path.display()))?;
+        Ok(())
+    }
+}
+
+pub(crate) fn detect_test_command(root: &Path) -> String {
     if root.join("Cargo.toml").is_file() {
         return String::from("cargo test");
     }

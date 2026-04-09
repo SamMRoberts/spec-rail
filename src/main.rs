@@ -83,6 +83,7 @@ fn run(cli: Cli) -> Result<()> {
                 id,
                 title,
                 purpose,
+                test_command,
             } => commands::project::new(
                 &repo,
                 commands::project::NewArgs {
@@ -90,6 +91,7 @@ fn run(cli: Cli) -> Result<()> {
                     id,
                     title,
                     purpose,
+                    test_command,
                 },
             ),
             ProjectCommands::List { solution_id } => commands::project::list(&repo, &solution_id),

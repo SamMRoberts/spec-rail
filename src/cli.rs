@@ -182,6 +182,9 @@ pub enum ProjectCommands {
         title: String,
         #[arg(long, short)]
         purpose: String,
+        /// Test command for this software project (e.g. `dotnet test src/Api/Api.csproj`)
+        #[arg(long)]
+        test_command: Option<String>,
     },
     List {
         solution_id: String,

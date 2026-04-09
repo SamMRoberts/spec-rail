@@ -13,7 +13,7 @@ use crate::{
 
 pub fn run(repo: &Repository, agent_override: Option<&str>) -> Result<()> {
     let state = repo.load_state()?;
-    let config = repo.load_config()?;
+    let config = repo.effective_config()?;
 
     let feature_id = state
         .active_feature
