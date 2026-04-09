@@ -137,7 +137,7 @@ fn outcome_new_prints_field_explanations_and_next_steps() {
         .stdout(contains("goal   — acceptance criterion"))
         .stdout(contains("order  — sequence position"))
         .stdout(contains("allow  — glob paths the AI agent may modify"))
-        .stdout(contains("test   — required test names/facts that must pass"))
+        .stdout(contains("test   — required manifest test IDs that must pass"))
         .stdout(contains("test-file — test file paths used by `specrail test generate`"))
         .stdout(contains("Next steps:"))
         .stdout(contains("specrail test add"))
@@ -171,7 +171,7 @@ fn outcome_show_prints_contextual_labels() {
         .stdout(contains("goal is the acceptance criterion"))
         .stdout(contains("AI agent may only modify"))
         .stdout(contains("AI agent must NOT touch"))
-        .stdout(contains("Required test names / facts:"))
+        .stdout(contains("Required test IDs:"))
         .stdout(contains("No required test file paths set."))
         .stdout(contains("add individual tests with `specrail test add`"));
 }
@@ -195,7 +195,7 @@ fn outcome_show_suggests_test_add_when_no_required_tests() {
         .args(["outcome", "show", "auth-login", "outcome-1-domain"])
         .assert()
         .success()
-        .stdout(contains("No required test names set."))
+        .stdout(contains("No required test IDs set."))
         .stdout(contains("No required test file paths set."))
         .stdout(contains("specrail test add"));
 }

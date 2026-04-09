@@ -198,7 +198,7 @@ pub fn generate_scoped(
             && (!outcome
                 .required_tests
                 .iter()
-                .any(|test_name| test_name == &generated.name)
+                .any(|test_id| test_id == &generated.id)
                 || !outcome
                     .required_test_files
                     .iter()
@@ -217,7 +217,7 @@ pub fn generate_scoped(
             repo,
             &generated.feature_id,
             &generated.outcome_id,
-            &generated.name,
+            &generated.id,
             &generated.path,
         )?;
 
@@ -419,16 +419,16 @@ fn prepare_test_generation(
                 .collect();
 
             let mut matched_required_for_outcome = 0usize;
-            for required_name in &outcome.required_tests {
+            for required_test_id in &outcome.required_tests {
                 if let Some(test) = related_tests
                     .iter()
-                    .find(|test| test.name == *required_name || test.id == *required_name)
+                    .find(|test| test.id == *required_test_id)
                 {
                     matched_required_for_outcome = matched_required_for_outcome.saturating_add(1);
                     expected_tests.insert((
                         feature.id.clone(),
                         outcome.id.clone(),
-                        required_name.clone(),
+                        required_test_id.clone(),
                         test.path.clone(),
                     ));
                 }
@@ -510,7 +510,7 @@ fn generated_test_specs(response: &GeneratedTestsResponse) -> BTreeSet<(String, 
             (
                 test.feature_id.clone(),
                 test.outcome_id.clone(),
-                test.name.clone(),
+                test.id.clone(),
                 test.path.clone(),
             )
         })

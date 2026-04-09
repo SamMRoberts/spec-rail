@@ -882,7 +882,7 @@ fn mcp_test_suggest_previews_without_writing_files() {
                 "title": "User login",
                 "goal": "Let a user sign in with valid credentials.",
                 "order": 1,
-                "required_tests": ["logs_in"],
+                "required_tests": ["auth-login-valid-credentials"],
                 "required_test_files": ["tests/auth/login.rs"]
             }
         }),
@@ -931,7 +931,7 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
     {
       "feature_id": "auth",
       "outcome_id": "login",
-            "id": "logs_in",
+            "id": "auth-login-valid-credentials",
             "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
@@ -1016,11 +1016,14 @@ fn mcp_test_generate_can_target_a_specific_outcome_without_activation() {
 
     let tests = support::tests(&dir);
     assert!(tests.iter().any(|test| {
-        test.path == "tests/auth/login.rs" && test.status == "written"
+        test.id == "auth-login-valid-credentials"
+            && test.name == "logs_in"
+            && test.path == "tests/auth/login.rs"
+            && test.status == "written"
     }));
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")
-        .contains(&"logs_in".to_string()));
+        .contains(&"auth-login-valid-credentials".to_string()));
     assert!(support::outcome_required_test_files(&dir, "auth", "login")
         .contains(&"tests/auth/login.rs".to_string()));
 
@@ -1038,7 +1041,7 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     {
       "feature_id": "auth",
       "outcome_id": "login",
-            "id": "logs_in",
+            "id": "auth-login-valid-credentials",
             "name": "logs_in",
       "path": "tests/auth/login.rs",
       "kind": "unit",
@@ -1112,13 +1115,16 @@ fn mcp_test_generate_bootstraps_required_tests_for_new_outcome() {
     assert!(dir.path().join("tests/auth/login.rs").exists());
 
     assert!(support::outcome_required_tests(&dir, "auth", "login")
-        .contains(&"logs_in".to_string()));
+        .contains(&"auth-login-valid-credentials".to_string()));
     assert!(support::outcome_required_test_files(&dir, "auth", "login")
         .contains(&"tests/auth/login.rs".to_string()));
 
     let tests = support::tests(&dir);
     assert!(tests.iter().any(|test| {
-        test.path == "tests/auth/login.rs" && test.status == "written"
+        test.id == "auth-login-valid-credentials"
+            && test.name == "logs_in"
+            && test.path == "tests/auth/login.rs"
+            && test.status == "written"
     }));
 
     client.shutdown();

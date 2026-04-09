@@ -269,7 +269,7 @@ pub enum OutcomeCommands {
         /// e.g. "src/billing/**" to keep unrelated modules off-limits)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Required test name/fact that must pass
+        /// Required manifest test ID that must pass
         #[arg(long = "test")]
         required_tests: Vec<String>,
         /// Test file path for AI-assisted generation via `specrail test generate`
@@ -318,7 +318,7 @@ pub enum OutcomeCommands {
         /// Glob path the AI agent must NOT touch (repeatable)
         #[arg(long = "forbid")]
         forbidden_paths: Vec<String>,
-        /// Required test name/fact that must pass
+        /// Required manifest test ID that must pass
         #[arg(long = "test")]
         required_tests: Vec<String>,
         /// Test file path for AI-assisted generation via `specrail test generate`

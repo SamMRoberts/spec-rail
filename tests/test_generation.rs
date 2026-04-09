@@ -32,7 +32,7 @@ fn test_generate_creates_files_and_manifest_entries() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "validates_credentials",
+            "--test", "auth-outcome-1-validates-credentials",
             "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
@@ -46,7 +46,7 @@ fn test_generate_creates_files_and_manifest_entries() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
-            "id": "validates_credentials",
+            "id": "auth-outcome-1-validates-credentials",
             "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
@@ -70,8 +70,15 @@ fn test_generate_creates_files_and_manifest_entries() {
 
     let tests = support::tests(&dir);
     assert!(tests.iter().any(|test| {
-        test.path == "tests/auth/validate.rs" && test.status == "written"
+        test.id == "auth-outcome-1-validates-credentials"
+            && test.name == "validates_credentials"
+            && test.path == "tests/auth/validate.rs"
+            && test.status == "written"
     }));
+    assert_eq!(
+        support::outcome_required_tests(&dir, "auth", "outcome-1"),
+        vec!["auth-outcome-1-validates-credentials".to_string()]
+    );
 
     let ledger = fs::read_to_string(dir.path().join(".specrail/state/ledger.jsonl")).unwrap();
     assert!(ledger.contains("test_generation_run"));
@@ -131,7 +138,7 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
             "--title", "Validation",
             "--goal", "Validate credentials.",
             "--order", "1",
-            "--test", "validates_credentials",
+            "--test", "auth-outcome-1-validates-credentials",
             "--test-file", "tests/auth/validate.rs",
         ])
         .assert()
@@ -145,7 +152,7 @@ fn test_suggest_previews_generated_tests_without_writing_files() {
     {
       "feature_id": "auth",
       "outcome_id": "outcome-1",
-            "id": "validates_credentials",
+            "id": "auth-outcome-1-validates-credentials",
             "name": "validates_credentials",
       "path": "tests/auth/validate.rs",
       "kind": "unit",
