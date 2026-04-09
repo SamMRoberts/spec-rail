@@ -190,6 +190,14 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
+        .contains("testReviewTool"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("hasTestGaps"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
         .contains("hero-panel"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
