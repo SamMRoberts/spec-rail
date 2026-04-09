@@ -8,7 +8,7 @@ argument-hint: "Continue the workflow, or name a phase such as setup, planning, 
 handoffs:
   - label: Resume Current Workflow
     agent: Specrail Resume
-    prompt: Inspect the current SpecRail state and recommend the right resume point before mutating anything.
+    prompt: Inspect the current SpecRail state, determine the right resume point, and immediately hand off to the appropriate phase agent.
     send: true
   - label: Initialize SpecRail
     agent: Specrail Setup
