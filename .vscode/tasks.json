@@ -110,6 +110,23 @@
                 "close": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Package VSCode Extension",
+            "command": "npx",
+            "args": [
+                "@vscode/vsce",
+                "package"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/.vscode/specrail-chat-bridge"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": true
+            },
+            "problemMatcher": []
         }
     ]
 }
