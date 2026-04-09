@@ -219,6 +219,14 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
+        .contains("Implementation delegation ready"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Copy Prompt"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
         .contains("btn-status-progress"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()

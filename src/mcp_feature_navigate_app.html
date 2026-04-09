@@ -1214,6 +1214,55 @@
             line-height: 1.45;
         }
 
+        .delegation-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .delegation-prompt {
+            margin-top: 8px;
+            padding: 8px 9px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+            color: var(--fg);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 280px;
+            overflow: auto;
+        }
+
+        .delegation-grid {
+            display: grid;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .delegation-item {
+            padding: 8px 9px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+        }
+
+        .delegation-item-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .delegation-item-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: var(--fg-muted);
+            font-family: var(--font-mono);
+        }
+
         .suggestion-list,
         .path-list,
         .related-test-list {
@@ -1489,6 +1538,7 @@
                 fileOpenStates: {},
                 suggestionPreviews: {},
                 suggestionPreviewErrors: {},
+                implementationDelegations: {},
             };
             let nextId = 1;
             const pending = new Map();
@@ -1690,6 +1740,7 @@
                         var advanceTool = nextActionTool(data, "advanceTool", "specrail_advance");
                         var implementStatus = featureActionStatus(selectedFeatureSummary, "implementStatus", "Run implement for each outcome in this feature.");
                         var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
+                        var activeDelegation = getImplementationDelegation(data.selectedFeatureId, activeOutcome.id);
                         if (hasTestGaps) {
                             var reviewState = reviewSummary(review);
                             icon = "\u{1F9EA}"; label = "Step 3 of 6 \u2014 Tests";
@@ -1710,6 +1761,23 @@
                                     refresh: true
                                 });
                             }
+                        } else if (activeDelegation && (st === "active" || st === "failed")) {
+                            icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
+                            title = "Delegation prepared for this outcome";
+                            desc = "The navigator received the implementation prompt. Review or copy it below, apply the changes in the current shell/chat, then run verify.";
+                            actions = [
+                                {
+                                    text: "Copy Prompt",
+                                    fn: function () { copyTextToClipboard(activeDelegation.delegation && activeDelegation.delegation.prompt, "Implementation prompt copied to clipboard."); },
+                                    kind: "primary"
+                                },
+                                {
+                                    text: "Review Tests",
+                                    tool: testReviewTool,
+                                    args: { feature_id: data.selectedFeatureId, outcome_id: activeOutcome.id },
+                                    kind: "default"
+                                }
+                            ];
                         } else if (st === "active" || st === "failed") {
                             if (featureActionLabel(verifyStatus) === "Needed" && st !== "failed") {
                                 icon = "\u2705"; label = "Step 5 of 6 \u2014 Verify";
@@ -1941,6 +2009,10 @@
                     if (result && result.isError) {
                         appendLog(title + " failed: " + (text || "Unknown error"), "error");
                         state.runningAction = null; render(); return;
+                    }
+                    if (name === "specrail_implement" && rememberImplementationDelegation(result, args)) {
+                        refresh = false;
+                        appendLog(title + " delegation ready. Review the implementation prompt in the outcome panel.", "success");
                     }
                     if (text) appendLog(title + ": " + text, "success");
                     else appendLog(title + " completed.", "success");
@@ -2446,6 +2518,92 @@
                 return panelStateKey("ai-suggestions", featureId, outcomeId);
             }
 
+            function implementationDelegationKey(featureId, outcomeId) {
+                return panelStateKey("implementation-delegation", featureId || "", outcomeId || "*");
+            }
+
+            function getImplementationDelegation(featureId, outcomeId) {
+                return state.implementationDelegations[implementationDelegationKey(featureId, outcomeId)] || null;
+            }
+
+            function setImplementationDelegation(featureId, outcomeId, payload) {
+                state.implementationDelegations[implementationDelegationKey(featureId, outcomeId)] = payload;
+            }
+
+            function rememberImplementationDelegation(result, args) {
+                var sc = result && result.structuredContent;
+                if (!sc || typeof sc !== "object") return false;
+
+                if (sc.delegation && typeof sc.delegation === "object") {
+                    var delegation = sc.delegation;
+                    setImplementationDelegation(
+                        delegation.feature_id || args.feature_id || "",
+                        delegation.outcome_id || "",
+                        {
+                            kind: "single",
+                            message: toolText(result),
+                            instructions: sc.instructions || null,
+                            delegation: delegation,
+                        }
+                    );
+                    return true;
+                }
+
+                if (Array.isArray(sc.delegations) && sc.delegations.length > 0) {
+                    var featureId = sc.feature_id || args.feature_id || sc.delegations[0].feature_id || "";
+                    setImplementationDelegation(featureId, "*", {
+                        kind: "feature",
+                        message: toolText(result),
+                        instructions: sc.instructions || null,
+                        delegations: sc.delegations,
+                        blocked: Array.isArray(sc.blocked) ? sc.blocked : [],
+                    });
+
+                    sc.delegations.forEach(function (delegation) {
+                        if (!delegation || typeof delegation !== "object") return;
+                        setImplementationDelegation(featureId, delegation.outcome_id || "", {
+                            kind: "single",
+                            message: toolText(result),
+                            instructions: sc.instructions || null,
+                            delegation: delegation,
+                        });
+                    });
+                    return true;
+                }
+
+                return false;
+            }
+
+            async function copyTextToClipboard(text, successMessage) {
+                var value = String(text == null ? "" : text);
+                if (!value) {
+                    appendLog("Nothing to copy.", "warn");
+                    return;
+                }
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(value);
+                    } else {
+                        var input = document.createElement("textarea");
+                        input.value = value;
+                        input.setAttribute("readonly", "readonly");
+                        input.style.position = "fixed";
+                        input.style.opacity = "0";
+                        document.body.appendChild(input);
+                        input.focus();
+                        input.select();
+                        var copied = document.execCommand && document.execCommand("copy");
+                        document.body.removeChild(input);
+                        if (!copied) throw new Error("Clipboard copy is unavailable in this host.");
+                    }
+
+                    appendLog(successMessage || "Copied to clipboard.", "success");
+                } catch (e) {
+                    appendLog("Copy failed: " + (e && e.message ? e.message : String(e)), "warn");
+                }
+            }
+
             function getSuggestionPreview(featureId, outcomeId) {
                 return state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] || null;
             }
@@ -2663,6 +2821,162 @@
 
                 if (actionRow.childNodes.length > 0) {
                     section.appendChild(actionRow);
+                }
+
+                return section;
+            }
+
+            function renderImplementationDelegationSection(featureId, outcomeId) {
+                var payload = getImplementationDelegation(featureId, outcomeId);
+                if (!payload || !payload.delegation) return null;
+
+                var delegation = payload.delegation;
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Implementation delegation ready</span>';
+                var readyBadge = badge("active");
+                readyBadge.textContent = "Ready";
+                head.appendChild(readyBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = payload.message
+                    || "The navigator prepared a delegated implementation prompt. It does not execute automatically in the current shell from this embedded view.";
+                section.appendChild(copy);
+
+                var chips = document.createElement("div");
+                chips.className = "test-chips";
+                appendTestChip(chips, delegation.agent || "agent", "");
+                appendTestChip(chips, (Array.isArray(delegation.allowed_paths) ? delegation.allowed_paths.length : 0) + " allowed path" + ((Array.isArray(delegation.allowed_paths) ? delegation.allowed_paths.length : 0) !== 1 ? "s" : ""), "");
+                if (Array.isArray(delegation.forbidden_paths) && delegation.forbidden_paths.length > 0) {
+                    appendTestChip(chips, delegation.forbidden_paths.length + " forbidden", "warning");
+                }
+                section.appendChild(chips);
+
+                if (payload.instructions && Array.isArray(payload.instructions.steps) && payload.instructions.steps.length > 0) {
+                    var stepsTitle = document.createElement("div");
+                    stepsTitle.className = "card-note";
+                    stepsTitle.textContent = "Next steps";
+                    section.appendChild(stepsTitle);
+                    section.appendChild(renderPathList(payload.instructions.steps, "suggestion-list"));
+                }
+
+                var actions = document.createElement("div");
+                actions.className = "delegation-actions";
+
+                var copyPromptBtn = document.createElement("button");
+                copyPromptBtn.type = "button";
+                copyPromptBtn.className = "btn btn-primary btn-sm";
+                copyPromptBtn.textContent = "Copy Prompt";
+                copyPromptBtn.addEventListener("click", function () {
+                    copyTextToClipboard(delegation.prompt || "", "Implementation prompt copied to clipboard.");
+                });
+                actions.appendChild(copyPromptBtn);
+
+                if (delegation.verify_tool) {
+                    var verifyHint = document.createElement("button");
+                    verifyHint.type = "button";
+                    verifyHint.className = "btn btn-ghost btn-sm";
+                    verifyHint.textContent = "Copy Verify Step";
+                    verifyHint.addEventListener("click", function () {
+                        copyTextToClipboard(String(delegation.verify_tool), "Verify tool name copied to clipboard.");
+                    });
+                    actions.appendChild(verifyHint);
+                }
+
+                section.appendChild(actions);
+
+                if (Array.isArray(delegation.allowed_paths) && delegation.allowed_paths.length > 0) {
+                    var allowedTitle = document.createElement("div");
+                    allowedTitle.className = "card-note";
+                    allowedTitle.textContent = "Allowed paths";
+                    section.appendChild(allowedTitle);
+                    section.appendChild(renderPathList(delegation.allowed_paths, "path-list"));
+                }
+
+                if (Array.isArray(delegation.forbidden_paths) && delegation.forbidden_paths.length > 0) {
+                    var forbiddenTitle = document.createElement("div");
+                    forbiddenTitle.className = "card-note";
+                    forbiddenTitle.textContent = "Forbidden paths";
+                    section.appendChild(forbiddenTitle);
+                    section.appendChild(renderPathList(delegation.forbidden_paths, "path-list"));
+                }
+
+                var promptTitle = document.createElement("div");
+                promptTitle.className = "card-note";
+                promptTitle.textContent = "Prompt";
+                section.appendChild(promptTitle);
+
+                var prompt = document.createElement("pre");
+                prompt.className = "delegation-prompt";
+                prompt.textContent = delegation.prompt || "No implementation prompt returned.";
+                section.appendChild(prompt);
+
+                return section;
+            }
+
+            function renderFeatureImplementationDelegationSection(featureId) {
+                var payload = getImplementationDelegation(featureId, "*");
+                if (!payload || !Array.isArray(payload.delegations) || payload.delegations.length === 0) return null;
+
+                var section = document.createElement("div");
+                section.className = "section-card";
+
+                var head = document.createElement("div");
+                head.className = "section-card-head";
+                head.innerHTML = '<span class="section-card-title">Prepared implementation tasks</span>';
+                var readyBadge = badge("active");
+                readyBadge.textContent = payload.delegations.length + " ready";
+                head.appendChild(readyBadge);
+                section.appendChild(head);
+
+                var copy = document.createElement("div");
+                copy.className = "section-card-copy";
+                copy.textContent = payload.message
+                    || "Specrail prepared delegated implementation prompts for this feature. Expand the relevant outcome card to inspect or copy a prompt.";
+                section.appendChild(copy);
+
+                var list = document.createElement("div");
+                list.className = "delegation-grid";
+                payload.delegations.forEach(function (delegation) {
+                    var item = document.createElement("div");
+                    item.className = "delegation-item";
+
+                    var title = document.createElement("div");
+                    title.className = "delegation-item-title";
+                    title.textContent = (delegation.outcome_title || delegation.outcome_id || "Outcome") + " (" + (delegation.outcome_id || "unknown") + ")";
+                    item.appendChild(title);
+
+                    var meta = document.createElement("div");
+                    meta.className = "delegation-item-meta";
+                    meta.textContent = "agent=" + String(delegation.agent || "unknown") + " • verify=" + String(delegation.verify_tool || "specrail_verify");
+                    item.appendChild(meta);
+
+                    var itemActions = document.createElement("div");
+                    itemActions.className = "delegation-actions";
+                    var copyBtn = document.createElement("button");
+                    copyBtn.type = "button";
+                    copyBtn.className = "btn btn-primary btn-sm";
+                    copyBtn.textContent = "Copy Prompt";
+                    copyBtn.addEventListener("click", function () {
+                        copyTextToClipboard(delegation.prompt || "", "Implementation prompt copied to clipboard.");
+                    });
+                    itemActions.appendChild(copyBtn);
+                    item.appendChild(itemActions);
+
+                    list.appendChild(item);
+                });
+                section.appendChild(list);
+
+                if (Array.isArray(payload.blocked) && payload.blocked.length > 0) {
+                    var blockedTitle = document.createElement("div");
+                    blockedTitle.className = "card-note";
+                    blockedTitle.textContent = payload.blocked.length + " outcome" + (payload.blocked.length !== 1 ? "s are" : " is") + " still blocked by gates.";
+                    section.appendChild(blockedTitle);
                 }
 
                 return section;
@@ -3333,7 +3647,7 @@
                                         ? "Activate one outcome before running implement."
                                         : outcomeHasTestGaps(activeOutcome)
                                             ? "Review the active outcome tests and resolve readiness gaps before implementation."
-                                    : implementStatus.detail,
+                                            : implementStatus.detail,
                             status: implementStatus
                         });
                         appendActionButton(fActions, {
@@ -3353,7 +3667,7 @@
                                             ? "Review the active outcome tests and resolve readiness gaps before verification."
                                             : !canVerify
                                                 ? "Run implement on the active outcome before verification becomes relevant."
-                                    : verifyStatus.detail,
+                                                : verifyStatus.detail,
                             status: verifyStatus
                         });
                         var feEditBtn = document.createElement("button"); feEditBtn.className = "btn btn-ghost btn-sm";
@@ -3368,6 +3682,9 @@
                         featureNote.className = "card-note";
                         featureNote.textContent = featureVerifiedCount + " of " + featureOutcomeCount + " outcomes are verified for this feature.";
                         content.appendChild(featureNote);
+
+                        var featureDelegationSection = renderFeatureImplementationDelegationSection(featureId);
+                        if (featureDelegationSection) content.appendChild(featureDelegationSection);
 
                         if (state.editingFeatureId === featureId && state.featureDraft) {
                             var d = state.featureDraft;
@@ -3511,7 +3828,7 @@
                                             tool: implementTool,
                                             args: {},
                                             kind: "primary",
-                                            refresh: true,
+                                            refresh: false,
                                             disabled: hasTestGaps,
                                             tooltip: hasTestGaps
                                                 ? "Review this outcome's tests and resolve readiness gaps before implementation."
@@ -3563,6 +3880,9 @@
 
                                 var healthSection = renderTestHealthSection(featureId, outcome, isActiveOutcome);
                                 if (healthSection) content.appendChild(healthSection);
+
+                                var implementationDelegationSection = renderImplementationDelegationSection(featureId, outcome.id);
+                                if (implementationDelegationSection) content.appendChild(implementationDelegationSection);
 
                                 var suggestionPreviewSection = renderSuggestionPreview(featureId, outcome.id);
                                 if (suggestionPreviewSection) content.appendChild(suggestionPreviewSection);
