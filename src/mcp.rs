@@ -533,7 +533,7 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     };
 
     repo.ensure_hierarchy()?;
-    let config = repo.load_config()?;
+    let config = repo.effective_config()?;
     let state = repo.load_state()?;
     let features = repo.list_features()?;
     let solutions = repo.list_solutions()?;

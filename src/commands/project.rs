@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 
 use crate::core::{
+    config::ProjectSettings,
     ledger::Ledger,
     models::{LedgerEvent, LedgerEventType, ProjectSpec},
     repository::Repository,
@@ -11,6 +12,7 @@ pub struct NewArgs {
     pub id: String,
     pub title: String,
     pub purpose: String,
+    pub test_command: Option<String>,
 }
 
 pub struct EditArgs {
@@ -34,6 +36,16 @@ pub(crate) fn create(repo: &Repository, args: NewArgs) -> Result<ProjectSpec> {
     };
     repo.save_project(&project)?;
 
+    // Create the per-project settings file so each specrail project has its
+    // own project.yaml with the test_command for its software project.
+    let settings = ProjectSettings {
+        test_command: args
+            .test_command
+            .unwrap_or_else(|| ProjectSettings::for_project(&repo.root).test_command),
+        default_agent: None,
+    };
+    repo.save_project_settings(&project.id, &settings)?;
+
     let event = LedgerEvent::new(LedgerEventType::ProjectCreated)
         .with_message(format!("project '{}' created", project.id));
     Ledger::append(&repo.ledger_path(), &event)?;
@@ -45,6 +57,10 @@ pub fn new(repo: &Repository, args: NewArgs) -> Result<()> {
     let project = create(repo, args)?;
     println!("✓ Project '{}' created: {}", project.id, project.title);
     println!("  Stored in .specrail/specrail.db");
+    println!(
+        "  Settings:  .specrail/projects/{}.yaml (edit to set test_command)",
+        project.id
+    );
     println!("  Next: specrail component new {} <component-id>", project.id);
     Ok(())
 }
@@ -72,6 +88,12 @@ pub fn show(repo: &Repository, id: &str) -> Result<()> {
     println!("Project:  {} — {}", project.id, project.title);
     println!("Solution: {}", project.solution_id);
     println!("Purpose:  {}", project.purpose);
+    if let Ok(settings) = repo.load_project_settings(id) {
+        println!("Test command: {}", settings.test_command);
+        if let Some(agent) = &settings.default_agent {
+            println!("Default agent: {agent}");
+        }
+    }
     println!("Components: {}", components.len());
     Ok(())
 }

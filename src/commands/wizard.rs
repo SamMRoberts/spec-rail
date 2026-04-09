@@ -160,6 +160,9 @@ fn prompt_hierarchy<R: BufRead, W: Write>(
     let project_id = prompt_required(reader, writer, "Project ID: ")?;
     let project_title = prompt_required(reader, writer, "Project title: ")?;
     let project_purpose = prompt_required(reader, writer, "Project purpose: ")?;
+    writeln!(writer, "  test-command — shell command used by `specrail verify` to run this project's tests")?;
+    writeln!(writer, "                 (e.g. `dotnet test src/Api/Api.csproj`, `npm test`, `cargo test`)")?;
+    let project_test_command = prompt_optional(reader, writer, "Test command (leave blank to auto-detect): ")?;
     project::create(
         repo,
         project::NewArgs {
@@ -167,6 +170,7 @@ fn prompt_hierarchy<R: BufRead, W: Write>(
             id: project_id.clone(),
             title: project_title,
             purpose: project_purpose,
+            test_command: project_test_command,
         },
     )?;
 

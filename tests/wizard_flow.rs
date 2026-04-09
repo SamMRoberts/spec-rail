@@ -24,6 +24,7 @@ fn init_walkthrough_creates_feature_and_multiple_outcomes() {
              api\n\
              API\n\
              Core API project.\n\
+             \n\
              auth-core\n\
              Authentication\n\
              Authentication domain component.\n\
@@ -120,6 +121,7 @@ fn init_walkthrough_can_repeat_features() {
              api\n\
              API\n\
              Core API project.\n\
+             \n\
              auth-core\n\
              Authentication\n\
              Authentication domain component.\n\

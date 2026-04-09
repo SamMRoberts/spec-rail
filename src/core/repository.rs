@@ -1,8 +1,10 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
+use crate::runtime::filesystem::ensure_dir;
+
 use super::{
-    config::ProjectConfig,
+    config::{ProjectConfig, ProjectSettings},
     database::Database,
     models::{
         ComponentSpec, FeatureSpec, OutcomeSpec, ProjectSpec, ProjectState, SolutionSpec,
@@ -69,6 +71,16 @@ impl Repository {
         self.specrail_dir().join("project.yaml")
     }
 
+    /// Directory that holds one `<project-id>.yaml` file per specrail project.
+    pub fn projects_config_dir(&self) -> PathBuf {
+        self.specrail_dir().join("projects")
+    }
+
+    /// Path to the per-project settings file for the given project ID.
+    pub fn project_settings_path(&self, project_id: &str) -> PathBuf {
+        self.projects_config_dir().join(format!("{project_id}.yaml"))
+    }
+
     pub fn ledger_path(&self) -> PathBuf {
         self.state_dir().join("ledger.jsonl")
     }
@@ -77,6 +89,46 @@ impl Repository {
 
     pub fn load_config(&self) -> Result<ProjectConfig> {
         ProjectConfig::load(&self.project_config_path())
+    }
+
+    /// Load per-project settings for the given project ID.
+    pub fn load_project_settings(&self, project_id: &str) -> Result<ProjectSettings> {
+        ProjectSettings::load(&self.project_settings_path(project_id))
+    }
+
+    /// Persist per-project settings for the given project ID, creating the
+    /// `.specrail/projects/` directory if it does not yet exist.
+    pub fn save_project_settings(&self, project_id: &str, settings: &ProjectSettings) -> Result<()> {
+        ensure_dir(&self.projects_config_dir())?;
+        settings.save(&self.project_settings_path(project_id))
+    }
+
+    /// Return the effective [`ProjectConfig`] for the currently active project.
+    ///
+    /// When the active project has a per-project settings file (at
+    /// `.specrail/projects/<id>.yaml`), its `test_command` and optional
+    /// `default_agent` take precedence over the workspace-level
+    /// `.specrail/project.yaml`.  Falls back to the workspace config when no
+    /// per-project file exists.
+    pub fn effective_config(&self) -> Result<ProjectConfig> {
+        let state = self.load_state()?;
+        if let Some(project_id) = &state.active_project {
+            let settings_path = self.project_settings_path(project_id);
+            if settings_path.exists() {
+                if let Ok(settings) = ProjectSettings::load(&settings_path) {
+                    let workspace = self.load_config().unwrap_or_default();
+                    return Ok(ProjectConfig {
+                        version: workspace.version,
+                        name: workspace.name,
+                        test_command: settings.test_command,
+                        default_agent: settings
+                            .default_agent
+                            .unwrap_or(workspace.default_agent),
+                    });
+                }
+            }
+        }
+        self.load_config()
     }
 
     pub fn load_state(&self) -> Result<ProjectState> {
@@ -153,6 +205,14 @@ impl Repository {
                 title: "Default Project".to_string(),
                 purpose: "Default project for this repository.".to_string(),
             })?;
+        }
+
+        // Ensure the default project has its own project.yaml settings file.
+        if !self.project_settings_path(DEFAULT_PROJECT_ID).exists() {
+            self.save_project_settings(
+                DEFAULT_PROJECT_ID,
+                &ProjectSettings::for_project(&self.root),
+            )?;
         }
 
         if !database.component_exists(DEFAULT_COMPONENT_ID)? {

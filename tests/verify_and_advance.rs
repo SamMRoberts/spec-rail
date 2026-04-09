@@ -263,18 +263,20 @@ fn test_set_status_updates_manifest() {
 
 // ── verify + advance happy path ───────────────────────────────────────────────
 
-/// This test patches project.yaml so the test_command is `true` (always exits 0),
-/// allowing us to exercise the verify → advance path without a real test suite.
+/// This test patches the per-project settings file so the test_command is
+/// `true` (always exits 0), allowing us to exercise the verify → advance path
+/// without a real test suite.
 #[test]
 fn verify_and_advance_happy_path() {
     let dir = TempDir::new().unwrap();
     full_setup(&dir);
 
-    // Write a project.yaml with test_command: true
-    let config_path = dir.path().join(".specrail/project.yaml");
+    // Write per-project settings for default-project with test_command: true
+    let project_config_dir = dir.path().join(".specrail/projects");
+    fs::create_dir_all(&project_config_dir).unwrap();
     fs::write(
-        &config_path,
-        "version: 1\nname: test\ntest_command: 'true'\ndefault_agent: generic-shell\n",
+        project_config_dir.join("default-project.yaml"),
+        "test_command: 'true'\n",
     )
     .unwrap();
 
@@ -301,11 +303,12 @@ fn verify_marks_outcome_failed_on_test_failure() {
     let dir = TempDir::new().unwrap();
     full_setup(&dir);
 
-    // Patch test_command to something that always fails
-    let config_path = dir.path().join(".specrail/project.yaml");
+    // Patch per-project settings for default-project with a command that always fails
+    let project_config_dir = dir.path().join(".specrail/projects");
+    fs::create_dir_all(&project_config_dir).unwrap();
     fs::write(
-        &config_path,
-        "version: 1\nname: test\ntest_command: 'false'\ndefault_agent: generic-shell\n",
+        project_config_dir.join("default-project.yaml"),
+        "test_command: 'false'\n",
     )
     .unwrap();
 

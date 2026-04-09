@@ -4,7 +4,7 @@ use crate::core::repository::Repository;
 
 pub fn run(repo: &Repository) -> Result<()> {
     let state = repo.load_state()?;
-    let config = repo.load_config()?;
+    let config = repo.effective_config()?;
 
     println!("specrail status");
     println!("{}", "═".repeat(50));

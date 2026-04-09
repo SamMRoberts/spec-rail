@@ -381,7 +381,7 @@ fn prepare_test_generation(
         bail!("outcome filter requires a feature filter");
     }
 
-    let config = repo.load_config()?;
+    let config = repo.effective_config()?;
     let manifest = repo.load_manifest()?;
     let features = match feature_filter {
         Some(feature_id) => vec![repo.load_feature(feature_id)?],
