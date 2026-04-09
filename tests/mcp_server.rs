@@ -1326,9 +1326,22 @@ fn mcp_implement_returns_delegation_without_spawning_nested_agent() {
         "generic-shell"
     );
     assert_eq!(
+        implement["result"]["structuredContent"]["instructions"]["mode"],
+        "apply_in_current_conversation"
+    );
+    assert_eq!(
+        implement["result"]["structuredContent"]["instructions"]["requires_parent_agent_edits"],
+        json!(true)
+    );
+    assert_eq!(
         implement["result"]["structuredContent"]["delegation"]["verify_tool"],
         "specrail_verify"
     );
+    assert!(implement["result"]["structuredContent"]["instructions"]["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|step| step == "After the code changes are complete, call specrail_verify."));
     assert!(implement["result"]["structuredContent"]["delegation"]["prompt"]
         .as_str()
         .unwrap()

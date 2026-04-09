@@ -62,7 +62,7 @@ Responsibilities:
 - Choose feature order using dependencies.
 - Choose outcome order using `order` and `prerequisites`.
 - Activate the correct feature and outcome.
-- Run `specrail_implement`, `specrail_verify`, and `specrail_advance` in sequence while keeping implementation limited to the code required by the active outcome's tests.
+- Run `specrail_implement`, apply its returned delegation prompt in the current conversation, then run `specrail_verify` and `specrail_advance` while keeping implementation limited to the code required by the active outcome's tests.
 - Repeat until all outcomes and features are complete.
 
 ## Recommended Flow

@@ -34,7 +34,7 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 8. Expand broad feature and outcome ideas into narrower, clearer slices, then confirm the expanded structure with the user before creating it.
 9. Keep looping on features and outcomes until the user explicitly says they are done.
 10. If the recommended skill is `specrail-prepare-tests`, prepare the tests for the current or next outcome until implementation is no longer blocked by missing or `planned` tests. Use `specrail_outcome_test_review` to inspect test gaps before asking questions.
-11. If the recommended skill is `specrail-run-workflow`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, `specrail_verify`, then `specrail_advance`.
+11. If the recommended skill is `specrail-run-workflow`, run the canonical loop: activate the correct feature and outcome, `specrail_implement`, apply its returned delegation prompt in the current conversation, then `specrail_verify`, then `specrail_advance`.
 12. After every mutating step, call `specrail_status` again and keep following the updated guidance until the workflow is complete or the user asks to stop.
 
 ## Feature and outcome interview rules
@@ -75,6 +75,7 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 - Prefer the MCP tools over editing `.specrail/*` files directly.
 - **Test-first is non-negotiable**: never call `specrail_implement` until all required tests for the active outcome are registered, their files exist, and they are in `written` (not `planned`) status. Use `specrail_outcome_test_review` to verify this before implementation.
 - Only create or generate tests that belong to the current outcome's required scope; justified regression tests are allowed when shared code is being touched, but say why.
+- After `specrail_implement`, inspect `structuredContent.delegation` and carry out the returned implementation prompt yourself before moving on to verification.
 - Once tests are defined and written, only implement the minimum code needed for those current tests to pass.
 - Treat `workflow.blockers` as reasons to stop and resolve the blocking stage before running implementation.
 - If the repository was opened outside the project root, pass the workspace path through `cwd`.

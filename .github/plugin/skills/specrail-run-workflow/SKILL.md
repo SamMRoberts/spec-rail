@@ -23,10 +23,11 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 8. Activate the first eligible feature with `specrail_feature_activate`.
 9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
 10. Run `specrail_implement` for the active outcome.
-11. Run `specrail_verify` for the active outcome.
-12. If verification succeeds, run `specrail_advance` to move to the next outcome.
-13. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
-14. Continue until all planned features and outcomes are verified or the user asks to stop.
+11. Read `structuredContent.delegation`, apply `delegation.prompt` yourself in the current conversation, and keep edits within `allowed_paths` and `forbidden_paths`.
+12. Run `specrail_verify` for the active outcome.
+13. If verification succeeds, run `specrail_advance` to move to the next outcome.
+14. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
+15. Continue until all planned features and outcomes are verified or the user asks to stop.
 
 ## Ordering rules
 
@@ -43,9 +44,10 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 - Do not switch away from an already active, unverified outcome unless the user explicitly asks to reorder or abandon it.
 - Treat outcome success as `Verified`, not merely `Active`.
 - Do not advance to the next outcome after activation alone.
-- Follow the canonical execution loop: `specrail_implement`, then `specrail_verify`, then `specrail_advance`.
+- Follow the canonical execution loop: `specrail_implement`, apply the returned delegation prompt in the current conversation, then `specrail_verify`, then `specrail_advance`.
 - Before `specrail_implement`, call `specrail_outcome_test_review` and constrain the scope to the active outcome's declared tests plus any explicitly justified regression coverage.
 - During implementation, write only the smallest amount of code needed to satisfy the active outcome's tests.
+- Treat `specrail_implement` as prompt preparation only; do not assume it already changed workspace files.
 - Do not implement future outcomes, speculative abstractions, or extra behavior that is not required by the current tests.
 - Do not bypass `specrail_advance` by directly activating the next outcome unless the user explicitly wants a manual override.
 - After each activation or advancement step, call `specrail_status` again to confirm the new state.
@@ -80,11 +82,12 @@ When a feature is completed:
 6. Optionally run an explicit red phase once tests are written so the current test command still proves the new work fails before implementation.
 7. Activate that outcome.
 8. Run `specrail_implement`.
-9. Run `specrail_verify`.
-10. If verification succeeds, run `specrail_advance`.
-11. Repeat until the feature is complete.
-12. Move to the next feature.
-13. Repeat until the full workflow is complete.
+9. Apply `structuredContent.delegation.prompt` in the current conversation while respecting the returned path constraints.
+10. Run `specrail_verify`.
+11. If verification succeeds, run `specrail_advance`.
+12. Repeat until the feature is complete.
+13. Move to the next feature.
+14. Repeat until the full workflow is complete.
 
 ## User interaction guidance
 
@@ -93,7 +96,7 @@ When a feature is completed:
 - Before implementation, remind the user which tests define the current scope and that no extra code should be added beyond what those tests require.
 - Tell the user which feature and outcome are active after each successful transition.
 - If the project was launched outside the repository root, pass the workspace path through the `cwd` argument.
-- This skill guides execution order and orchestration; the `specrail_*activate`, `specrail_implement`, `specrail_verify`, and `specrail_advance` tools perform the direct actions.
+- This skill guides execution order and orchestration; the `specrail_*activate`, `specrail_verify`, and `specrail_advance` tools perform direct state changes, while `specrail_implement` returns the delegated implementation prompt for the parent agent to execute.
 
 ## Example
 

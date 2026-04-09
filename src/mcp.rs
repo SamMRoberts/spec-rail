@@ -2080,6 +2080,17 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
                 "outcome_count": outcomes.len(),
                 "delegations": delegations,
                 "blocked": blocked,
+                "instructions": {
+                    "mode": "apply_in_current_conversation",
+                    "requires_parent_agent_edits": true,
+                    "steps": [
+                        "For each unblocked delegation, read delegation.prompt and apply the implementation in this workspace from the current MCP client/agent.",
+                        "Respect each delegation.allowed_paths and delegation.forbidden_paths while editing.",
+                        "Activate the target outcome with specrail_outcome_activate before verifying it.",
+                        "After implementation edits are complete for the active outcome, call specrail_verify.",
+                        "If verification succeeds, call specrail_advance."
+                    ]
+                },
                 "activate_tool": "specrail_outcome_activate",
                 "verify_tool": "specrail_verify",
                 "advance_tool": "specrail_advance"
@@ -2093,7 +2104,19 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
             "Prepared delegated implementation for {}:{} using agent '{}'. Have the current MCP client/agent apply the prompt in this conversation, then run {}.",
             delegation.feature_id, delegation.outcome_id, delegation.agent, delegation.verify_tool
         ),
-        Some(json!({ "delegation": delegation })),
+        Some(json!({
+            "delegation": delegation,
+            "instructions": {
+                "mode": "apply_in_current_conversation",
+                "requires_parent_agent_edits": true,
+                "steps": [
+                    "Read structuredContent.delegation.prompt and implement it in this workspace from the current MCP client/agent.",
+                    "Respect delegation.allowed_paths and delegation.forbidden_paths while editing.",
+                    "After the code changes are complete, call specrail_verify.",
+                    "If verification succeeds, call specrail_advance."
+                ]
+            }
+        })),
     ))
 }
 
@@ -3200,7 +3223,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_implement",
             "title": "Implement",
-            "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns the prompt and path constraints but never spawns a nested agent. If feature_id is provided, returns one delegated task per outcome in order.",
+            "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns structuredContent.delegation.prompt plus path constraints, but never spawns a nested agent. The parent agent must apply that prompt in the current conversation, then call specrail_verify. If feature_id is provided, returns one delegated task per outcome in order.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
