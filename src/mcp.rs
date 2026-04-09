@@ -324,6 +324,11 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         summarize_for_log(&Value::Object(arguments.clone()).to_string())
     ));
 
+    {
+        let mut stderr = std::io::stderr().lock();
+        let _ = writeln!(stderr, "[SpecRail MCP] >> {name}");
+    }
+
     let result = match name {
         "specrail_status" => tool_status(arguments),
         "specrail_feature_navigate" => tool_feature_navigate(arguments),
@@ -368,6 +373,17 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_advance" => tool_advance(arguments),
         other => Ok(tool_error_payload(anyhow!("unknown tool '{other}'"))),
     };
+
+    match &result {
+        Ok(_) => {
+            let mut stderr = std::io::stderr().lock();
+            let _ = writeln!(stderr, "[SpecRail MCP] << {name} ok");
+        }
+        Err(error) => {
+            let mut stderr = std::io::stderr().lock();
+            let _ = writeln!(stderr, "[SpecRail MCP] << {name} error: {error:#}");
+        }
+    }
 
     match &result {
         Ok(payload) => mcp_log_info(format!(
