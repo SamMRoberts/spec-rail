@@ -577,7 +577,7 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         "outcome_selection"
     );
     assert_eq!(
-        outcome_picker["result"]["_meta"]["ui/resourceUri"],
+        outcome_picker["result"]["_meta"]["ui"]["resourceUri"],
         "ui://specrail/feature-navigate"
     );
     assert_eq!(
@@ -637,6 +637,14 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["testSuggestTool"],
         "specrail_test_suggest"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["testAddTool"],
+        "specrail_test_add"
+    );
+    assert_eq!(
+        outcome_picker["result"]["structuredContent"]["nextActions"]["testSetStatusTool"],
+        "specrail_test_set_status"
     );
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["nextActions"]["implementTool"],

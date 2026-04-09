@@ -889,6 +889,9 @@ fn feature_navigate_outcome_actions() -> Value {
         "verifyTool": "specrail_verify",
         "advanceTool": "specrail_advance",
         "testListTool": "specrail_test_list",
+        "testAddTool": "specrail_test_add",
+        "testSetStatusTool": "specrail_test_set_status",
+        "testApplyGeneratedTool": "specrail_test_apply_generated",
         "testReviewTool": "specrail_outcome_test_review",
         "testSuggestTool": "specrail_test_suggest",
         "testGenerateTool": "specrail_test_generate",
@@ -1317,7 +1320,19 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         payload.insert("suggestedNewOutcomeOrder".to_string(), json!(next_order));
         payload.insert("nextActions".to_string(), feature_navigate_outcome_actions());
 
-        return Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))));
+        let verified_count = outcome_summaries
+            .iter()
+            .filter(|o| o.get("status").and_then(Value::as_str) == Some("verified"))
+            .count();
+        let active_outcome_str = active_outcome_id.as_deref().unwrap_or("none");
+        let outcome_text = format!(
+            "Feature '{}' ({feature_id}) — {} outcome(s), {verified_count} verified. Active outcome: {active_outcome_str}. \
+             Use the embedded navigator UI to manage outcomes and run the TDD workflow.",
+            feature.title,
+            outcome_summaries.len(),
+        );
+
+        return Ok(feature_navigate_payload(outcome_text, Some(Value::Object(payload))));
     }
 
     let mut payload = Map::new();
@@ -1336,7 +1351,15 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
     payload.insert("features".to_string(), json!(scoped_feature_summaries));
     payload.insert("nextActions".to_string(), feature_navigate_feature_actions());
 
-    Ok(feature_navigate_payload(String::new(), Some(Value::Object(payload))))
+    let feature_text = format!(
+        "{} feature(s) in scope. Active feature: {}. Active outcome: {}. \
+         Use the embedded navigator UI to select a feature and manage its outcomes.",
+        scoped_feature_summaries.len(),
+        active_feature_id.as_deref().unwrap_or("none"),
+        active_outcome_id.as_deref().unwrap_or("none"),
+    );
+
+    Ok(feature_navigate_payload(feature_text, Some(Value::Object(payload))))
 }
 
 fn outcome_available_actions(
@@ -2592,8 +2615,7 @@ fn feature_navigate_payload(text: String, structured_content: Option<Value>) -> 
             "ui": {
                 "resourceUri": FEATURE_NAVIGATE_APP_URI,
                 "visibility": ["model", "app"]
-            },
-            "ui/resourceUri": FEATURE_NAVIGATE_APP_URI
+            }
         })),
         false,
     )
