@@ -29,6 +29,35 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     "2024-11-05",
 ];
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+enum McpLogLevel {
+    Error,
+    Warning,
+    Info,
+    Verbose,
+}
+
+impl McpLogLevel {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Error => "error",
+            Self::Warning => "warning",
+            Self::Info => "info",
+            Self::Verbose => "verbose",
+        }
+    }
+
+    fn from_env_value(value: &str) -> Option<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "error" => Some(Self::Error),
+            "warn" | "warning" => Some(Self::Warning),
+            "info" => Some(Self::Info),
+            "debug" | "trace" | "verbose" => Some(Self::Verbose),
+            _ => None,
+        }
+    }
+}
+
 fn negotiate_protocol_version(requested: Option<&str>) -> &'static str {
     SUPPORTED_PROTOCOL_VERSIONS
         .iter()
@@ -53,10 +82,34 @@ fn server_capabilities() -> Value {
     })
 }
 
-fn mcp_debug_log(message: impl AsRef<str>) {
-    let message = message.as_ref();
+fn mcp_should_log(level: McpLogLevel) -> bool {
+    let configured = std::env::var("SPECRAIL_MCP_LOG_LEVEL")
+        .ok()
+        .as_deref()
+        .and_then(McpLogLevel::from_env_value)
+        .or_else(|| {
+            if std::env::var_os("SPECRAIL_MCP_DEBUG_STDERR").is_some()
+                || std::env::var_os("SPECRAIL_MCP_DEBUG_LOG").is_some()
+            {
+                Some(McpLogLevel::Verbose)
+            } else {
+                None
+            }
+        });
 
-    let log_to_stderr = std::env::var_os("SPECRAIL_MCP_DEBUG_STDERR").is_some();
+    configured.is_some_and(|configured| level <= configured)
+}
+
+fn mcp_log(level: McpLogLevel, message: impl AsRef<str>) {
+    if !mcp_should_log(level) {
+        return;
+    }
+
+    let message = message.as_ref();
+    let formatted = format!("[{}] {message}", level.as_str());
+
+    let log_to_stderr = std::env::var_os("SPECRAIL_MCP_DEBUG_STDERR").is_some()
+        || std::env::var_os("SPECRAIL_MCP_LOG_LEVEL").is_some();
     let log_path = std::env::var_os("SPECRAIL_MCP_DEBUG_LOG");
 
     if !log_to_stderr && log_path.is_none() {
@@ -65,7 +118,7 @@ fn mcp_debug_log(message: impl AsRef<str>) {
 
     if log_to_stderr {
         let mut stderr = std::io::stderr().lock();
-        let _ = writeln!(stderr, "[SpecRail MCP] {message}");
+        let _ = writeln!(stderr, "[SpecRail MCP] {formatted}");
     }
 
     let Some(path) = log_path else {
@@ -76,7 +129,23 @@ fn mcp_debug_log(message: impl AsRef<str>) {
         return;
     };
 
-    let _ = writeln!(file, "{message}");
+    let _ = writeln!(file, "{formatted}");
+}
+
+fn mcp_log_info(message: impl AsRef<str>) {
+    mcp_log(McpLogLevel::Info, message);
+}
+
+fn mcp_log_warning(message: impl AsRef<str>) {
+    mcp_log(McpLogLevel::Warning, message);
+}
+
+fn mcp_log_error(message: impl AsRef<str>) {
+    mcp_log(McpLogLevel::Error, message);
+}
+
+fn mcp_debug_log(message: impl AsRef<str>) {
+    mcp_log(McpLogLevel::Verbose, message);
 }
 
 fn summarize_for_log(text: &str) -> String {
@@ -102,7 +171,7 @@ pub fn run() -> Result<()> {
     let mut writer = stdout.lock();
     let mut server = McpServer::default();
 
-    mcp_debug_log(format!(
+    mcp_log_info(format!(
         "server start pid={} cwd={}",
         std::process::id(),
         std::env::current_dir()
@@ -249,7 +318,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         None => bail!("missing tool arguments"),
     };
 
-    mcp_debug_log(format!(
+    mcp_log_info(format!(
         "tool call start name={} args={}",
         name,
         summarize_for_log(&Value::Object(arguments.clone()).to_string())
@@ -300,12 +369,12 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
     };
 
     match &result {
-        Ok(payload) => mcp_debug_log(format!(
+        Ok(payload) => mcp_log_info(format!(
             "tool call success name={} result={}",
             name,
             summarize_for_log(&payload.to_string())
         )),
-        Err(error) => mcp_debug_log(format!("tool call error name={} error={error:#}", name)),
+        Err(error) => mcp_log_error(format!("tool call error name={} error={error:#}", name)),
     }
 
     result
@@ -3019,7 +3088,7 @@ fn read_message(reader: &mut impl BufRead) -> Result<Option<(Value, MessageTrans
         let mut line = String::new();
         let read = reader.read_line(&mut line)?;
         if read == 0 {
-            mcp_debug_log("read_message: EOF");
+            mcp_log_info("read_message: EOF");
             return Ok(None);
         }
 
@@ -3027,7 +3096,7 @@ fn read_message(reader: &mut impl BufRead) -> Result<Option<(Value, MessageTrans
         mcp_debug_log(format!("read_message header: {line:?}"));
 
         if content_length.is_none() && line.starts_with('{') {
-            mcp_debug_log("read_message: treating first line as raw JSON payload");
+            mcp_log_warning("read_message: treating first line as raw JSON payload");
             let message = serde_json::from_str(line).context("parsing raw JSON-RPC payload")?;
             return Ok(Some((message, MessageTransport::RawJsonLine)));
         }

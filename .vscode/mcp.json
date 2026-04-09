@@ -4,6 +4,7 @@
             "type": "stdio",
             "command": "${workspaceFolder}/target/debug/specrail",
             "env": {
+                "SPECRAIL_MCP_LOG_LEVEL": "verbose",
                 // "SPECRAIL_MCP_DEBUG_LOG": "/tmp/specrail-mcp-debug.log",
                 "SPECRAIL_MCP_DEBUG_STDERR": "1"
             },

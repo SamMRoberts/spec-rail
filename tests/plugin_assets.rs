@@ -28,6 +28,10 @@ fn plugin_mcp_config_runs_specrail_mcp_server() {
     assert_eq!(config["mcpServers"]["specrail"]["type"], "stdio");
     assert_eq!(config["mcpServers"]["specrail"]["command"], "specrail");
     assert_eq!(config["mcpServers"]["specrail"]["args"], serde_json::json!(["mcp-server"]));
+    assert_eq!(
+        config["mcpServers"]["specrail"]["env"]["SPECRAIL_MCP_LOG_LEVEL"],
+        "warning"
+    );
     // The packaged plugin must not enable debug stderr by default.
     assert!(
         config["mcpServers"]["specrail"]["env"]["SPECRAIL_MCP_DEBUG_STDERR"].is_null(),
@@ -47,6 +51,7 @@ fn workspace_mcp_config_uses_specrail_server_id() {
     assert!(mcp_config.contains("\"type\": \"stdio\""));
     assert!(mcp_config.contains("\"command\": \"${workspaceFolder}/target/debug/specrail\""));
     assert!(mcp_config.contains("\"mcp-server\""));
+    assert!(mcp_config.contains("\"SPECRAIL_MCP_LOG_LEVEL\": \"verbose\""));
     assert!(mcp_config.contains("\"SPECRAIL_MCP_DEBUG_STDERR\": \"1\""));
 }
 

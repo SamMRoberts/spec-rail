@@ -3,6 +3,9 @@
         "specrail": {
             "type": "stdio",
             "command": "specrail",
+            "env": {
+                "SPECRAIL_MCP_LOG_LEVEL": "warning"
+            },
             "args": [
                 "mcp-server"
             ]
