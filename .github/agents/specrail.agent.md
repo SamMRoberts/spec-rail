@@ -6,6 +6,9 @@ agents: ["Specrail Setup", "Specrail Plan", "Specrail Test Prep", "Specrail Exec
 user-invocable: true
 argument-hint: "Continue the workflow, or name a phase such as setup, planning, test prep, execution, or resume."
 handoffs:
+  - label: Continue With Suggestions
+    agent: Specrail Resume
+    prompt: Continue based on the current SpecRail workflow state and recommendations, but you decide which phase agent to delegate to without explicit user input.
   - label: Resume Current Workflow
     agent: Specrail Resume
     prompt: Inspect the current SpecRail state, determine the right resume point, and immediately hand off to the appropriate phase agent.
