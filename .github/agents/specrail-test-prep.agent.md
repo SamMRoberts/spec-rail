@@ -37,6 +37,15 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Only delegate to `Specrail Plan` or `Specrail Execute`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Run Workflow` handoff once all required tests are written and ready.
 
+## Decision picker requirement
+
+- Anytime you decide on solution, project, feature, outcome, or test actions, present a picker before execution.
+- Picker options must include:
+  - Current suggestion
+  - 1-3 alternate suggestions
+  - Custom free-text option
+- Do not register tests, change test status, generate test files, or hand off until the user confirms one picker option or provides custom text.
+
 ## Output
 
 - Summarize the current test gaps, the registered tests, and anything that still blocks implementation.
