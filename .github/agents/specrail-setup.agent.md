@@ -9,6 +9,7 @@ handoffs:
   - label: Plan Features
     agent: Specrail Plan
     prompt: The repository is initialized. Gather the next feature and outcome slice and confirm it before creating anything.
+    send: true
 ---
 
 You handle only repository bootstrap for SpecRail.

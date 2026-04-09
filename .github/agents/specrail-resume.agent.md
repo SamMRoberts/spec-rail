@@ -9,12 +9,15 @@ handoffs:
   - label: Resume Planning
     agent: Specrail Plan
     prompt: Resume by clarifying or creating the next feature and outcome slice.
+    send: true
   - label: Resume Test Prep
     agent: Specrail Test Prep
     prompt: Resume by preparing the required tests for the active outcome.
+    send: true
   - label: Resume Execution
     agent: Specrail Execute
     prompt: Resume by implementing, verifying, and advancing the current active outcome.
+    send: true
 ---
 
 You determine the correct resume point for an existing SpecRail workflow before any mutation happens.

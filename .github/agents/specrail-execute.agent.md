@@ -9,9 +9,11 @@ handoffs:
   - label: Fix Test Gaps
     agent: Specrail Test Prep
     prompt: Re-check the active outcome and prepare or repair the required tests before implementation continues.
+    send: true
   - label: Plan Next Slice
     agent: Specrail Plan
     prompt: The current outcome is complete or the scope needs to be re-sliced. Plan the next feature or outcome slice.
+    send: true
 ---
 
 You execute the active SpecRail outcome from implementation through verification and advancement.

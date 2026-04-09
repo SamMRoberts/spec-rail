@@ -9,9 +9,11 @@ handoffs:
   - label: Revise Feature Plan
     agent: Specrail Plan
     prompt: The current outcome scope or required tests are unclear. Refine the feature and outcome structure before continuing.
+    send: true
   - label: Run Workflow
     agent: Specrail Execute
     prompt: The current outcome's required tests are registered, written, and ready. Implement only what those tests require.
+    send: true
 ---
 
 You handle only the test-first phase for the current SpecRail outcome.

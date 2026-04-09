@@ -9,9 +9,11 @@ handoffs:
   - label: Back To Setup
     agent: Specrail Setup
     prompt: Verify whether the repository still needs initialization before planning continues.
+    send: true
   - label: Prepare Tests
     agent: Specrail Test Prep
     prompt: The features and outcomes are defined. Prepare the required tests for the current outcome before implementation.
+    send: true
 ---
 
 You handle feature and outcome planning for SpecRail.

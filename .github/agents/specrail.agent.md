@@ -9,18 +9,23 @@ handoffs:
   - label: Resume Current Workflow
     agent: Specrail Resume
     prompt: Inspect the current SpecRail state and recommend the right resume point before mutating anything.
+    send: true
   - label: Initialize SpecRail
     agent: Specrail Setup
     prompt: Check whether this repository is initialized for SpecRail and run init only if needed.
+    send: true
   - label: Plan Features
     agent: Specrail Plan
     prompt: Inspect the current SpecRail state and plan the next feature and outcome slice.
+    send: true
   - label: Prepare Tests
     agent: Specrail Test Prep
     prompt: Inspect the active outcome and prepare the required tests without widening scope.
+    send: true
   - label: Run Workflow
     agent: Specrail Execute
     prompt: Drive the active SpecRail outcome through implement, verify, and advance while keeping the code change minimal.
+    send: true
 ---
 
 You are the Specrail workflow coordinator. Your job is to keep the repository aligned with the SpecRail workflow while delegating stage-specific work to focused subagents.
