@@ -1254,7 +1254,7 @@ fn mcp_test_generate_promotes_existing_planned_test_to_written() {
 }
 
 #[test]
-fn mcp_implement_returns_delegation_without_spawning_nested_agent() {
+fn mcp_implement_runs_cli_implement_command() {
     let dir = TempDir::new().unwrap();
     let mut client = McpClient::spawn(dir.path());
     client.initialize();
@@ -1309,7 +1309,6 @@ fn mcp_implement_returns_delegation_without_spawning_nested_agent() {
         }),
     );
     fs::create_dir_all(dir.path().join("tests/auth")).unwrap();
-    assert!(dir.path().join("tests/auth").is_dir());
     fs::write(
         dir.path().join("tests/auth/login.rs"),
         "#[test]\nfn logs_in() {\n    assert!(true);\n}\n",
@@ -1352,32 +1351,31 @@ fn mcp_implement_returns_delegation_without_spawning_nested_agent() {
         }),
     );
 
-    assert_eq!(implement["result"]["isError"], json!(false));
-    assert_eq!(
-        implement["result"]["structuredContent"]["delegation"]["agent"],
-        "generic-shell"
+    // The CLI was actually invoked: structuredContent carries a CliToolResult shape.
+    let sc = &implement["result"]["structuredContent"];
+    assert!(
+        sc.get("command").is_some(),
+        "expected structuredContent.command (CliToolResult), got: {sc}"
     );
-    assert_eq!(
-        implement["result"]["structuredContent"]["instructions"]["mode"],
-        "apply_in_current_conversation"
+    assert!(
+        sc.get("stdout").is_some(),
+        "expected structuredContent.stdout (CliToolResult), got: {sc}"
     );
-    assert_eq!(
-        implement["result"]["structuredContent"]["instructions"]["requires_parent_agent_edits"],
-        json!(true)
+    assert!(
+        sc.get("stderr").is_some(),
+        "expected structuredContent.stderr (CliToolResult), got: {sc}"
     );
+    // generic-shell without SPECRAIL_AGENT_CMD must surface a meaningful error.
     assert_eq!(
-        implement["result"]["structuredContent"]["delegation"]["verify_tool"],
-        "specrail_verify"
+        sc["success"], json!(false),
+        "expected specrail implement to fail when SPECRAIL_AGENT_CMD is unset"
     );
-    assert!(implement["result"]["structuredContent"]["instructions"]["steps"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|step| step == "After the code changes are complete, call specrail_verify."));
-    assert!(implement["result"]["structuredContent"]["delegation"]["prompt"]
-        .as_str()
-        .unwrap()
-        .contains("User login"));
+    let stderr = sc["stderr"].as_str().unwrap_or("");
+    let stdout = sc["stdout"].as_str().unwrap_or("");
+    assert!(
+        stderr.contains("SPECRAIL_AGENT_CMD") || stdout.contains("SPECRAIL_AGENT_CMD"),
+        "expected error to mention SPECRAIL_AGENT_CMD; stderr={stderr:?} stdout={stdout:?}"
+    );
 
     client.shutdown();
 }

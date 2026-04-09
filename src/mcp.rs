@@ -2053,110 +2053,13 @@ fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
-    let repo = discover_repo(arguments)?;
-    let agent_override = optional_string(arguments, "agent");
-    let feature_id = optional_string(arguments, "feature_id");
-
-    // If feature_id is provided, prepare implementation for all outcomes in order
-    if let Some(feature_id) = feature_id {
-        let mut outcomes = repo.list_outcomes(&feature_id)?;
-        outcomes.sort_by_key(|outcome| outcome.order);
-        if outcomes.is_empty() {
-            return Ok(tool_success_payload(
-                format!("No outcomes found for feature '{feature_id}'."),
-                Some(json!({
-                    "feature_id": feature_id,
-                    "outcome_count": 0,
-                    "summary": "Feature has no outcomes to implement."
-                })),
-            ));
-        }
-
-        let mut delegations = Vec::new();
-        let mut blocked = Vec::new();
-
-        for outcome in &outcomes {
-            match commands::implement::prepare_request_for_outcome(
-                &repo,
-                &feature_id,
-                &outcome.id,
-                agent_override.as_deref(),
-            ) {
-                Ok(delegation) => delegations.push(json!({
-                    "order": outcome.order,
-                    "feature_id": delegation.feature_id,
-                    "feature_title": delegation.feature_title,
-                    "outcome_id": delegation.outcome_id,
-                    "outcome_title": delegation.outcome_title,
-                    "agent": delegation.agent,
-                    "prompt": delegation.prompt,
-                    "allowed_paths": delegation.allowed_paths,
-                    "forbidden_paths": delegation.forbidden_paths,
-                    "activate_tool": "specrail_outcome_activate",
-                    "verify_tool": delegation.verify_tool,
-                    "advance_tool": delegation.advance_tool,
-                })),
-                Err(error) => blocked.push(json!({
-                    "order": outcome.order,
-                    "outcome_id": outcome.id,
-                    "outcome_title": outcome.title,
-                    "error": error.to_string(),
-                })),
-            }
-        }
-
-        let text = format!(
-            "Prepared {} delegated implementation task(s) for feature '{}'; {} outcome(s) are blocked by gates.",
-            delegations.len(),
-            feature_id,
-            blocked.len()
-        );
-
-        return Ok(tool_success_payload(
-            text,
-            Some(json!({
-                "feature_id": feature_id,
-                "outcome_count": outcomes.len(),
-                "delegations": delegations,
-                "blocked": blocked,
-                "instructions": {
-                    "mode": "apply_in_current_conversation",
-                    "requires_parent_agent_edits": true,
-                    "steps": [
-                        "For each unblocked delegation, read delegation.prompt and apply the implementation in this workspace from the current MCP client/agent.",
-                        "Respect each delegation.allowed_paths and delegation.forbidden_paths while editing.",
-                        "Activate the target outcome with specrail_outcome_activate before verifying it.",
-                        "After implementation edits are complete for the active outcome, call specrail_verify.",
-                        "If verification succeeds, call specrail_advance."
-                    ]
-                },
-                "activate_tool": "specrail_outcome_activate",
-                "verify_tool": "specrail_verify",
-                "advance_tool": "specrail_advance"
-            })),
-        ));
+    let cwd = resolve_cwd(arguments)?;
+    let mut args = vec!["implement".to_string()];
+    if let Some(agent) = optional_string(arguments, "agent") {
+        args.push("--agent".to_string());
+        args.push(agent);
     }
-
-    let delegation = commands::implement::prepare_request(&repo, agent_override.as_deref())?;
-    Ok(tool_success_payload(
-        format!(
-            "Prepared delegated implementation for {}:{} using agent '{}'. Have the current MCP client/agent apply the prompt in this conversation, then run {}.",
-            delegation.feature_id, delegation.outcome_id, delegation.agent, delegation.verify_tool
-        ),
-        Some(json!({
-            "delegation": delegation,
-            "instructions": {
-                "mode": "apply_in_current_conversation",
-                "requires_parent_agent_edits": true,
-                "steps": [
-                    "Read structuredContent.delegation.prompt and implement it in this workspace from the current MCP client/agent.",
-                    "Respect delegation.allowed_paths and delegation.forbidden_paths while editing.",
-                    "After the code changes are complete, call specrail_verify.",
-                    "If verification succeeds, call specrail_advance."
-                ]
-            }
-        })),
-    ))
+    run_cli_tool(&cwd, args)
 }
 
 fn tool_verify(arguments: &Map<String, Value>) -> Result<Value> {

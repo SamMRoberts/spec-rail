@@ -2089,15 +2089,7 @@
                         appendLog(title + " failed: " + (text || "Unknown error"), "error");
                         state.runningAction = null; render(); return;
                     }
-                    if (name === "specrail_implement" && rememberImplementationDelegation(result, args)) {
-                        refresh = false;
-                        appendLog(title + " prompt ready. Review the implementation prompt in the outcome panel.", "success");
-                        var sc = result && result.structuredContent;
-                        if (sc && sc.delegation && typeof sc.delegation === "object") {
-                            await startChatForDelegation(sc.delegation);
-                        }
-                    }
-                    // Clear cached implementation delegation when the outcome is verified or advanced
+                    // Clear cached implementation prompt state when the outcome is verified or advanced
                     if (name === "specrail_verify" || name === "specrail_advance") {
                         var sc2 = state.toolResult && state.toolResult.structuredContent;
                         var fid = sc2 && sc2.selectedFeatureId;
