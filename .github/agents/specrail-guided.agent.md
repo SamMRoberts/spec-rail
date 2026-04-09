@@ -6,6 +6,10 @@ agents: ["Specrail Guided Setup", "Specrail Guided Plan", "Specrail Guided Test 
 user-invocable: true
 argument-hint: "Run guided SpecRail mode with user confirmations for feature/outcome planning and test selection."
 handoffs:
+  - label: Continue With Suggestions
+    agent: Specrail Guided Resume
+    prompt: Continue based on the current SpecRail workflow state and recommendations, but you decide which phase agent to delegate to without explicit user input.
+    send: true
   - label: Guided Resume
     agent: Specrail Guided Resume
     prompt: Inspect status and route to the right guided phase with a confirmation picker.
