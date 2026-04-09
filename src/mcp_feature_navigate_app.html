@@ -1592,7 +1592,7 @@
                     if (!outcomes.length) return "outcome";
                     var activeOutcome = outcomes.find(function (o) { return o.isActive; });
                     if (!activeOutcome) return "outcome";
-                    var selectedFeatureSummary = featureSummaryById(data, data.selectedFeatureId);
+                    var selectedFeatureSummary = featureSummaryById(data, data.selectedFeatureId || data.activeFeatureId);
                     var verifyStatus = featureActionStatus(selectedFeatureSummary, "verifyStatus", "Verify outcomes after implement succeeds.");
                     var hasTestGaps = outcomeHasTestGaps(activeOutcome);
                     var st = activeOutcome.status;
@@ -2056,7 +2056,7 @@
             }
 
             function featureActionLabel(status) {
-                return String(status && status.label || "");
+                return String((status && status.label) || "");
             }
 
             function featureActionStatus(featureSummary, key, fallbackDetail) {
@@ -3298,7 +3298,8 @@
                         var verifyTool = nextActionTool(data, "verifyTool", "specrail_verify");
                         var testReviewTool = nextActionTool(data, "testReviewTool", "specrail_outcome_test_review");
                         var implementDisabled = !isActiveF || !featureHasOutcomes || !activeOutcome || outcomeHasTestGaps(activeOutcome);
-                        var verifyDisabled = implementDisabled || ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) < 0;
+                        var canVerify = ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) >= 0;
+                        var verifyDisabled = implementDisabled || !canVerify;
                         if (!isActiveF) {
                             var actBtn = document.createElement("button"); actBtn.className = "btn btn-sm";
                             actBtn.disabled = state.isActivating === featureId || state.isSaving;
@@ -3350,7 +3351,7 @@
                                         ? "Activate one outcome before running verify."
                                         : outcomeHasTestGaps(activeOutcome)
                                             ? "Review the active outcome tests and resolve readiness gaps before verification."
-                                            : ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) < 0
+                                            : !canVerify
                                                 ? "Run implement on the active outcome before verification becomes relevant."
                                     : verifyStatus.detail,
                             status: verifyStatus
@@ -3475,6 +3476,7 @@
                                 var testReviewTool = nextActionTool(data, "testReviewTool", "specrail_outcome_test_review");
                                 var testGenerateTool = nextActionTool(data, "testGenerateTool", "specrail_test_generate");
                                 var hasTestGaps = outcomeHasTestGaps(outcome);
+                                var canVerify = ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) >= 0;
 
                                 if (outcome.status !== "verified" && outcome.status !== "skipped" && !isActiveOutcome) {
                                     var actBtn = document.createElement("button"); actBtn.className = "btn btn-primary btn-sm";
@@ -3523,10 +3525,10 @@
                                             args: {},
                                             kind: "success",
                                             refresh: true,
-                                            disabled: hasTestGaps || ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) < 0,
+                                            disabled: hasTestGaps || !canVerify,
                                             tooltip: hasTestGaps
                                                 ? "Review this outcome's tests and resolve readiness gaps before verification."
-                                                : ["Needed", "Failed"].indexOf(featureActionLabel(verifyStatus)) < 0
+                                                : !canVerify
                                                     ? "Run implement successfully before verification becomes relevant."
                                                     : verifyStatus.detail
                                         });
