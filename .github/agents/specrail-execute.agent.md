@@ -1,9 +1,10 @@
 ---
 name: Specrail Execute
-description: "Use for SpecRail implementation, verification, and advancement after tests are ready for the active outcome."
+description: "Use when the active outcome's tests are ready and the user wants to implement, verify, advance, or run the SpecRail workflow with the smallest code change needed."
 tools: [agent, read, search, edit, execute, specrail-mcp/*]
 agents: ["Specrail Test Prep", "Specrail Plan"]
 user-invocable: true
+argument-hint: "Implement, verify, and advance the active outcome once its required tests are ready."
 handoffs:
   - label: Fix Test Gaps
     agent: Specrail Test Prep

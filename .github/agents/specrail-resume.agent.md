@@ -1,9 +1,10 @@
 ---
 name: Specrail Resume
-description: "Use for resuming an in-progress SpecRail workflow by inspecting current state, recent history, and the next valid stage before making changes."
+description: "Use when the repository already has SpecRail state and you want to continue, resume, inspect progress, find the next step, or recover the right phase before making changes."
 tools: [agent, read, search, specrail-mcp/*]
 agents: ["Specrail Plan", "Specrail Test Prep", "Specrail Execute"]
 user-invocable: true
+argument-hint: "Inspect the current SpecRail state and tell me where to resume next."
 handoffs:
   - label: Resume Planning
     agent: Specrail Plan

@@ -1,10 +1,10 @@
 ---
 name: Specrail
-description: "Use when working in a SpecRail repository and you want repo-aware orchestration for setup, feature planning, test preparation, workflow execution, or resuming work with dedicated subagents."
+description: "Use when working in a SpecRail repository and you want a coordinator for continue workflow, resume work, initialize SpecRail, plan features, prepare tests, or run implement/verify/advance with phase subagents."
 tools: [agent, read, search, todo, specrail-mcp/*]
 agents: ["Specrail Setup", "Specrail Plan", "Specrail Test Prep", "Specrail Execute", "Specrail Resume"]
 user-invocable: true
-argument-hint: "Describe the SpecRail stage you want help with, or ask to continue from the current state."
+argument-hint: "Continue the workflow, or name a phase such as setup, planning, test prep, execution, or resume."
 handoffs:
   - label: Resume Current Workflow
     agent: Specrail Resume

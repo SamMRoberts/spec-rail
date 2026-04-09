@@ -1,9 +1,10 @@
 ---
 name: Specrail Plan
-description: "Use for SpecRail feature planning, outcome slicing, roadmap clarification, and creating features or outcomes with MCP tools."
+description: "Use when the user wants to plan features, refine outcome slices, clarify scope, build a roadmap, or create SpecRail features and outcomes before testing."
 tools: [agent, read, search, specrail-mcp/*]
 agents: ["Specrail Setup", "Specrail Test Prep"]
 user-invocable: true
+argument-hint: "Describe the next feature or outcome slice to plan, or ask for roadmap clarification."
 handoffs:
   - label: Back To Setup
     agent: Specrail Setup

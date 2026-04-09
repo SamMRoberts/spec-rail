@@ -48,6 +48,38 @@ cargo build
 cargo test
 ```
 
+## VS Code agents
+
+This repository now includes workspace custom agents under `.github/agents/` for the main SpecRail phases.
+
+Use the `Specrail` agent as the coordinator when you want end-to-end help. It checks the current workflow state, chooses the correct phase, and can delegate to the more focused phase agents as subagents.
+
+Available phase agents:
+
+- `Specrail Setup` for initializing `.specrail/` state in a new repository
+- `Specrail Plan` for defining or refining features and outcomes
+- `Specrail Test Prep` for registering, writing, or generating only the tests required by the active outcome
+- `Specrail Execute` for implementing, verifying, and advancing the active outcome once tests are ready
+- `Specrail Resume` for inspecting existing workflow state and choosing the correct next phase before making changes
+
+Typical chat flow in VS Code:
+
+1. Select `Specrail` in the Chat agent picker.
+2. Ask to continue from the current state, or ask for a specific phase such as planning or test preparation.
+3. Review the result from each phase before using the next handoff.
+
+Example prompts:
+
+```text
+Continue the current SpecRail workflow from wherever it stopped.
+
+Plan the next feature and outcome slice for authentication.
+
+Prepare the required tests for the active outcome.
+
+Run the workflow for the active outcome and keep the code change minimal.
+```
+
 ## Quick start
 
 Initialize a project:

@@ -1,9 +1,10 @@
 ---
 name: Specrail Setup
-description: "Use for SpecRail bootstrap, initialization, and first-time setup when .specrail is missing or specrail_status says the project is not initialized."
+description: "Use when the repository is not initialized, .specrail is missing, specrail_status says setup is required, or the user wants to bootstrap or initialize SpecRail."
 tools: [agent, read, search, specrail-mcp/*]
 agents: ["Specrail Plan"]
 user-invocable: true
+argument-hint: "Initialize SpecRail in this repository, or check whether setup is already complete."
 handoffs:
   - label: Plan Features
     agent: Specrail Plan

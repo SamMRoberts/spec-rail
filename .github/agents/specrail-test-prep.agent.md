@@ -1,9 +1,10 @@
 ---
 name: Specrail Test Prep
-description: "Use for SpecRail test planning, required test registration, writing or generating tests, and clearing blocked outcomes with missing or planned tests."
+description: "Use when an outcome needs tests, required tests are missing or still planned, or the user wants to register, write, or generate tests before implementation."
 tools: [agent, read, search, edit, specrail-mcp/*]
 agents: ["Specrail Plan", "Specrail Execute"]
 user-invocable: true
+argument-hint: "Prepare the tests for the active outcome, or describe which required test cases still need to be added or written."
 handoffs:
   - label: Revise Feature Plan
     agent: Specrail Plan
