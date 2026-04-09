@@ -37,10 +37,12 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Only delegate to `Specrail Plan` or `Specrail Execute`.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Execute Current Outcome` handoff once all required tests are written and ready.
 
-## Picker menu requirement
+## Question fallback requirement
 
-- When asking the user to choose test actions, invoke `vscode_askQuestions`.
-- Do not only output choices in chat text.
+- Only ask the user to choose test actions when there is a real decision about scope or drafting approach.
+- Prefer `vscode_askQuestions` when it is available for those decisions.
+- If the picker tool is unavailable, ask one short natural-language question instead of numbered menu choices.
+- Never require replies in the form `Reply with 1 or 2`.
 
 ## Output
 

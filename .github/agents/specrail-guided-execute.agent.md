@@ -1,10 +1,10 @@
 ---
 name: Specrail Guided Execute
-description: "Guided execution phase that confirms scope before implement/verify/advance and loops through the feature outcomes."
+description: "Guided execution phase that runs the approved scope and loops through the feature outcomes."
 tools: [agent, read, search, edit, execute, specrail-mcp/*]
 agents: ["Specrail Guided Test Prep", "Specrail Guided Plan"]
 user-invocable: false
-argument-hint: "Implement the confirmed outcome scope, then verify and advance with guided checkpoints."
+argument-hint: "Implement the approved outcome scope, then verify and advance with guided checkpoints only when scope changes."
 handoffs:
   - label: Return To Test Preparation
     agent: Specrail Guided Test Prep
@@ -26,17 +26,16 @@ You execute the active outcome in guided mode.
 
 - Start with `specrail_status` and `specrail_outcome_test_review`.
 - If tests are not ready, hand off to `Specrail Guided Test Prep` using `Return To Test Preparation`.
-- Confirm execution scope with picker before `specrail_implement`.
+- If the active outcome and approved test set are still aligned, proceed directly to `specrail_implement`.
+- Only pause for user confirmation when the execution scope has changed, verification uncovers a contradiction, or the user explicitly asked to review before running.
 - Run `specrail_implement`, apply delegation prompt, then run `specrail_verify` and `specrail_advance` when verified.
 - Re-check `specrail_status`.
 - If more outcomes remain in the same feature, use `Prepare Next Outcome Tests` to stay on the same feature.
 - If feature is complete, use `Plan Next Feature Or Slice`.
 
-## Decision picker requirement
+## Decision prompt requirement
 
-- Before implement/verify/advance or phase handoffs, invoke `vscode_askQuestions` with picker options:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not only print options in chat text.
-- Do not mutate state until user confirms.
+- Do not ask for confirmation before routine implement, verify, advance, or next-phase handoffs when the scope is already approved and the next route is clear.
+- If a scope decision is genuinely needed, prefer `vscode_askQuestions` when available.
+- If the picker tool is unavailable, ask one short natural-language question and avoid numbered response menus.
+- Never require numeric replies.

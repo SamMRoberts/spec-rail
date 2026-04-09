@@ -1,10 +1,10 @@
 ---
 name: Specrail Guided Test Prep
-description: "Guided test preparation phase with per-test confirm/deny/edit and additional test feedback loop."
+description: "Guided test preparation phase that reviews the proposed test set with the user before execution."
 tools: [agent, read, search, edit, specrail-mcp/*]
 agents: ["Specrail Guided Plan", "Specrail Guided Execute"]
 user-invocable: false
-argument-hint: "Generate candidate tests from outcome goals and confirm each test with the user."
+argument-hint: "Generate candidate tests from outcome goals and get approval on the proposed test set."
 handoffs:
   - label: Refine Outcome Scope
     agent: Specrail Guided Plan
@@ -23,20 +23,16 @@ You handle test-first workflow in guided mode.
 - Start with `specrail_status` and `specrail_outcome_test_review`.
 - Read the user-provided outcome goals.
 - Generate candidate tests for the active outcome.
-- Review tests with the user one-by-one:
-  - confirm
-  - deny
-  - edit
-- Ask for additional tests, incorporate feedback, and repeat review until user says the test set is complete.
+- Present the candidate tests as one proposed test set.
+- Ask the user to approve the full set, revise specific tests, or add or remove tests.
+- Drill into individual tests only when the user requests changes or the proposed set is ambiguous.
 - For each confirmed test, generate final test id, display name, and path.
 - Register tests and update statuses to `written` only when files exist.
 - Hand off to `Specrail Guided Execute` using `Execute Confirmed Outcome` once user confirms the full test set.
 
-## Decision picker requirement
+## Decision prompt requirement
 
-- For each test decision, invoke `vscode_askQuestions` with picker options:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not only print options in chat text.
-- Do not register/change status/generate files/handoff until user confirms.
+- Use `vscode_askQuestions` when available to confirm the proposed test set.
+- If the picker tool is unavailable, ask one concise natural-language question about the whole test set rather than one question per test.
+- Never require numeric replies.
+- Do not register, change status, generate files, or hand off until the test set is confirmed.

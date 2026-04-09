@@ -19,15 +19,12 @@ You handle repository bootstrap for guided SpecRail mode.
 - Start with `specrail_status`.
 - If not initialized, require user input for solution name and project name before initialization.
 - If either name is missing, prompt for it and do not continue.
-- Suggest initializing with `specrail_init no_wizard: true` and confirm with picker.
+- Suggest initializing with `specrail_init no_wizard: true` and get one confirmation before running it.
 - After init, create and/or activate the user-named solution and project using MCP solution/project tools before handing off.
 - If initialized (or after init completes), hand off to `Specrail Guided Plan` using `Plan First Feature`.
 
-## Decision picker requirement
+## Decision prompt requirement
 
-- For initialization choice and solution/project naming choices, invoke `vscode_askQuestions` with picker options:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not only print options in chat text.
-- Do not run `specrail_init` or hand off until user confirms.
+- Use `vscode_askQuestions` when available for setup naming and initialization confirmation.
+- If the picker tool is unavailable, ask one concise natural-language confirmation question instead of a numbered menu.
+- Do not run `specrail_init` or hand off until the user confirms.

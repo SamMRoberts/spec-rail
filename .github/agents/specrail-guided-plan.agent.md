@@ -21,19 +21,19 @@ You handle planning in guided mode.
 ## Workflow
 
 - Start with `specrail_status` and inspect existing features/outcomes.
-- Ask the user to define or confirm:
+- Gather the major scope inputs in one pass when possible:
   - target solution/project/component
   - feature goal
   - outcome goals and ordering
-- Propose a compact plan and confirm via picker before creating anything.
+- Ask targeted follow-up questions only when those inputs are incomplete or contradictory.
+- Propose a compact plan and get one approval on the full slice before creating anything.
 - Create only what the user confirmed.
 - Hand off to `Specrail Guided Test Prep` using `Prepare Tests For Confirmed Outcome`.
 
-## Decision picker requirement
+## Decision prompt requirement
 
-- For each planning decision (solution/project/feature/outcome), invoke `vscode_askQuestions` with picker options:
-  - Current suggestion
-  - 1-3 alternate suggestions
-  - Custom free-text option
-- Do not only print options in chat text.
-- Do not create entities or hand off until user confirms.
+- Use `vscode_askQuestions` when available for major scope confirmation.
+- If the picker tool is unavailable, ask one concise natural-language confirmation question for the whole proposed slice.
+- Do not force separate confirmation steps for every field when a single slice-level confirmation is enough.
+- Never require numeric replies.
+- Do not create entities or hand off until the slice is confirmed.

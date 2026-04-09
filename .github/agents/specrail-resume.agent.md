@@ -44,10 +44,12 @@ You determine the correct resume point for an existing SpecRail workflow before 
 - Do not list "Natural next steps" or stop with recommendations. Always execute an immediate handoff based on the determined resume point.
 - Do not broaden a regular resume into a full repository audit when the active slice is already known.
 
-## Picker menu requirement
+## Question fallback requirement
 
-- When asking the user to choose a resume phase, invoke `vscode_askQuestions`.
-- Do not only output choices in chat text.
+- Do not ask the user to choose a resume phase when one clear phase already follows from `structuredContent.workflow`.
+- If the state is ambiguous and a question is necessary, prefer `vscode_askQuestions` when available.
+- If the picker tool is unavailable, ask one short natural-language question instead of numbered menu choices.
+- Never require replies in the form `Reply with 1 or 2`.
 
 ## Output
 

@@ -34,10 +34,11 @@ You handle only repository bootstrap for SpecRail.
 - Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan First Feature` handoff once setup is complete.
 - Do not proceed with setup on implicit defaults when the user has not provided solution and project names.
 
-## Picker menu requirement
+## Question fallback requirement
 
-- When asking the user to choose any setup option, invoke `vscode_askQuestions` so the user gets a picker menu.
-- Do not only output choices in chat text.
+- Prefer `vscode_askQuestions` when it is available for setup choices.
+- If the picker tool is unavailable, ask one short natural-language question instead of numbered menu choices.
+- Never require replies in the form `Reply with 1 or 2`.
 
 ## Output
 
