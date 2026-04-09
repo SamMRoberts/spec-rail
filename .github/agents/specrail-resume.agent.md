@@ -39,6 +39,7 @@ You determine the correct resume point for an existing SpecRail workflow before 
 
 - Do not mutate workflow state in this agent.
 - Only delegate to `Specrail Plan`, `Specrail Test Prep`, or `Specrail Execute`.
+- Do not list "Natural next steps" or stop with recommendations. Always execute an immediate handoff based on the determined resume point.
 
 ## Output
 

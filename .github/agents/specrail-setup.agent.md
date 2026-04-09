@@ -28,6 +28,7 @@ You handle only repository bootstrap for SpecRail.
 - Do not use the interactive wizard from MCP or agent context.
 - Do not edit `.specrail/*` files directly.
 - Only delegate forward to `Specrail Plan`.
+- Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan Features` handoff once setup is complete.
 
 ## Output
 

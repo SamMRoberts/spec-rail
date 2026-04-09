@@ -35,6 +35,7 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Do not broaden coverage beyond the active outcome unless you explicitly justify shared regression coverage.
 - Do not leave required tests in `planned` if the next step is implementation.
 - Only delegate to `Specrail Plan` or `Specrail Execute`.
+- Do not list "Natural next steps" or stop with recommendations. Always execute the `Run Workflow` handoff once all required tests are written and ready.
 
 ## Output
 

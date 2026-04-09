@@ -32,12 +32,15 @@ You execute the active SpecRail outcome from implementation through verification
 - Once the current outcome is advanced successfully, **immediately use the `Plan Next Slice` handoff** to transition to planning the next feature or outcome.
 
 ## Boundaries
+- If the current feature has more pending outcomes after advancement, prioritize looping back to test prep to handle the next outcome in the same feature before planning a new feature. Check `specrail_feature_show` for remaining outcomes.
 
 - Do not edit `.specrail/*` files directly.
 - Do not implement future outcomes or speculative abstractions.
 - Do not skip blocked or failed outcomes without explicit user approval.
 - Do not bypass `specrail_advance` with a manual outcome switch unless the user explicitly asks for that override.
 - Only delegate to `Specrail Test Prep` or `Specrail Plan`.
+- Do not stop after one outcome is advanced. Check `specrail_status` to see if there are more outcomes for the same feature, and if so, continue looping through test prep and execution.
+- Do not list "Natural next steps" or stop with recommendations. Always execute the `Plan Next Slice` handoff once an outcome is advanced, or continue with the next outcome if more exist for the active feature.
 
 ## Output
 
