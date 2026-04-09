@@ -58,7 +58,6 @@ If `workflow.next_tools` is available, list the next tools with a ▶ prefix.
 
 ## Response formatting
 
-- Use `specrail_feature_navigate` to show the interactive feature/outcome picker UI whenever the user asks to browse features or outcomes.
 - Use markdown tables to summarize feature and outcome lists:
 
 ```

@@ -14,20 +14,19 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 ## Default sequence
 
 1. Call `specrail_status` to identify the current active feature, current active outcome, and whether work is already in progress.
-2. Call `specrail_feature_navigate` (no arguments) to see all features with progress indicators. Call again with `feature_id` to drill into a specific feature's outcomes.
-3. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
-4. Determine the best feature order using explicit dependencies first.
-5. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
-6. Before activating or implementing an outcome, call `specrail_outcome_test_review` to verify that the outcome has registered tests, existing test files, and no missing or `planned` required coverage.
-7. If tests are missing, files do not exist, or tests are still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
-8. Activate the first eligible feature with `specrail_feature_activate`.
-9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
-10. Run `specrail_implement` for the active outcome.
-11. Read `structuredContent.delegation`, apply `delegation.prompt` yourself in the current conversation, and keep edits within `allowed_paths` and `forbidden_paths`.
-12. Run `specrail_verify` for the active outcome.
-13. If verification succeeds, run `specrail_advance` to move to the next outcome.
-14. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
-15. Continue until all planned features and outcomes are verified or the user asks to stop.
+2. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
+3. Determine the best feature order using explicit dependencies first.
+4. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
+5. Before activating or implementing an outcome, call `specrail_outcome_test_review` to verify that the outcome has registered tests, existing test files, and no missing or `planned` required coverage.
+6. If tests are missing, files do not exist, or tests are still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
+7. Activate the first eligible feature with `specrail_feature_activate`.
+8. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
+9. Run `specrail_implement` for the active outcome.
+10. Read `structuredContent.delegation`, apply `delegation.prompt` yourself in the current conversation, and keep edits within `allowed_paths` and `forbidden_paths`.
+11. Run `specrail_verify` for the active outcome.
+12. If verification succeeds, run `specrail_advance` to move to the next outcome.
+13. When a feature has no remaining outcomes, move to the next eligible feature and repeat the same process.
+14. Continue until all planned features and outcomes are verified or the user asks to stop.
 
 ## Ordering rules
 

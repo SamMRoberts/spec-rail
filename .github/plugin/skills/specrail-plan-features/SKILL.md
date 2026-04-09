@@ -7,16 +7,9 @@ When a repository uses specrail, prefer the `specrail_*` MCP tools for reading a
 
 If `specrail_status` shows that the project is not initialized yet, start with the `specrail-setup` skill or call `specrail_init` before gathering features and outcomes.
 
-## Use the navigator UI
+## Inspect workflow state
 
-Call `specrail_feature_navigate` (without arguments) whenever the user wants to see all features or needs to pick one. This tool returns an interactive panel that shows:
-- Feature cards with progress bars (verified outcomes / total)
-- Status badges: ⚡ Active, ✅ Verified, ❌ Failed, ○ Pending
-- Per-outcome test counts and test-readiness warnings
-
-When a feature is selected (by passing `feature_id`), the navigator shows outcomes with:
-- Test counts (total / passing / planned)
-- Outcome status and activation controls
+Use `specrail_status`, `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, and `specrail_outcome_show` whenever the user wants to see all features, pick one, or inspect progress in detail.
 
 ## Default sequence
 

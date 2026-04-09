@@ -11,13 +11,12 @@ When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect cu
 
 1. Call `specrail_status` to determine whether the project is initialized and to inspect the active feature, active outcome, feature summaries, and test counts.
 2. If the project is not initialized, tell the user there is no workflow to resume yet and hand off to `specrail-setup`.
-3. Call `specrail_feature_navigate` (no arguments) to see a visual overview of all features with progress bars. Then call with `feature_id` to inspect the active feature's outcomes and test status.
-4. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, and `specrail_trace` to gather the detailed state of features, outcomes, tests, and recent workflow history.
-5. Determine the most likely resume point from the current active state first, then from incomplete work if no active state exists.
-6. Summarize what was last in progress, what is already complete, and the recommended resume point.
-7. Ask the user to confirm whether to resume from that point.
-8. Tell the user exactly which feature and outcome the workflow would resume from, and which skill should be used next.
-9. Do not activate, advance, or otherwise mutate workflow state until the user confirms the resume point.
+3. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, and `specrail_trace` to gather the detailed state of features, outcomes, tests, and recent workflow history.
+4. Determine the most likely resume point from the current active state first, then from incomplete work if no active state exists.
+5. Summarize what was last in progress, what is already complete, and the recommended resume point.
+6. Ask the user to confirm whether to resume from that point.
+7. Tell the user exactly which feature and outcome the workflow would resume from, and which skill should be used next.
+8. Do not activate, advance, or otherwise mutate workflow state until the user confirms the resume point.
 
 ## Resume status display
 

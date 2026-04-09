@@ -23,7 +23,7 @@ You determine the correct resume point for an existing SpecRail workflow before 
 
 - Start with `specrail_status`.
 - If the repository is not initialized, point back to `Specrail Setup` through the coordinator instead of pretending there is a workflow to resume.
-- Use `specrail_feature_navigate`, `specrail_feature_list`, `specrail_outcome_list`, `specrail_test_list`, and `specrail_trace` to understand what was last active and what remains incomplete.
+- Use `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, and `specrail_trace` to understand what was last active and what remains incomplete.
 - Prefer the active feature and active outcome as the resume point when they exist.
 - If there is no active outcome, identify the next incomplete outcome using ordering and current status.
 - Recommend the next phase based on blockers: planning when scope is incomplete, test prep when tests are missing or still `planned`, execution when tests are ready.
