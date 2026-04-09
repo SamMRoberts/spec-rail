@@ -2173,6 +2173,7 @@
                 var title = config.title, tool = config.tool, args = config.args || {},
                     kind = config.kind || "default", refresh = config.refresh || false,
                     status = buttonStatus(config.status || null, tool, args, title), disabled = !!config.disabled;
+                var useChatCommand = tool === "specrail_implement";
                 var button = document.createElement("button");
                 button.type = "button";
                 button.className = kind === "primary" ? "btn btn-primary btn-sm"
@@ -2185,6 +2186,7 @@
                 button.dataset.toolTitle = title;
                 button.dataset.toolArgs = encodeButtonArgs(args);
                 button.dataset.toolRefresh = refresh ? "true" : "false";
+                button.dataset.toolMode = useChatCommand ? "chat-command" : "tool-call";
                 button.dataset.toolSource = config.source || "action-button";
                 button.disabled = state.isSaving || isActionRunning(tool, args) || disabled;
                 if (config.tooltip || (status && status.detail)) {
@@ -2755,6 +2757,45 @@
                     return !(result && result.isError);
                 } catch (e) {
                     return false;
+                }
+            }
+
+            function chatCommandForTool(tool, args) {
+                if (tool === "specrail_implement") {
+                    return "#specrail_implement";
+                }
+                return tool ? ("#" + tool) : "";
+            }
+
+            async function executeChatCommandAction(title, tool, args) {
+                var commandText = chatCommandForTool(tool, args || {});
+                var actionKey = tool + ":" + JSON.stringify(args || {});
+                state.runningAction = actionKey;
+                appendLog("Submitting to chat: " + commandText, "action");
+                render();
+                try {
+                    var drafted = await sendRequestWithTimeout("ui/message", {
+                        content: [{ type: "text", text: commandText }]
+                    }, 1500);
+                    if (drafted && drafted.isError) {
+                        throw new Error("Host rejected the chat command draft.");
+                    }
+
+                    var submitted = await requestHostOpenLink(buildCommandUri("specrail.runMcpAction", [{ autoSubmit: true }]));
+                    if (!submitted) {
+                        appendLog(title + " drafted `" + commandText + "` into chat, but automatic submit was unavailable.", "warn");
+                        state.runningAction = null;
+                        render();
+                        return;
+                    }
+
+                    appendLog(title + " submitted to VS Code chat as " + commandText + ".", "success");
+                    state.runningAction = null;
+                    render();
+                } catch (e) {
+                    appendLog(title + " error: " + (e && e.message ? e.message : String(e)), "error");
+                    state.runningAction = null;
+                    render();
                 }
             }
 
@@ -4240,6 +4281,14 @@
                 event.preventDefault();
                 event.stopPropagation();
                 appendLog("Dispatching tool action: " + buttonLogLabel(button), "action");
+                if (button.dataset.toolMode === "chat-command") {
+                    executeChatCommandAction(
+                        button.dataset.toolTitle || "Run Action",
+                        button.dataset.toolName || "",
+                        decodeButtonArgs(button.dataset.toolArgs)
+                    );
+                    return;
+                }
                 runToolAction(
                     button.dataset.toolTitle || "Run Action",
                     button.dataset.toolName || "",
