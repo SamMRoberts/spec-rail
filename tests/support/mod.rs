@@ -76,16 +76,14 @@ pub fn outcome_required_test_files(
     outcome_id: &str,
 ) -> Vec<String> {
     let conn = open_db(dir);
-    let mut stmt = conn
-        .prepare(
-            "SELECT path FROM tests WHERE feature_id = ?1 AND outcome_id = ?2 ORDER BY path",
+    let json: String = conn
+        .query_row(
+            "SELECT required_test_files FROM outcomes WHERE feature_id = ?1 AND id = ?2",
+            params![feature_id, outcome_id],
+            |row| row.get(0),
         )
         .unwrap();
-    let rows = stmt
-        .query_map(params![feature_id, outcome_id], |row| row.get(0))
-        .unwrap();
-
-    rows.map(|row| row.unwrap()).collect()
+    serde_json::from_str(&json).unwrap()
 }
 
 pub fn current_state(dir: &TempDir) -> StateSnapshot {

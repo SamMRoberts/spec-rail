@@ -582,6 +582,16 @@ pub fn set_status(
         .find(|t| t.id == test_id)
         .ok_or_else(|| anyhow::anyhow!("test '{}' not found in manifest", test_id))?;
 
+    if status == crate::core::models::TestStatus::Written {
+        let test_path = repo.root.join(&test.path);
+        anyhow::ensure!(
+            test_path.is_file(),
+            "cannot mark test '{}' as 'written' because '{}' does not exist",
+            test_id,
+            test.path
+        );
+    }
+
     test.status = status.clone();
     repo.save_manifest(&manifest)?;
 

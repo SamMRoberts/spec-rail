@@ -50,6 +50,10 @@ fn full_setup(dir: &TempDir) {
         .assert()
         .success();
 
+    let test_path = dir.path().join("tests/domain/validate_email.rs");
+    fs::create_dir_all(test_path.parent().unwrap()).unwrap();
+    fs::write(&test_path, "#[test]\nfn validate_email() {}\n").unwrap();
+
     // Mark test as written so the outcome gate allows implementation
     specrail(dir)
         .args(["test", "set-status", "test-validate-email", "written"])
@@ -165,6 +169,20 @@ fn verify_fails_when_no_active_outcome() {
     specrail(&dir).arg("verify").assert().failure();
 }
 
+#[test]
+fn verify_fails_when_required_test_file_is_missing() {
+    let dir = TempDir::new().unwrap();
+    full_setup(&dir);
+
+    fs::remove_file(dir.path().join("tests/domain/validate_email.rs")).unwrap();
+
+    specrail(&dir)
+        .arg("verify")
+        .assert()
+        .failure()
+        .stderr(contains("required test files that do not exist yet"));
+}
+
 // ── advance ───────────────────────────────────────────────────────────────────
 
 #[test]
@@ -261,6 +279,57 @@ fn test_set_status_updates_manifest() {
     }));
 }
 
+#[test]
+fn test_set_status_written_requires_existing_file() {
+    let dir = TempDir::new().unwrap();
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
+
+    specrail(&dir)
+        .args([
+            "feature", "new", "feat",
+            "--title", "F", "--purpose", "p",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "outcome", "new", "feat", "o1",
+            "--title", "T", "--goal", "g", "--order", "1",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args([
+            "test", "add", "my-test",
+            "--feature", "feat", "--outcome", "o1",
+            "--path", "tests/my_test.rs",
+        ])
+        .assert()
+        .success();
+
+    specrail(&dir)
+        .args(["test", "set-status", "my-test", "written"])
+        .assert()
+        .failure()
+        .stderr(contains("does not exist"));
+}
+
+#[test]
+fn implement_fails_when_written_test_file_is_missing() {
+    let dir = TempDir::new().unwrap();
+    full_setup(&dir);
+
+    fs::remove_file(dir.path().join("tests/domain/validate_email.rs")).unwrap();
+
+    specrail(&dir)
+        .arg("implement")
+        .assert()
+        .failure()
+        .stderr(contains("required test files that do not exist yet"));
+}
+
 // ── verify + advance happy path ───────────────────────────────────────────────
 
 /// This test patches the per-project settings file so the test_command is
@@ -320,4 +389,3 @@ fn verify_marks_outcome_failed_on_test_failure() {
         .success()
         .stdout(contains("Status:  Failed"));
 }
-

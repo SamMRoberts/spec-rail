@@ -9,7 +9,7 @@ When a repository uses specrail, prefer the `specrail_*` MCP tools to inspect st
 
 If the project is not initialized yet, use the `specrail-setup` skill or call `specrail_init` before applying this workflow.
 
-If the active or planned outcomes do not yet have registered, non-`planned` tests, use the `specrail-prepare-tests` skill before running implementation.
+If the active or planned outcomes do not yet have registered tests, existing test files, and non-`planned` status, use the `specrail-prepare-tests` skill before running implementation.
 
 ## Default sequence
 
@@ -18,8 +18,8 @@ If the active or planned outcomes do not yet have registered, non-`planned` test
 3. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
 4. Determine the best feature order using explicit dependencies first.
 5. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
-6. Before activating or implementing an outcome, call `specrail_outcome_test_review` to verify that the outcome has registered tests and that none of its required tests are still `planned` or missing.
-7. If tests are missing or still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
+6. Before activating or implementing an outcome, call `specrail_outcome_test_review` to verify that the outcome has registered tests, existing test files, and no missing or `planned` required coverage.
+7. If tests are missing, files do not exist, or tests are still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
 8. Activate the first eligible feature with `specrail_feature_activate`.
 9. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
 10. Run `specrail_implement` for the active outcome.
@@ -44,7 +44,7 @@ If the active or planned outcomes do not yet have registered, non-`planned` test
 - Treat outcome success as `Verified`, not merely `Active`.
 - Do not advance to the next outcome after activation alone.
 - Follow the canonical execution loop: `specrail_implement`, then `specrail_verify`, then `specrail_advance`.
-- Before `specrail_implement`, constrain the scope to the active outcome's declared tests only.
+- Before `specrail_implement`, call `specrail_outcome_test_review` and constrain the scope to the active outcome's declared tests plus any explicitly justified regression coverage.
 - During implementation, write only the smallest amount of code needed to satisfy the active outcome's tests.
 - Do not implement future outcomes, speculative abstractions, or extra behavior that is not required by the current tests.
 - Do not bypass `specrail_advance` by directly activating the next outcome unless the user explicitly wants a manual override.
@@ -75,15 +75,16 @@ When a feature is completed:
 1. Identify the next eligible feature.
 2. Activate that feature.
 3. Identify the next eligible outcome in that feature.
-4. Call `specrail_outcome_test_review` to confirm that the outcome's tests are registered, non-`planned`, and have no gaps.
+4. Call `specrail_outcome_test_review` to confirm that the outcome's tests are registered, their files exist, they are non-`planned`, and they have no gaps.
 5. If test gaps exist, resolve them with `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status` before proceeding.
-6. Activate that outcome.
-7. Run `specrail_implement`.
-8. Run `specrail_verify`.
-9. If verification succeeds, run `specrail_advance`.
-10. Repeat until the feature is complete.
-11. Move to the next feature.
-12. Repeat until the full workflow is complete.
+6. Optionally run an explicit red phase once tests are written so the current test command still proves the new work fails before implementation.
+7. Activate that outcome.
+8. Run `specrail_implement`.
+9. Run `specrail_verify`.
+10. If verification succeeds, run `specrail_advance`.
+11. Repeat until the feature is complete.
+12. Move to the next feature.
+13. Repeat until the full workflow is complete.
 
 ## User interaction guidance
 
@@ -101,4 +102,3 @@ When a feature is completed:
 - If outcome `2` still has tests in `planned`, stop and use the testing workflow before running `specrail_implement`.
 - If outcome `2` fails verification, keep outcome `2` active and do not move to outcome `3` until outcome `2` is verified.
 - Once all outcomes in Feature A are verified, move to the next eligible feature and repeat.
-

@@ -22,8 +22,8 @@ When a feature is selected (by passing `feature_id`), the navigator shows outcom
 
 1. Call `specrail_status` to confirm whether the project is initialized and which feature or outcome is active.
 2. Use the read tools (`specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, `specrail_test_list`, `specrail_trace`) before proposing changes.
-3. Ask follow-up questions to gather the full set of features and outcomes when the user has not already provided them completely.
-4. Keep asking for the next feature or the next outcome under the current feature until the user explicitly says they are done.
+3. Ask follow-up questions to gather the next feature or outcome slice needed right now unless the user explicitly asks for a full roadmap.
+4. Keep the conversation incremental by default: define the next feature or the next outcome under the current feature, then pause for confirmation before expanding further.
 5. Summarize the collected features and outcomes back to the user so they can confirm the structure before creation.
 6. Use the mutating tools to create or activate features, outcomes, and tests instead of writing `.specrail/*` files by hand.
 7. After any mutating tool call, check `specrail_status` again to verify the new state.
@@ -34,10 +34,10 @@ When a feature is selected (by passing `feature_id`), the navigator shows outcom
 
 - Do not assume the full workflow structure from a brief request.
 - Ask targeted follow-up questions when features, outcomes, or scope boundaries are unclear.
-- Gather all planned features first, or work feature-by-feature if that is easier for the user.
-- For each feature, continue asking for additional outcomes until the user says that feature is complete.
-- After finishing one feature, ask whether there is another feature to add.
-- Continue this loop until the user explicitly says they are done adding features and outcomes.
+- Default to planning the next slice, not the whole roadmap.
+- Only gather all planned features up front when the user asks for a full roadmap or when cross-feature ordering truly depends on it.
+- For each feature, continue asking for additional outcomes only while that helps define the next implementation slice.
+- After finishing one feature, ask whether there is another feature to add only if the user wants to keep planning.
 - If the user gives a broad feature, help break it into smaller, outcome-sized slices.
 - If the user gives a broad outcome, ask how to split it into narrower sibling outcomes under the same feature.
 - Before creating anything, restate the current feature and outcome list in a compact structure for confirmation.

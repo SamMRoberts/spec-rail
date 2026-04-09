@@ -1,6 +1,11 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 
-use crate::core::models::{OutcomeSpec, OutcomeStatus, TestManifest, TestStatus};
+use crate::core::{
+    models::{OutcomeSpec, OutcomeStatus, TestManifest, TestStatus},
+    repository::Repository,
+};
 
 /// Check whether all policy gates pass for entering the implementation step of
 /// the given outcome.
@@ -14,7 +19,11 @@ use crate::core::models::{OutcomeSpec, OutcomeStatus, TestManifest, TestStatus};
 ///
 /// Returns `Ok(())` when all gates pass, or an `Err` describing the first
 /// violation found.
-pub fn check_implementation_gates(outcome: &OutcomeSpec, manifest: &TestManifest) -> Result<()> {
+pub fn check_implementation_gates(
+    repo: &Repository,
+    outcome: &OutcomeSpec,
+    manifest: &TestManifest,
+) -> Result<()> {
     // Gate 1 — outcome must be actionable
     if outcome.status != OutcomeStatus::Pending && outcome.status != OutcomeStatus::Active {
         anyhow::bail!(
@@ -24,39 +33,7 @@ pub fn check_implementation_gates(outcome: &OutcomeSpec, manifest: &TestManifest
         );
     }
 
-    // Collect tests for this outcome
-    let outcome_tests: Vec<_> = manifest
-        .tests
-        .iter()
-        .filter(|t| t.feature_id == outcome.feature_id && t.outcome_id == outcome.id)
-        .collect();
-
-    // Gate 2 — at least one test must exist
-    if outcome_tests.is_empty() {
-        anyhow::bail!(
-            "outcome '{}' has no tests in the manifest — add tests with \
-             `specrail test add` before implementing",
-            outcome.id
-        );
-    }
-
-    // Gate 3 — no test may be in `planned` status
-    let planned: Vec<_> = outcome_tests
-        .iter()
-        .filter(|t| t.status == TestStatus::Planned)
-        .map(|t| t.id.as_str())
-        .collect();
-
-    if !planned.is_empty() {
-        anyhow::bail!(
-            "outcome '{}' has tests still in 'planned' status: [{}]\n\
-             Update test status to 'written' once the test file exists.",
-            outcome.id,
-            planned.join(", ")
-        );
-    }
-
-    Ok(())
+    check_test_readiness(repo, outcome, manifest)
 }
 
 /// Check whether all policy gates pass for advancing past the current outcome.
@@ -72,5 +49,107 @@ pub fn check_advance_gates(outcome: &OutcomeSpec) -> Result<()> {
             outcome.status
         );
     }
+    Ok(())
+}
+
+pub fn check_verify_gates(
+    repo: &Repository,
+    outcome: &OutcomeSpec,
+    manifest: &TestManifest,
+) -> Result<()> {
+    check_test_readiness(repo, outcome, manifest)
+}
+
+fn check_test_readiness(repo: &Repository, outcome: &OutcomeSpec, manifest: &TestManifest) -> Result<()> {
+    let outcome_tests: Vec<_> = manifest
+        .tests
+        .iter()
+        .filter(|t| t.feature_id == outcome.feature_id && t.outcome_id == outcome.id)
+        .collect();
+
+    if outcome_tests.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' has no tests in the manifest — add tests with \
+             `specrail test add` before continuing",
+            outcome.id
+        );
+    }
+
+    if outcome.required_tests.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' has no required test IDs — review the outcome and register the tests before continuing",
+            outcome.id
+        );
+    }
+
+    if outcome.required_test_files.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' has no required test files — review the outcome and register test paths before continuing",
+            outcome.id
+        );
+    }
+
+    let missing_required_tests: Vec<_> = outcome
+        .required_tests
+        .iter()
+        .filter(|required_test_id| !outcome_tests.iter().any(|test| test.id == **required_test_id))
+        .cloned()
+        .collect();
+    if !missing_required_tests.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' is missing registered required tests: [{}]\nRun `specrail test add` or `specrail_outcome_test_review` before continuing.",
+            outcome.id,
+            missing_required_tests.join(", ")
+        );
+    }
+
+    let missing_required_test_files: Vec<_> = outcome
+        .required_test_files
+        .iter()
+        .filter(|required_path| !outcome_tests.iter().any(|test| test.path == **required_path))
+        .cloned()
+        .collect();
+    if !missing_required_test_files.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' is missing registered required test files: [{}]\nRun `specrail test add` or `specrail_outcome_test_review` before continuing.",
+            outcome.id,
+            missing_required_test_files.join(", ")
+        );
+    }
+
+    let planned: Vec<_> = outcome_tests
+        .iter()
+        .filter(|t| t.status == TestStatus::Planned)
+        .map(|t| t.id.as_str())
+        .collect();
+
+    if !planned.is_empty() {
+        anyhow::bail!(
+            "outcome '{}' has tests still in 'planned' status: [{}]\n\
+             Update test status to 'written' once the test file exists.",
+            outcome.id,
+            planned.join(", ")
+        );
+    }
+
+    let missing_files: Vec<PathBuf> = outcome
+        .required_test_files
+        .iter()
+        .map(|path| repo.root.join(path))
+        .filter(|path| !path.is_file())
+        .collect();
+
+    if !missing_files.is_empty() {
+        let display_paths: Vec<_> = missing_files
+            .iter()
+            .map(|path| path.strip_prefix(&repo.root).unwrap_or(path).display().to_string())
+            .collect();
+        anyhow::bail!(
+            "outcome '{}' has required test files that do not exist yet: [{}]\nCreate the test files before continuing.",
+            outcome.id,
+            display_paths.join(", ")
+        );
+    }
+
     Ok(())
 }

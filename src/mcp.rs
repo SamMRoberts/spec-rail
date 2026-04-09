@@ -398,6 +398,7 @@ struct OutcomeWorkflowSnapshot {
     outcome: OutcomeSpec,
     test_count: usize,
     planned_test_ids: Vec<String>,
+    test_review: OutcomeTestReview,
 }
 
 #[derive(Serialize, Clone)]
@@ -2241,29 +2242,28 @@ fn workflow_guidance_for_snapshot(
         let next_tools = if active.outcome.status == OutcomeStatus::Verified {
             vec!["specrail_advance".to_string()]
         } else if active.outcome.status == OutcomeStatus::Failed {
-            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
-        } else if active.test_count == 0 || !active.planned_test_ids.is_empty() {
             vec![
+                "specrail_outcome_test_review".to_string(),
+                "specrail_implement".to_string(),
+                "specrail_verify".to_string(),
+            ]
+        } else if active.test_review.has_gaps {
+            vec![
+                "specrail_outcome_test_review".to_string(),
                 "specrail_test_add".to_string(),
                 "specrail_test_generate".to_string(),
                 "specrail_test_set_status".to_string(),
             ]
         } else {
-            vec!["specrail_implement".to_string(), "specrail_verify".to_string()]
+            vec![
+                "specrail_outcome_test_review".to_string(),
+                "specrail_implement".to_string(),
+                "specrail_verify".to_string(),
+            ]
         };
 
-        let blockers = if active.test_count == 0 {
-            vec![format!(
-                "Active outcome '{}:{}' has no registered tests yet.",
-                active.feature_id, active.outcome.id
-            )]
-        } else if !active.planned_test_ids.is_empty() {
-            vec![format!(
-                "Active outcome '{}:{}' still has tests in planned status: {}.",
-                active.feature_id,
-                active.outcome.id,
-                active.planned_test_ids.join(", ")
-            )]
+        let blockers = if active.test_review.has_gaps {
+            workflow_test_review_blockers(active, "Active")
         } else if active.outcome.status == OutcomeStatus::Failed {
             vec![format!(
                 "Active outcome '{}:{}' failed verification and must be fixed before advancing.",
@@ -2293,16 +2293,12 @@ fn workflow_guidance_for_snapshot(
                 "Active outcome '{}:{}' failed verification. Keep it active, fix the implementation, then verify again.",
                 active.feature_id, active.outcome.id
             ),
-            _ if active.test_count == 0 => format!(
-                "Active outcome '{}:{}' is blocked on test planning. Register at least one test before implementation.",
-                active.feature_id, active.outcome.id
-            ),
-            _ if !active.planned_test_ids.is_empty() => format!(
-                "Active outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
+            _ if active.test_review.has_gaps => format!(
+                "Active outcome '{}:{}' is blocked on test readiness. Run `specrail_outcome_test_review` and resolve the listed gaps before implementation.",
                 active.feature_id, active.outcome.id
             ),
             _ => format!(
-                "Active outcome '{}:{}' is ready for the implement → verify loop.",
+                "Active outcome '{}:{}' passed test readiness review. Run `specrail_outcome_test_review`, then continue with implement → verify.",
                 active.feature_id, active.outcome.id
             ),
         };
@@ -2334,37 +2330,16 @@ fn workflow_guidance_for_snapshot(
         });
     };
 
-    let (summary, blockers, next_tools, stage, recommended_skill) = if candidate.test_count == 0 {
+    let (summary, blockers, next_tools, stage, recommended_skill) = if candidate.test_review.has_gaps {
         (
             format!(
-                "Next outcome '{}:{}' is blocked on test planning. Register at least one test before activation.",
+                "Next outcome '{}:{}' is blocked on test readiness. Run `specrail_outcome_test_review` and resolve the listed gaps before activation.",
                 candidate.feature_id, candidate.outcome.id
             ),
-            vec![format!(
-                "Outcome '{}:{}' has no registered tests yet.",
-                candidate.feature_id, candidate.outcome.id
-            )],
+            workflow_test_review_blockers(&candidate, "Next"),
             vec![
+                "specrail_outcome_test_review".to_string(),
                 "specrail_test_add".to_string(),
-                "specrail_test_generate".to_string(),
-                "specrail_test_set_status".to_string(),
-            ],
-            "testing".to_string(),
-            "specrail-prepare-tests".to_string(),
-        )
-    } else if !candidate.planned_test_ids.is_empty() {
-        (
-            format!(
-                "Next outcome '{}:{}' is blocked on test authoring. Move planned tests to written before implementation.",
-                candidate.feature_id, candidate.outcome.id
-            ),
-            vec![format!(
-                "Outcome '{}:{}' still has tests in planned status: {}.",
-                candidate.feature_id,
-                candidate.outcome.id,
-                candidate.planned_test_ids.join(", ")
-            )],
-            vec![
                 "specrail_test_generate".to_string(),
                 "specrail_test_set_status".to_string(),
             ],
@@ -2374,13 +2349,14 @@ fn workflow_guidance_for_snapshot(
     } else {
         (
             format!(
-                "Next outcome '{}:{}' is ready to activate and run through implement → verify → advance.",
+                "Next outcome '{}:{}' is ready to activate, review, and run through implement → verify → advance.",
                 candidate.feature_id, candidate.outcome.id
             ),
             Vec::new(),
             vec![
                 "specrail_feature_activate".to_string(),
                 "specrail_outcome_activate".to_string(),
+                "specrail_outcome_test_review".to_string(),
                 "specrail_implement".to_string(),
                 "specrail_verify".to_string(),
                 "specrail_advance".to_string(),
@@ -2406,7 +2382,7 @@ fn workflow_guidance_for_snapshot(
 fn workflow_stage(snapshot: &OutcomeWorkflowSnapshot) -> String {
     if snapshot.outcome.status != OutcomeStatus::Failed
         && snapshot.outcome.status != OutcomeStatus::Verified
-        && (snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty())
+        && snapshot.test_review.has_gaps
     {
         "testing".to_string()
     } else {
@@ -2419,11 +2395,72 @@ fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
         || snapshot.outcome.status == OutcomeStatus::Failed
     {
         "specrail-run-workflow"
-    } else if snapshot.test_count == 0 || !snapshot.planned_test_ids.is_empty() {
+    } else if snapshot.test_review.has_gaps {
         "specrail-prepare-tests"
     } else {
         "specrail-run-workflow"
     }
+}
+
+fn workflow_test_review_blockers(
+    snapshot: &OutcomeWorkflowSnapshot,
+    label: &str,
+) -> Vec<String> {
+    let review = &snapshot.test_review;
+    let mut blockers = Vec::new();
+
+    if review.has_no_required_tests {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' has no required test IDs yet.",
+            snapshot.feature_id, snapshot.outcome.id
+        ));
+    }
+    if review.has_no_required_test_files {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' has no required test file paths yet.",
+            snapshot.feature_id, snapshot.outcome.id
+        ));
+    }
+    if review.has_no_related_tests {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' has no registered tests yet.",
+            snapshot.feature_id, snapshot.outcome.id
+        ));
+    }
+    if !review.missing_required_tests.is_empty() {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' is missing registered required test IDs: {}.",
+            snapshot.feature_id,
+            snapshot.outcome.id,
+            review.missing_required_tests.join(", ")
+        ));
+    }
+    if !review.missing_required_test_files.is_empty() {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' is missing registered required test files: {}.",
+            snapshot.feature_id,
+            snapshot.outcome.id,
+            review.missing_required_test_files.join(", ")
+        ));
+    }
+    if !review.planned_required_tests.is_empty() {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' still has required tests in planned status: {}.",
+            snapshot.feature_id,
+            snapshot.outcome.id,
+            review.planned_required_tests.join(", ")
+        ));
+    }
+    if !review.planned_required_test_files.is_empty() {
+        blockers.push(format!(
+            "{label} outcome '{}:{}' still has required test files in planned status: {}.",
+            snapshot.feature_id,
+            snapshot.outcome.id,
+            review.planned_required_test_files.join(", ")
+        ));
+    }
+
+    blockers
 }
 
 fn find_first_incomplete_outcome(
@@ -2459,12 +2496,14 @@ fn workflow_snapshot(
         .filter(|test| test.status == TestStatus::Planned)
         .map(|test| test.id.clone())
         .collect();
+    let test_review = build_outcome_test_review(&outcome, manifest);
 
     Ok(OutcomeWorkflowSnapshot {
         feature_id: feature_id.to_string(),
         outcome,
         test_count: tests.len(),
         planned_test_ids,
+        test_review,
     })
 }
 
