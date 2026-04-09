@@ -1575,6 +1575,12 @@
             function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
             function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id: id, result: r }, "*"); }
             function callTool(name, args) { return sendRequest("tools/call", { name: name, arguments: args }); }
+            function requestExecuteCommand(command, args) {
+                return sendRequestWithTimeout("ui/requests/execute-command", {
+                    command: command,
+                    args: Array.isArray(args) ? args : []
+                }, 900);
+            }
 
             // Utilities
             function esc(v) {
@@ -1764,12 +1770,17 @@
                         } else if (activeDelegation && (st === "active" || st === "failed")) {
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
                             title = "Delegation prepared for this outcome";
-                            desc = "The navigator received the implementation prompt. Review or copy it below, apply the changes in the current shell/chat, then run verify.";
+                            desc = "The navigator received the implementation prompt and will try to open chat automatically. Review or copy it below, apply the changes in chat, then run verify.";
                             actions = [
+                                {
+                                    text: "Start Editor Chat",
+                                    fn: function () { startChatForDelegation(activeDelegation.delegation); },
+                                    kind: "primary"
+                                },
                                 {
                                     text: "Copy Prompt",
                                     fn: function () { copyTextToClipboard(activeDelegation.delegation && activeDelegation.delegation.prompt, "Implementation prompt copied to clipboard."); },
-                                    kind: "primary"
+                                    kind: "default"
                                 },
                                 {
                                     text: "Review Tests",
@@ -2013,6 +2024,10 @@
                     if (name === "specrail_implement" && rememberImplementationDelegation(result, args)) {
                         refresh = false;
                         appendLog(title + " delegation ready. Review the implementation prompt in the outcome panel.", "success");
+                        var sc = result && result.structuredContent;
+                        if (sc && sc.delegation && typeof sc.delegation === "object") {
+                            await startChatForDelegation(sc.delegation);
+                        }
                     }
                     if (text) appendLog(title + ": " + text, "success");
                     else appendLog(title + " completed.", "success");
@@ -2604,6 +2619,56 @@
                 }
             }
 
+            function invokeCommandUri(commandId) {
+                if (!commandId) return false;
+                try {
+                    var link = document.createElement("a");
+                    link.href = "command:" + commandId;
+                    link.style.display = "none";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            async function startChatForDelegation(delegation) {
+                if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
+
+                var prompt = String(delegation.prompt || "");
+                var copied = false;
+                if (prompt) {
+                    await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
+                    copied = true;
+                }
+
+                try {
+                    await requestExecuteCommand("vscode.editorChat.start", []);
+                    appendLog("Opened editor chat. Paste the copied implementation prompt into the new chat session.", "success");
+                    return { opened: true, copied: copied, method: "request:vscode.editorChat.start" };
+                } catch (editorChatError) {
+                    try {
+                        await requestExecuteCommand("workbench.action.chat.open", []);
+                        appendLog("Opened chat view. Paste the copied implementation prompt into the chat input.", "success");
+                        return { opened: true, copied: copied, method: "request:workbench.action.chat.open" };
+                    } catch (chatViewError) {
+                        if (invokeCommandUri("vscode.editorChat.start")) {
+                            appendLog("Attempted to open editor chat via command URI. Paste the copied implementation prompt if the chat appears.", "warn");
+                            return { opened: true, copied: copied, method: "command-uri:vscode.editorChat.start" };
+                        }
+                        if (invokeCommandUri("workbench.action.chat.open")) {
+                            appendLog("Attempted to open chat view via command URI. Paste the copied implementation prompt if the chat appears.", "warn");
+                            return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                        }
+                    }
+                }
+
+                appendLog("Chat handoff is not available from this host. Use the copied prompt or the delegation panel below.", "warn");
+                return { opened: false, copied: copied };
+            }
+
             function getSuggestionPreview(featureId, outcomeId) {
                 return state.suggestionPreviews[suggestionPreviewKey(featureId, outcomeId)] || null;
             }
@@ -2868,6 +2933,15 @@
                 var actions = document.createElement("div");
                 actions.className = "delegation-actions";
 
+                var startChatBtn = document.createElement("button");
+                startChatBtn.type = "button";
+                startChatBtn.className = "btn btn-success btn-sm";
+                startChatBtn.textContent = "Start Editor Chat";
+                startChatBtn.addEventListener("click", function () {
+                    startChatForDelegation(delegation);
+                });
+                actions.appendChild(startChatBtn);
+
                 var copyPromptBtn = document.createElement("button");
                 copyPromptBtn.type = "button";
                 copyPromptBtn.className = "btn btn-primary btn-sm";
@@ -2958,6 +3032,16 @@
 
                     var itemActions = document.createElement("div");
                     itemActions.className = "delegation-actions";
+
+                    var startChatBtn = document.createElement("button");
+                    startChatBtn.type = "button";
+                    startChatBtn.className = "btn btn-success btn-sm";
+                    startChatBtn.textContent = "Start Editor Chat";
+                    startChatBtn.addEventListener("click", function () {
+                        startChatForDelegation(delegation);
+                    });
+                    itemActions.appendChild(startChatBtn);
+
                     var copyBtn = document.createElement("button");
                     copyBtn.type = "button";
                     copyBtn.className = "btn btn-primary btn-sm";

@@ -227,6 +227,18 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
+        .contains("Start Editor Chat"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("ui/requests/execute-command"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("vscode.editorChat.start"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
         .contains("btn-status-progress"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
