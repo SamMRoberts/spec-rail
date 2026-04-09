@@ -1529,14 +1529,37 @@
             background: var(--fg-dim);
         }
 
-        .app-status-bar.sb-action .sb-dot { background: var(--accent); }
-        .app-status-bar.sb-success .sb-dot { background: var(--verified-border); }
-        .app-status-bar.sb-error .sb-dot { background: var(--failed-border); }
-        .app-status-bar.sb-warn .sb-dot { background: var(--active-border); }
-        .app-status-bar.sb-action { color: var(--fg); }
-        .app-status-bar.sb-success { color: var(--verified-fg); }
-        .app-status-bar.sb-error { color: var(--failed-fg); }
-        .app-status-bar.sb-warn { color: var(--active-fg); }
+        .app-status-bar.sb-action .sb-dot {
+            background: var(--accent);
+        }
+
+        .app-status-bar.sb-success .sb-dot {
+            background: var(--verified-border);
+        }
+
+        .app-status-bar.sb-error .sb-dot {
+            background: var(--failed-border);
+        }
+
+        .app-status-bar.sb-warn .sb-dot {
+            background: var(--active-border);
+        }
+
+        .app-status-bar.sb-action {
+            color: var(--fg);
+        }
+
+        .app-status-bar.sb-success {
+            color: var(--verified-fg);
+        }
+
+        .app-status-bar.sb-error {
+            color: var(--failed-fg);
+        }
+
+        .app-status-bar.sb-warn {
+            color: var(--active-fg);
+        }
     </style>
 </head>
 
@@ -1626,12 +1649,6 @@
             function sendNotification(m, p) { window.parent.postMessage({ jsonrpc: "2.0", method: m, params: p }, "*"); }
             function sendResponse(id, r) { window.parent.postMessage({ jsonrpc: "2.0", id: id, result: r }, "*"); }
             function callTool(name, args) { return sendRequest("tools/call", { name: name, arguments: args }); }
-            function requestExecuteCommand(command, args) {
-                return sendRequestWithTimeout("ui/requests/execute-command", {
-                    command: command,
-                    args: Array.isArray(args) ? args : []
-                }, 2500);
-            }
 
             // Utilities
             function esc(v) {
@@ -2680,11 +2697,18 @@
                 }
             }
 
-            function invokeCommandUri(commandId) {
-                if (!commandId) return false;
+            function buildCommandUri(commandId, args) {
+                if (!commandId) return "";
+                var encodedArgs = encodeURIComponent(JSON.stringify(Array.isArray(args) ? args : []));
+                return "command:" + commandId + (encodedArgs ? ("?" + encodedArgs) : "");
+            }
+
+            function invokeCommandUri(commandId, args) {
+                var href = buildCommandUri(commandId, args);
+                if (!href) return false;
                 try {
                     var link = document.createElement("a");
-                    link.href = "command:" + commandId;
+                    link.href = href;
                     link.style.display = "none";
                     document.body.appendChild(link);
                     link.click();
@@ -2699,56 +2723,26 @@
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
                 var prompt = String(delegation.prompt || "");
-
-                // Try editor chat with inline prompt first (VS Code ≥ 1.90)
-                try {
-                    await requestExecuteCommand("vscode.editorChat.start", [{ initialPrompt: prompt, isPartialQuery: false }]);
-                    appendLog("Opened editor chat with implementation prompt. Review and run it.", "success");
-                    return { opened: true, copied: false, method: "editor-chat-with-prompt" };
-                } catch (editorChatError) {
-                    try {
-                        // Fall back to panel chat with inline query
-                        await requestExecuteCommand("workbench.action.chat.open", [{ query: prompt, isPartialQuery: false }]);
-                        appendLog("Opened panel chat with implementation prompt.", "success");
-                        return { opened: true, copied: false, method: "chat-panel-with-query" };
-                    } catch (chatViewError) {
-                        // Copy prompt to clipboard then try to open chat without pre-fill
-                        var copied = false;
-                        if (prompt) {
-                            try {
-                                await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
-                                copied = true;
-                            } catch (_) { }
-                        }
-
-                        try {
-                            await requestExecuteCommand("vscode.editorChat.start", []);
-                            appendLog("Opened editor chat. Paste the copied implementation prompt.", "success");
-                            return { opened: true, copied: copied, method: "editor-chat-empty" };
-                        } catch (_) { }
-
-                        try {
-                            await requestExecuteCommand("workbench.action.chat.open", []);
-                            appendLog("Opened chat view. Paste the copied implementation prompt.", "success");
-                            return { opened: true, copied: copied, method: "chat-panel-empty" };
-                        } catch (_) { }
-
-                        if (invokeCommandUri("vscode.editorChat.start")) {
-                            appendLog("Attempted to open editor chat via command URI. Paste the copied prompt if chat appears.", "warn");
-                            return { opened: true, copied: copied, method: "command-uri:editor-chat" };
-                        }
-                        if (invokeCommandUri("workbench.action.chat.open")) {
-                            appendLog("Attempted to open chat view via command URI. Paste the copied prompt if chat appears.", "warn");
-                            return { opened: true, copied: copied, method: "command-uri:chat-panel" };
-                        }
-                    }
-                }
-
+                var copied = false;
                 if (prompt) {
-                    try { await copyTextToClipboard(prompt, "Implementation prompt copied — paste it into a chat session."); } catch (_) { }
+                    try {
+                        await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
+                        copied = true;
+                    } catch (_) { }
                 }
+
+                if (invokeCommandUri("workbench.action.chat.open", [{ query: prompt, isPartialQuery: false }])) {
+                    appendLog("Opened chat with the implementation prompt. Review and submit it in chat if the host did not auto-run it.", "success");
+                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                }
+
+                if (invokeCommandUri("workbench.action.chat.open", [])) {
+                    appendLog("Opened chat without a prefilled prompt. Paste the copied implementation prompt into chat.", "warn");
+                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open-empty" };
+                }
+
                 appendLog("Chat handoff unavailable from this host. Use the copied prompt or the delegation panel below.", "warn");
-                return { opened: false, copied: !!prompt };
+                return { opened: false, copied: copied };
             }
 
             function getSuggestionPreview(featureId, outcomeId) {

@@ -231,11 +231,15 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("ui/requests/execute-command"));
+        .contains("command:"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
-        .contains("vscode.editorChat.start"));
+        .contains("workbench.action.chat.open"));
+    assert!(feature_picker_html["result"]["contents"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("isPartialQuery"));
     assert!(feature_picker_html["result"]["contents"][0]["text"]
         .as_str()
         .unwrap()
