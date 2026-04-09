@@ -345,6 +345,23 @@ In VS Code, the `Specrail` workspace agent is the repo-aware entrypoint. It shou
 
 For troubleshooting in VS Code, the workspace MCP config enables stderr logging for the server. Open `MCP: List Servers`, select `specrail`, then choose `Show Output` to inspect the live MCP log stream.
 
+#### MCP logging levels
+
+The MCP server supports level-based logging via this env var in MCP config:
+
+- `SPECRAIL_MCP_LOG_LEVEL=error`
+- `SPECRAIL_MCP_LOG_LEVEL=warning`
+- `SPECRAIL_MCP_LOG_LEVEL=info`
+- `SPECRAIL_MCP_LOG_LEVEL=verbose`
+
+Recommended defaults:
+
+- Local development: `verbose` (or `info` when logs are noisy)
+- CI / automation: `warning`
+- Minimal production diagnostics: `error`
+
+You can also keep `SPECRAIL_MCP_DEBUG_STDERR=1` enabled to emit logs to stderr and optionally set `SPECRAIL_MCP_DEBUG_LOG=/path/to/file.log` to mirror logs into a file.
+
 After installing, verify that the plugin and MCP server are loaded:
 
 ```bash

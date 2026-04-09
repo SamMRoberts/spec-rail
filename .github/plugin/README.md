@@ -37,3 +37,18 @@ The normal progression is:
 If the project is already partway through the workflow, `specrail-tdd` should call `specrail_status`, use the `workflow.recommended_skill` guidance, and then hand off to `specrail-resume` or the matching stage instead of starting over.
 
 Skills are the guided user-facing workflows. The `specrail_*` MCP tools are the direct executable actions that the skills call.
+
+## MCP Logging Configuration
+
+Set `SPECRAIL_MCP_LOG_LEVEL` in MCP server env to control log verbosity:
+
+- `error`
+- `warning`
+- `info`
+- `verbose`
+
+Suggested values:
+
+- local development: `verbose`
+- CI: `warning`
+- minimal diagnostics: `error`
