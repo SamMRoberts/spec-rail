@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 use crate::{
     agents,
@@ -30,21 +31,21 @@ pub struct AddArgs {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-struct GeneratedTestsResponse {
-    tests: Vec<GeneratedTest>,
+pub struct GeneratedTestsResponse {
+    pub tests: Vec<GeneratedTest>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-struct GeneratedTest {
-    feature_id: String,
-    outcome_id: String,
-    id: String,
-    name: String,
-    path: String,
-    kind: String,
+pub struct GeneratedTest {
+    pub feature_id: String,
+    pub outcome_id: String,
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub kind: String,
     #[serde(default)]
-    purpose_refs: Vec<String>,
-    content: String,
+    pub purpose_refs: Vec<String>,
+    pub content: String,
 }
 
 struct OutcomeGenerationContext {
@@ -58,6 +59,18 @@ struct PreparedTestGeneration {
     outcome_contexts: Vec<OutcomeGenerationContext>,
     scope_label: String,
     allow_path_discovery: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TestGenerationDelegation {
+    pub agent: String,
+    pub scope_label: String,
+    pub prompt: String,
+    pub allowed_paths: Vec<String>,
+    pub expected_paths: Vec<String>,
+    pub allow_path_discovery: bool,
+    pub response_schema: Value,
+    pub apply_tool: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -143,18 +156,14 @@ pub fn generate_scoped(
     agent_override: Option<&str>,
 ) -> Result<TestGenerationRunSummary> {
     let prepared = prepare_test_generation(repo, feature_id, outcome_id)?;
-    let mut manifest = repo.load_manifest()?;
-    let agent_name = agent_override.unwrap_or("copilot");
+    let agent_name = resolve_generation_agent(agent_override);
 
     println!("▶ Running agent '{agent_name}' to generate required tests…");
     println!("{}", "─".repeat(60));
     let agent_output = run_test_generation_agent(repo, &prepared, agent_override)?;
     let agent_name = agent_output.agent_name.as_str();
 
-    let run_event = LedgerEvent::new(LedgerEventType::TestGenerationRun)
-        .with_agent(agent_name)
-        .with_success(agent_output.result.success);
-    Ledger::append(repo, &run_event)?;
+    log_test_generation_run(repo, agent_name, agent_output.result.success)?;
 
     if !agent_output.result.success {
         println!("stdout:\n{}", agent_output.result.stdout);
@@ -168,93 +177,13 @@ pub fn generate_scoped(
     }
 
     let response = parse_generated_tests(&agent_output.result.stdout)?;
-    let actual_tests = generated_test_specs(&response);
-
-    if !prepared.allow_path_discovery && actual_tests != prepared.expected_tests {
-        bail!("generated tests did not match outcome required test declarations");
-    }
-
-    if prepared.allow_path_discovery && response.tests.is_empty() {
-        bail!("generated tests did not include a bootstrap test for the scoped outcome");
-    }
-
-    let mut generated_count = 0usize;
-    for generated in response.tests {
-        let outcome = prepared.outcome_contexts
-            .iter()
-            .find(|context| {
-                context.feature_id == generated.feature_id
-                    && context.outcome.id == generated.outcome_id
-            })
-            .map(|context| &context.outcome)
-            .with_context(|| {
-                format!(
-                    "generated unknown outcome '{}:{}'",
-                    generated.feature_id, generated.outcome_id
-                )
-            })?;
-
-        if !prepared.allow_path_discovery
-            && (!outcome
-                .required_tests
-                .iter()
-                .any(|test_id| test_id == &generated.id)
-                || !outcome
-                    .required_test_files
-                    .iter()
-                    .any(|path| path == &generated.path))
-        {
-            bail!(
-                "generated test '{}:{}' is not declared in outcome required test metadata for '{}:{}'",
-                generated.id,
-                generated.path,
-                generated.feature_id,
-                generated.outcome_id
-            );
-        }
-
-        let kind = parse_generated_test_kind(&generated.kind)?;
-        let canonical_test_id = upsert_generated_test_in_manifest(
-            &mut manifest,
-            AddArgs {
-                id: generated.id.clone(),
-                name: Some(generated.name.clone()),
-                feature_id: generated.feature_id.clone(),
-                outcome_id: generated.outcome_id.clone(),
-                path: generated.path.clone(),
-                kind,
-                purpose_refs: generated.purpose_refs.clone(),
-            },
-            TestStatus::Written,
-        )?;
-
-        write_file(&repo.root.join(&generated.path), &generated.content)?;
-
-        crate::commands::outcome::ensure_required_test_reference(
-            repo,
-            &generated.feature_id,
-            &generated.outcome_id,
-            &canonical_test_id,
-            &generated.path,
-        )?;
-
-        let event = LedgerEvent::new(LedgerEventType::TestAdded)
-            .with_feature(&generated.feature_id)
-            .with_outcome(&generated.outcome_id)
-            .with_message(format!("test '{}' generated", canonical_test_id));
-        Ledger::append(repo, &event)?;
-        generated_count = generated_count.saturating_add(1);
-    }
-
-    repo.save_manifest(&manifest)?;
-
-    println!("Generated {generated_count} test file(s) and updated the manifest.");
+    let summary = apply_generated_tests_response(repo, &prepared, agent_name, response)?;
+    println!(
+        "Generated {} test file(s) and updated the manifest.",
+        summary.generated_count
+    );
     println!("{}", "─".repeat(60));
-    Ok(TestGenerationRunSummary {
-        agent: agent_name.to_string(),
-        scope_label: prepared.scope_label,
-        generated_count,
-    })
+    Ok(summary)
 }
 
 pub fn suggest(
@@ -372,6 +301,47 @@ pub fn preview(
     })
 }
 
+pub fn prepare_generation_delegation(
+    repo: &Repository,
+    feature_id: Option<&str>,
+    outcome_id: Option<&str>,
+    agent_override: Option<&str>,
+) -> Result<TestGenerationDelegation> {
+    let prepared = prepare_test_generation(repo, feature_id, outcome_id)?;
+    Ok(TestGenerationDelegation {
+        agent: resolve_generation_agent(agent_override),
+        scope_label: prepared.scope_label,
+        prompt: prepared.prompt,
+        allowed_paths: prepared
+            .expected_tests
+            .iter()
+            .map(|(_, _, _, path)| path.clone())
+            .collect(),
+        expected_paths: prepared
+            .expected_tests
+            .iter()
+            .map(|(_, _, _, path)| path.clone())
+            .collect(),
+        allow_path_discovery: prepared.allow_path_discovery,
+        response_schema: generated_tests_response_schema(),
+        apply_tool: "specrail_test_apply_generated".to_string(),
+    })
+}
+
+pub fn apply_generated_tests(
+    repo: &Repository,
+    feature_id: Option<&str>,
+    outcome_id: Option<&str>,
+    agent_override: Option<&str>,
+    response: GeneratedTestsResponse,
+) -> Result<TestGenerationRunSummary> {
+    let prepared = prepare_test_generation(repo, feature_id, outcome_id)?;
+    let agent_name = resolve_generation_agent(agent_override);
+    let summary = apply_generated_tests_response(repo, &prepared, &agent_name, response)?;
+    log_test_generation_run(repo, &agent_name, true)?;
+    Ok(summary)
+}
+
 fn prepare_test_generation(
     repo: &Repository,
     feature_filter: Option<&str>,
@@ -482,7 +452,7 @@ fn run_test_generation_agent(
     prepared: &PreparedTestGeneration,
     agent_override: Option<&str>,
 ) -> Result<GenerationAgentOutput> {
-    let agent_name = agent_override.unwrap_or("copilot").to_string();
+    let agent_name = resolve_generation_agent(agent_override);
     let task = AgentTask {
         feature_id: "project".to_string(),
         outcome_id: "all-required-tests".to_string(),
@@ -498,6 +468,138 @@ fn run_test_generation_agent(
     let result = agents::run_task(&agent_name, &task, Some(&repo.root))?;
 
     Ok(GenerationAgentOutput { agent_name, result })
+}
+
+fn apply_generated_tests_response(
+    repo: &Repository,
+    prepared: &PreparedTestGeneration,
+    agent_name: &str,
+    response: GeneratedTestsResponse,
+) -> Result<TestGenerationRunSummary> {
+    let mut manifest = repo.load_manifest()?;
+    let actual_tests = generated_test_specs(&response);
+
+    if !prepared.allow_path_discovery && actual_tests != prepared.expected_tests {
+        bail!("generated tests did not match outcome required test declarations");
+    }
+
+    if prepared.allow_path_discovery && response.tests.is_empty() {
+        bail!("generated tests did not include a bootstrap test for the scoped outcome");
+    }
+
+    let mut generated_count = 0usize;
+    for generated in response.tests {
+        let outcome = prepared
+            .outcome_contexts
+            .iter()
+            .find(|context| {
+                context.feature_id == generated.feature_id
+                    && context.outcome.id == generated.outcome_id
+            })
+            .map(|context| &context.outcome)
+            .with_context(|| {
+                format!(
+                    "generated unknown outcome '{}:{}'",
+                    generated.feature_id, generated.outcome_id
+                )
+            })?;
+
+        if !prepared.allow_path_discovery
+            && (!outcome
+                .required_tests
+                .iter()
+                .any(|test_id| test_id == &generated.id)
+                || !outcome
+                    .required_test_files
+                    .iter()
+                    .any(|path| path == &generated.path))
+        {
+            bail!(
+                "generated test '{}:{}' is not declared in outcome required test metadata for '{}:{}'",
+                generated.id,
+                generated.path,
+                generated.feature_id,
+                generated.outcome_id
+            );
+        }
+
+        let kind = parse_generated_test_kind(&generated.kind)?;
+        let canonical_test_id = upsert_generated_test_in_manifest(
+            &mut manifest,
+            AddArgs {
+                id: generated.id.clone(),
+                name: Some(generated.name.clone()),
+                feature_id: generated.feature_id.clone(),
+                outcome_id: generated.outcome_id.clone(),
+                path: generated.path.clone(),
+                kind,
+                purpose_refs: generated.purpose_refs.clone(),
+            },
+            TestStatus::Written,
+        )?;
+
+        write_file(&repo.root.join(&generated.path), &generated.content)?;
+
+        crate::commands::outcome::ensure_required_test_reference(
+            repo,
+            &generated.feature_id,
+            &generated.outcome_id,
+            &canonical_test_id,
+            &generated.path,
+        )?;
+
+        let event = LedgerEvent::new(LedgerEventType::TestAdded)
+            .with_feature(&generated.feature_id)
+            .with_outcome(&generated.outcome_id)
+            .with_message(format!("test '{}' generated", canonical_test_id));
+        Ledger::append(repo, &event)?;
+        generated_count = generated_count.saturating_add(1);
+    }
+
+    repo.save_manifest(&manifest)?;
+
+    Ok(TestGenerationRunSummary {
+        agent: agent_name.to_string(),
+        scope_label: prepared.scope_label.clone(),
+        generated_count,
+    })
+}
+
+fn resolve_generation_agent(agent_override: Option<&str>) -> String {
+    agent_override.unwrap_or("copilot").to_string()
+}
+
+fn log_test_generation_run(repo: &Repository, agent_name: &str, success: bool) -> Result<()> {
+    let run_event = LedgerEvent::new(LedgerEventType::TestGenerationRun)
+        .with_agent(agent_name)
+        .with_success(success);
+    Ledger::append(repo, &run_event)
+}
+
+fn generated_tests_response_schema() -> Value {
+    json!({
+        "type": "object",
+        "required": ["tests"],
+        "properties": {
+            "tests": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["feature_id", "outcome_id", "id", "name", "path", "kind", "content"],
+                    "properties": {
+                        "feature_id": { "type": "string" },
+                        "outcome_id": { "type": "string" },
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "path": { "type": "string" },
+                        "kind": { "type": "string", "enum": ["unit", "integration", "e2e"] },
+                        "purpose_refs": { "type": "array", "items": { "type": "string" } },
+                        "content": { "type": "string" }
+                    }
+                }
+            }
+        }
+    })
 }
 
 fn generated_test_specs(response: &GeneratedTestsResponse) -> BTreeSet<(String, String, String, String)> {
