@@ -52,6 +52,12 @@ pub fn check_advance_gates(outcome: &OutcomeSpec) -> Result<()> {
     Ok(())
 }
 
+/// Check whether verification can run against the active outcome.
+///
+/// Verification uses the project's full test command, so it still relies on the
+/// same per-outcome readiness checks as implementation to avoid recording noisy
+/// or misleading results when required tests are missing, still planned, or not
+/// yet written to disk.
 pub fn check_verify_gates(
     repo: &Repository,
     outcome: &OutcomeSpec,
@@ -60,6 +66,16 @@ pub fn check_verify_gates(
     check_test_readiness(repo, outcome, manifest)
 }
 
+/// Enforce the shared test-readiness rules that must hold before workflow steps
+/// can trust the current outcome's tests as a meaningful gate.
+///
+/// This requires:
+/// - at least one registered outcome test,
+/// - declared required test IDs,
+/// - discoverable required test files,
+/// - manifest coverage for each required test ID and file,
+/// - no outcome tests left in `planned`,
+/// - and required test files that already exist on disk.
 fn check_test_readiness(repo: &Repository, outcome: &OutcomeSpec, manifest: &TestManifest) -> Result<()> {
     let outcome_tests: Vec<_> = manifest
         .tests

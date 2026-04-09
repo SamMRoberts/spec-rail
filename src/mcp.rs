@@ -2400,6 +2400,10 @@ fn workflow_skill(snapshot: &OutcomeWorkflowSnapshot) -> &'static str {
     }
 }
 
+/// Build workflow blocker strings from an outcome test review.
+///
+/// `label` lets callers tailor the phrasing for active vs. candidate outcomes
+/// while reusing the same gap-to-message mapping.
 fn workflow_test_review_blockers(
     snapshot: &OutcomeWorkflowSnapshot,
     label: &str,
