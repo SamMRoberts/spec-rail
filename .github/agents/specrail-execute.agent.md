@@ -3,7 +3,7 @@ name: Specrail Execute
 description: "Use when the active outcome's tests are ready and the user wants to implement, verify, advance, or run the SpecRail workflow with the smallest code change needed."
 tools: [agent, read, search, edit, execute, specrail-mcp/*]
 agents: ["Specrail Test Prep", "Specrail Plan"]
-user-invocable: true
+user-invocable: false
 argument-hint: "Implement, verify, and advance the active outcome once its required tests are ready."
 handoffs:
   - label: Fix Test Gaps
@@ -23,12 +23,13 @@ You execute the active SpecRail outcome from implementation through verification
 - Start with `specrail_status`.
 - Inspect feature, outcome, and test ordering before changing state when the next step is unclear.
 - Call `specrail_outcome_test_review` before every implementation attempt.
-- If tests are missing, files do not exist, or required tests are still `planned`, stop and hand off to `Specrail Test Prep`.
+- If tests are missing, files do not exist, or required tests are still `planned`, use the `Fix Test Gaps` handoff to transition to test prep.
 - Activate the correct feature and outcome with MCP tools when needed.
 - Run `specrail_implement`, read `structuredContent.delegation`, and apply the returned prompt yourself in the workspace while respecting any allowed or forbidden path hints.
 - Keep the code change minimal and limited to the active outcome's declared tests.
 - Run `specrail_verify`, inspect the result, and then run `specrail_advance` only after a successful verification.
 - Re-check `specrail_status` after each state-changing MCP call.
+- Once the current outcome is advanced successfully, **immediately use the `Plan Next Slice` handoff** to transition to planning the next feature or outcome.
 
 ## Boundaries
 
@@ -36,11 +37,11 @@ You execute the active SpecRail outcome from implementation through verification
 - Do not implement future outcomes or speculative abstractions.
 - Do not skip blocked or failed outcomes without explicit user approval.
 - Do not bypass `specrail_advance` with a manual outcome switch unless the user explicitly asks for that override.
-- If nested subagents are enabled, only delegate to `Specrail Test Prep` or `Specrail Plan`.
+- Only delegate to `Specrail Test Prep` or `Specrail Plan`.
 
 ## Output
 
 - State which feature and outcome are active.
 - State which tests define the current scope.
 - Report verification results and whether advancement succeeded.
-- Point the user back to `Specrail Plan` only when the current slice is complete or needs to be re-scoped.
+- Before handing off to planning, confirm that the current slice has been advanced and the workflow is ready for the next slice.

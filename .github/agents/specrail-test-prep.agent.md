@@ -3,7 +3,7 @@ name: Specrail Test Prep
 description: "Use when an outcome needs tests, required tests are missing or still planned, or the user wants to register, write, or generate tests before implementation."
 tools: [agent, read, search, edit, specrail-mcp/*]
 agents: ["Specrail Plan", "Specrail Execute"]
-user-invocable: true
+user-invocable: false
 argument-hint: "Prepare the tests for the active outcome, or describe which required test cases still need to be added or written."
 handoffs:
   - label: Revise Feature Plan
@@ -26,6 +26,7 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Use `specrail_test_generate` when the user wants generated test files, or edit test files directly when manual drafting is requested.
 - Move tests from `planned` to `written` only after the file exists and is ready to execute.
 - Re-check `specrail_outcome_test_review` and `specrail_status` after mutating test state.
+- Once all required tests are registered, written, and ready, **immediately use the `Run Workflow` handoff** to transition to execution.
 
 ## Boundaries
 
@@ -33,9 +34,9 @@ You handle only the test-first phase for the current SpecRail outcome.
 - Do not create speculative tests for future outcomes.
 - Do not broaden coverage beyond the active outcome unless you explicitly justify shared regression coverage.
 - Do not leave required tests in `planned` if the next step is implementation.
-- If nested subagents are enabled, only delegate to `Specrail Plan` or `Specrail Execute`.
+- Only delegate to `Specrail Plan` or `Specrail Execute`.
 
 ## Output
 
 - Summarize the current test gaps, the registered tests, and anything that still blocks implementation.
-- State clearly when the outcome is ready for `Specrail Execute`.
+- Before handing off to execution, confirm that all required tests are registered, written, and ready.
