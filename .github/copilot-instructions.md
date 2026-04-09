@@ -101,8 +101,9 @@ These commands pass in the current repository state and are the baseline validat
 - `specrail_status` returns `structuredContent.workflow` with the recommended skill, blockers, next tools, and candidate feature/outcome for the TDD loop.
 - `specrail_feature_navigate` returns structured feature summaries, outcome counts, and test counts in `structuredContent`. When called with a `feature_id`, it returns outcomes with per-outcome test counts (`testCount`, `passingTestCount`, `plannedTestCount`).
 - All tools now include a `title` field (e.g. `"title": "Feature & Outcome Navigator"`) for display in MCP-capable hosts.
-- The workspace custom agent lives under `.github/agents/specrail.agent.md` and serves as the repo-aware VS Code entrypoint for SpecRail guidance.
-- The installable Copilot CLI plugin lives under `.github/plugin/`; `.github/plugin/.mcp.json` launches `specrail mcp-server` as the `specrail` MCP server, and `.github/plugin/skills/` contains workflow skills (`specrail-tdd`, `specrail-setup`, `specrail-plan-features`, `specrail-prepare-tests`, `specrail-run-workflow`, `specrail-resume`).
+- The workspace custom agents live under `.github/agents/`; `specrail.agent.md` is the coordinator and the phase agents are `specrail-setup.agent.md`, `specrail-plan.agent.md`, `specrail-test-prep.agent.md`, `specrail-execute.agent.md`, and `specrail-resume.agent.md`.
+- The coordinator maps `workflow.recommended_skill` onto those phase agents and uses subagent delegation plus handoffs instead of loading the plugin skills as the primary workspace workflow abstraction.
+- The installable Copilot CLI plugin still lives under `.github/plugin/`; `.github/plugin/.mcp.json` launches `specrail mcp-server` as the `specrail` MCP server, and `.github/plugin/skills/` still contain the plugin-oriented workflow skills (`specrail-tdd`, `specrail-setup`, `specrail-plan-features`, `specrail-prepare-tests`, `specrail-run-workflow`, `specrail-resume`).
 
 ## Practical pitfalls
 
