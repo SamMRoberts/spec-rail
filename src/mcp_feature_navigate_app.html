@@ -1837,7 +1837,7 @@
                             }
                         } else if (activeDelegation && (st === "active" || st === "failed")) {
                             icon = "\u2699\uFE0F"; label = "Step 4 of 6 \u2014 Implement";
-                            title = "Delegation prepared for this outcome";
+                            title = "Implementation prompt ready for this outcome";
                             desc = "The navigator received the implementation prompt and will try to open chat automatically. Review or copy it below, apply the changes in chat, then run verify.";
                             actions = [
                                 {
@@ -2091,7 +2091,7 @@
                     }
                     if (name === "specrail_implement" && rememberImplementationDelegation(result, args)) {
                         refresh = false;
-                        appendLog(title + " delegation ready. Review the implementation prompt in the outcome panel.", "success");
+                        appendLog(title + " prompt ready. Review the implementation prompt in the outcome panel.", "success");
                         var sc = result && result.structuredContent;
                         if (sc && sc.delegation && typeof sc.delegation === "object") {
                             await startChatForDelegation(sc.delegation);
@@ -2741,7 +2741,7 @@
                     return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open-empty" };
                 }
 
-                appendLog("Chat handoff unavailable from this host. Use the copied prompt or the delegation panel below.", "warn");
+                appendLog("Chat handoff unavailable from this host. Use the copied prompt or the implementation prompt panel below.", "warn");
                 return { opened: false, copied: copied };
             }
 
@@ -2977,7 +2977,7 @@
 
                 var head = document.createElement("div");
                 head.className = "section-card-head";
-                head.innerHTML = '<span class="section-card-title">Implementation delegation ready</span>';
+                head.innerHTML = '<span class="section-card-title">Implementation prompt ready</span>';
                 var readyBadge = badge("active");
                 readyBadge.textContent = "Ready";
                 head.appendChild(readyBadge);
@@ -2986,7 +2986,7 @@
                 var copy = document.createElement("div");
                 copy.className = "section-card-copy";
                 copy.textContent = payload.message
-                    || "The navigator prepared a delegated implementation prompt. It does not execute automatically in the current shell from this embedded view.";
+                    || "The navigator prepared an implementation prompt for chat. It does not execute automatically in the current shell from this embedded view.";
                 section.appendChild(copy);
 
                 var chips = document.createElement("div");
@@ -3087,7 +3087,7 @@
                 var copy = document.createElement("div");
                 copy.className = "section-card-copy";
                 copy.textContent = payload.message
-                    || "Specrail prepared delegated implementation prompts for this feature. Expand the relevant outcome card to inspect or copy a prompt.";
+                    || "Specrail prepared implementation prompts for this feature. Expand the relevant outcome card to inspect or copy a prompt.";
                 section.appendChild(copy);
 
                 var list = document.createElement("div");
