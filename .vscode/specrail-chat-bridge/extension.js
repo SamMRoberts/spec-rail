@@ -62,11 +62,14 @@ function activate(context) {
     const prompt = extractPrompt(payload);
     const mode = extractMode(payload);
     const autoSubmit = extractAutoSubmit(payload);
-    await vscode.commands.executeCommand("workbench.action.chat.open", {
-      query: prompt,
-      isPartialQuery: false,
-      mode,
-    });
+
+    if (prompt) {
+      await vscode.commands.executeCommand("workbench.action.chat.open", {
+        query: prompt,
+        isPartialQuery: false,
+        mode,
+      });
+    }
 
     if (autoSubmit) {
       await delay(75);

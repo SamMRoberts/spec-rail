@@ -2748,6 +2748,16 @@
                 }
             }
 
+            async function requestHostOpenLink(url) {
+                if (!url) return false;
+                try {
+                    var result = await sendRequestWithTimeout("ui/open-link", { url: url }, 1500);
+                    return !(result && result.isError);
+                } catch (e) {
+                    return false;
+                }
+            }
+
             async function startChatForDelegation(delegation) {
                 if (!delegation || typeof delegation !== "object") return { opened: false, copied: false };
 
@@ -2760,21 +2770,30 @@
                         await copyTextToClipboard(prompt, "Implementation prompt copied to clipboard.");
                         copied = true;
                     } catch (_) { }
+
+                    try {
+                        var drafted = await sendRequestWithTimeout("ui/message", {
+                            content: [{ type: "text", text: prompt }]
+                        }, 1500);
+                        if (!(drafted && drafted.isError)) {
+                            appendLog("Drafted the implementation prompt into the current chat input.", "success");
+                        }
+                    } catch (_) { }
                 }
 
-                if (invokeCommandUri(chatBridgeCommand, [{ prompt: prompt, mode: "agent", autoSubmit: true }])) {
-                    appendLog("Requested automatic VS Code chat execution through 'specrail.runMcpAction'.", "success");
-                    return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction" };
+                if (await requestHostOpenLink(buildCommandUri(chatBridgeCommand, [{ autoSubmit: true }]))) {
+                    appendLog("Requested automatic submission of the drafted chat message through 'specrail.runMcpAction'.", "success");
+                    return { opened: true, copied: copied, method: "ui/open-link:specrail.runMcpAction" };
                 }
 
-                if (invokeCommandUri(chatBridgeCommand, [])) {
+                if (await requestHostOpenLink(buildCommandUri(chatBridgeCommand, []))) {
                     appendLog("Requested fallback VS Code command 'specrail.runMcpAction' without arguments.", "warn");
-                    return { opened: true, copied: copied, method: "command-uri:specrail.runMcpAction-empty" };
+                    return { opened: true, copied: copied, method: "ui/open-link:specrail.runMcpAction-empty" };
                 }
 
-                if (invokeCommandUri(builtInChatCommand, [{ query: prompt, isPartialQuery: false, mode: "agent" }])) {
+                if (await requestHostOpenLink(buildCommandUri(builtInChatCommand, [{ query: prompt, isPartialQuery: false, mode: "agent" }]))) {
                     appendLog("Requested built-in VS Code chat with the implementation prompt. Submission may still require host support.", "success");
-                    return { opened: true, copied: copied, method: "command-uri:workbench.action.chat.open" };
+                    return { opened: true, copied: copied, method: "ui/open-link:workbench.action.chat.open" };
                 }
 
                 appendLog("Command handoff unavailable. The built-in chat command was not accepted, and no fallback bridge is available.", "warn");
