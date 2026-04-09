@@ -23,6 +23,7 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     "2025-03-26",
     "2024-11-05",
 ];
+const WORKFLOW_UI_RESOURCE_URI: &str = "ui://specrail/workflow";
 
 #[derive(Debug, Clone, Serialize)]
 struct ImplementationBlockedOutcome {
@@ -78,7 +79,42 @@ fn server_capabilities() -> Value {
     json!({
         "tools": {
             "listChanged": false
+        },
+        "resources": {
+            "subscribe": false,
+            "listChanged": false
         }
+    })
+}
+
+fn resource_definitions() -> Vec<Value> {
+    vec![json!({
+        "uri": WORKFLOW_UI_RESOURCE_URI,
+        "name": "Specrail Workflow UI",
+        "title": "Specrail Workflow UI",
+        "mimeType": "text/html",
+        "description": "Small @mcp-ui workflow/status panel for Specrail status, overview, review, and delegation results."
+    })]
+}
+
+fn handle_resource_read(uri: &str) -> Result<Value> {
+    let contents = match uri {
+        WORKFLOW_UI_RESOURCE_URI => vec![json!({
+            "uri": WORKFLOW_UI_RESOURCE_URI,
+            "mimeType": "text/html",
+            "text": include_str!("mcp_workflow_app.html"),
+        })],
+        _ => bail!("unknown resource '{uri}'"),
+    };
+
+    Ok(json!({ "contents": contents }))
+}
+
+fn resource_error_content(uri: &str, error: &anyhow::Error) -> Value {
+    json!({
+        "uri": uri,
+        "mimeType": "text/plain",
+        "text": error.to_string(),
     })
 }
 
@@ -279,6 +315,19 @@ impl McpServer {
             }
             "ping" => id.map(|id| jsonrpc_result(id, json!({}))),
             "tools/list" => id.map(|id| jsonrpc_result(id, json!({ "tools": tool_definitions() }))),
+            "resources/list" => {
+                id.map(|id| jsonrpc_result(id, json!({ "resources": resource_definitions() })))
+            }
+            "resources/read" => {
+                let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
+                let uri = params
+                    .get("uri")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let result = handle_resource_read(uri)
+                    .unwrap_or_else(|error| json!({ "contents": [resource_error_content(uri, &error)] }));
+                id.map(|id| jsonrpc_result(id, result))
+            }
             "tools/call" => {
                 let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
                 let result = handle_tool_call(&params).unwrap_or_else(|error| tool_error_payload(error));
@@ -336,6 +385,9 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_outcome_show" => tool_outcome_show(arguments),
         "specrail_outcome_test_review" => tool_outcome_test_review(arguments),
         "specrail_test_list" => tool_test_list(arguments),
+        "specrail_workflow_overview" => tool_workflow_overview(arguments),
+        "specrail_workflow_next" => tool_workflow_next(arguments),
+        "specrail_resume_point" => tool_resume_point(arguments),
         "specrail_trace" => tool_trace(arguments),
         "specrail_init" => tool_init(arguments),
         "specrail_solution_new" => tool_solution_new(arguments),
@@ -360,6 +412,7 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
         "specrail_test_generate" => tool_test_generate(arguments),
         "specrail_test_apply_generated" => tool_test_apply_generated(arguments),
         "specrail_test_set_status" => tool_test_set_status(arguments),
+        "specrail_activate_next" => tool_activate_next(arguments),
         "specrail_implement" => tool_implement(arguments),
         "specrail_verify" => tool_verify(arguments),
         "specrail_advance" => tool_advance(arguments),
@@ -389,13 +442,45 @@ fn handle_tool_call(params: &Value) -> Result<Value> {
     result
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Clone, Serialize)]
+struct WorkflowProgress {
+    feature_total: usize,
+    feature_completed: usize,
+    outcome_total: usize,
+    outcome_verified: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WorkflowBlocker {
+    kind: String,
+    message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WorkflowAction {
+    id: String,
+    label: String,
+    tool: String,
+    purpose: String,
+    stage: String,
+    group: String,
+    arguments: Value,
+    required_arguments: Vec<String>,
+    requires_confirmation: bool,
+    recommended: bool,
+    blocked_reason: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
 struct WorkflowGuidance {
     stage: String,
     recommended_skill: String,
     summary: String,
     blockers: Vec<String>,
+    blocker_details: Vec<WorkflowBlocker>,
     next_tools: Vec<String>,
+    actions: Vec<WorkflowAction>,
+    progress: WorkflowProgress,
     active_feature_id: Option<String>,
     active_outcome_id: Option<String>,
     candidate_feature_id: Option<String>,
@@ -583,12 +668,73 @@ fn sync_required_test_names(
     Ok(updated)
 }
 
+fn workflow_action(
+    id: &str,
+    label: &str,
+    tool: &str,
+    purpose: &str,
+    stage: &str,
+    group: &str,
+    arguments: Value,
+    required_arguments: &[&str],
+    requires_confirmation: bool,
+    recommended: bool,
+    blocked_reason: Option<String>,
+) -> WorkflowAction {
+    WorkflowAction {
+        id: id.to_string(),
+        label: label.to_string(),
+        tool: tool.to_string(),
+        purpose: purpose.to_string(),
+        stage: stage.to_string(),
+        group: group.to_string(),
+        arguments,
+        required_arguments: required_arguments.iter().map(|value| value.to_string()).collect(),
+        requires_confirmation,
+        recommended,
+        blocked_reason,
+    }
+}
+
+fn workflow_progress(repo: &Repository, features: &[FeatureSpec]) -> Result<WorkflowProgress> {
+    let mut feature_completed = 0usize;
+    let mut outcome_total = 0usize;
+    let mut outcome_verified = 0usize;
+
+    for feature in features {
+        let outcomes = repo.list_outcomes(&feature.id)?;
+        outcome_total += outcomes.len();
+        let verified = outcomes
+            .iter()
+            .filter(|outcome| outcome.status == OutcomeStatus::Verified)
+            .count();
+        outcome_verified += verified;
+        if !outcomes.is_empty() && verified == outcomes.len() {
+            feature_completed += 1;
+        }
+    }
+
+    Ok(WorkflowProgress {
+        feature_total: features.len(),
+        feature_completed,
+        outcome_total,
+        outcome_verified,
+    })
+}
+
+fn workflow_blocker(kind: &str, message: impl Into<String>) -> WorkflowBlocker {
+    WorkflowBlocker {
+        kind: kind.to_string(),
+        message: message.into(),
+    }
+}
+
 fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
     let repo = match Repository::discover(&cwd) {
         Ok(repo) => repo,
         Err(_) => {
-            return Ok(tool_success_payload(
+            return Ok(tool_success_payload_with_meta(
                 format!("No specrail project found from {}.", cwd.display()),
                 Some(json!({
                     "initialized": false,
@@ -598,13 +744,37 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
                         recommended_skill: "specrail-setup".to_string(),
                         summary: "Initialize specrail before planning features, tests, or implementation.".to_string(),
                         blockers: vec!["No .specrail project was found from this working directory.".to_string()],
+                        blocker_details: vec![workflow_blocker(
+                            "not_initialized",
+                            "No .specrail project was found from this working directory.",
+                        )],
                         next_tools: vec!["specrail_init".to_string()],
+                        actions: vec![workflow_action(
+                            "initialize-project",
+                            "Initialize project",
+                            "specrail_init",
+                            "Create the .specrail workspace before planning or implementing work.",
+                            "init",
+                            "setup",
+                            json!({ "no_wizard": true }),
+                            &[],
+                            false,
+                            true,
+                            None,
+                        )],
+                        progress: WorkflowProgress {
+                            feature_total: 0,
+                            feature_completed: 0,
+                            outcome_total: 0,
+                            outcome_verified: 0,
+                        },
                         active_feature_id: None,
                         active_outcome_id: None,
                         candidate_feature_id: None,
                         candidate_outcome_id: None,
                     }
                 })),
+                workflow_ui_meta("status"),
             ));
         }
     };
@@ -668,7 +838,7 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
     let test_count = manifest.tests.len();
     let workflow = build_workflow_guidance(&repo, &state, &features, &manifest)?;
 
-    Ok(tool_success_payload(
+    Ok(tool_success_payload_with_meta(
         {
             let active_feat_icon = if state.active_feature.is_some() { "⚡" } else { "○" };
             let active_out_icon = if state.active_outcome.is_some() { "⚡" } else { "○" };
@@ -709,6 +879,7 @@ fn tool_status(arguments: &Map<String, Value>) -> Result<Value> {
             },
             "workflow": workflow
         })),
+        workflow_ui_meta("status"),
     ))
 }
 
@@ -873,11 +1044,12 @@ fn tool_outcome_test_review(arguments: &Map<String, Value>) -> Result<Value> {
     let manifest = repo.load_manifest()?;
     let review = build_outcome_test_review(&outcome, &manifest);
 
-    Ok(tool_success_payload(
+    Ok(tool_success_payload_with_meta(
         format!(
             "Reviewed tests for outcome '{outcome_id}' in feature '{feature_id}'."
         ),
         Some(json!({ "outcome": outcome, "review": review })),
+        workflow_ui_meta("review"),
     ))
 }
 
@@ -903,6 +1075,186 @@ fn tool_test_list(arguments: &Map<String, Value>) -> Result<Value> {
     Ok(tool_success_payload(
         format!("Found {count} test(s)."),
         Some(json!({ "tests": tests })),
+    ))
+}
+
+fn tool_workflow_overview(arguments: &Map<String, Value>) -> Result<Value> {
+    let cwd = resolve_cwd(arguments)?;
+    let repo = match Repository::discover(&cwd) {
+        Ok(repo) => repo,
+        Err(_) => {
+            return Ok(tool_success_payload_with_meta(
+                format!("No specrail project found from {}.", cwd.display()),
+                Some(json!({
+                    "initialized": false,
+                    "cwd": cwd.display().to_string(),
+                    "features": [],
+                })),
+                workflow_ui_meta("overview"),
+            ));
+        }
+    };
+
+    repo.ensure_hierarchy()?;
+    let state = repo.load_state()?;
+    let manifest = repo.load_manifest()?;
+    let features = repo.list_features()?;
+    let workflow = build_workflow_guidance(&repo, &state, &features, &manifest)?;
+
+    let feature_rows: Result<Vec<Value>> = features
+        .iter()
+        .map(|feature| {
+            let outcomes = repo.list_outcomes(&feature.id)?;
+            let verified = outcomes
+                .iter()
+                .filter(|outcome| outcome.status == OutcomeStatus::Verified)
+                .count();
+            let outcome_rows = outcomes
+                .into_iter()
+                .map(|outcome| {
+                    let review = build_outcome_test_review(&outcome, &manifest);
+                    let next_tool = if outcome.status == OutcomeStatus::Verified {
+                        "specrail_advance"
+                    } else if review.has_gaps {
+                        "specrail_outcome_test_review"
+                    } else if state.active_feature.as_deref() == Some(feature.id.as_str())
+                        && state.active_outcome.as_deref() == Some(outcome.id.as_str())
+                    {
+                        "specrail_implement"
+                    } else {
+                        "specrail_activate_next"
+                    };
+
+                    json!({
+                        "outcome": outcome,
+                        "active": state.active_feature.as_deref() == Some(feature.id.as_str())
+                            && state.active_outcome.as_deref() == Some(outcome.id.as_str()),
+                        "candidate": workflow.candidate_feature_id.as_deref() == Some(feature.id.as_str())
+                            && workflow.candidate_outcome_id.as_deref() == Some(outcome.id.as_str()),
+                        "ready_for_implementation": !review.has_gaps && outcome.status != OutcomeStatus::Verified,
+                        "progress": {
+                            "required_test_count": review.required_test_count,
+                            "related_test_count": review.related_test_count,
+                            "has_gaps": review.has_gaps,
+                        },
+                        "next_action_tool": next_tool,
+                        "test_review": review,
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            Ok(json!({
+                "feature": feature,
+                "active": state.active_feature.as_deref() == Some(feature.id.as_str()),
+                "candidate": workflow.candidate_feature_id.as_deref() == Some(feature.id.as_str()),
+                "progress": {
+                    "outcome_total": outcome_rows.len(),
+                    "outcome_verified": verified,
+                },
+                "outcomes": outcome_rows,
+            }))
+        })
+        .collect();
+
+    let feature_rows = feature_rows?;
+    Ok(tool_success_payload_with_meta(
+        format!("Workflow overview for {} feature(s).", feature_rows.len()),
+        Some(json!({
+            "initialized": true,
+            "root": repo.root.display().to_string(),
+            "workflow": workflow,
+            "features": feature_rows,
+        })),
+        workflow_ui_meta("overview"),
+    ))
+}
+
+fn tool_workflow_next(arguments: &Map<String, Value>) -> Result<Value> {
+    let status = tool_status(arguments)?;
+    let structured = status
+        .get("structuredContent")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let workflow = structured.get("workflow").cloned().unwrap_or_else(|| json!({}));
+    let next_action = workflow
+        .get("actions")
+        .and_then(Value::as_array)
+        .and_then(|actions| actions.iter().find(|action| {
+            action
+                .get("recommended")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        }).cloned())
+        .or_else(|| {
+            workflow
+                .get("actions")
+                .and_then(Value::as_array)
+                .and_then(|actions| actions.first().cloned())
+        });
+
+    Ok(tool_success_payload_with_meta(
+        workflow
+            .get("summary")
+            .and_then(Value::as_str)
+            .unwrap_or("No workflow guidance is available.")
+            .to_string(),
+        Some(json!({
+            "workflow": workflow,
+            "next_action": next_action,
+            "status": structured,
+        })),
+        workflow_ui_meta("next"),
+    ))
+}
+
+fn tool_resume_point(arguments: &Map<String, Value>) -> Result<Value> {
+    let status = tool_status(arguments)?;
+    let structured = status
+        .get("structuredContent")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let workflow = structured.get("workflow").cloned().unwrap_or_else(|| json!({}));
+
+    let feature_id = workflow
+        .get("active_feature_id")
+        .and_then(Value::as_str)
+        .or_else(|| workflow.get("candidate_feature_id").and_then(Value::as_str));
+    let outcome_id = workflow
+        .get("active_outcome_id")
+        .and_then(Value::as_str)
+        .or_else(|| workflow.get("candidate_outcome_id").and_then(Value::as_str));
+
+    let text = match (feature_id, outcome_id) {
+        (Some(feature_id), Some(outcome_id)) => format!(
+            "Resume {}:{} with {}.",
+            feature_id,
+            outcome_id,
+            workflow
+                .get("recommended_skill")
+                .and_then(Value::as_str)
+                .unwrap_or("specrail_status")
+        ),
+        _ => workflow
+            .get("summary")
+            .and_then(Value::as_str)
+            .unwrap_or("No resume point is available yet.")
+            .to_string(),
+    };
+
+    Ok(tool_success_payload_with_meta(
+        text,
+        Some(json!({
+            "resume": {
+                "feature_id": feature_id,
+                "outcome_id": outcome_id,
+                "stage": workflow.get("stage").cloned().unwrap_or(Value::Null),
+                "recommended_skill": workflow.get("recommended_skill").cloned().unwrap_or(Value::Null),
+                "summary": workflow.get("summary").cloned().unwrap_or(Value::Null),
+                "actions": workflow.get("actions").cloned().unwrap_or_else(|| json!([])),
+            },
+            "status": structured,
+        })),
+        workflow_ui_meta("resume"),
     ))
 }
 
@@ -1354,12 +1706,13 @@ fn tool_test_generate(arguments: &Map<String, Value>) -> Result<Value> {
         agent.as_deref(),
     )?;
 
-    Ok(tool_success_payload(
+    Ok(tool_success_payload_with_meta(
         format!(
             "Prepared delegated test generation for {}. Have the current MCP client/agent generate JSON matching response_schema, then call the apply tool `{}` to persist it.",
             delegation.scope_label, delegation.apply_tool
         ),
         Some(json!({ "delegation": delegation })),
+        workflow_ui_meta("delegation"),
     ))
 }
 
@@ -1375,12 +1728,13 @@ fn tool_test_suggest(arguments: &Map<String, Value>) -> Result<Value> {
         agent.as_deref(),
     )?;
 
-    Ok(tool_success_payload(
+    Ok(tool_success_payload_with_meta(
         format!(
             "Prepared delegated test suggestion prompt for {}. Have the current MCP client/agent return JSON matching response_schema without writing files.",
             delegation.scope_label
         ),
         Some(json!({ "delegation": delegation })),
+        workflow_ui_meta("delegation"),
     ))
 }
 
@@ -1424,6 +1778,93 @@ fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
     )
 }
 
+fn tool_activate_next(arguments: &Map<String, Value>) -> Result<Value> {
+    let status = tool_status(arguments)?;
+    let structured = status
+        .get("structuredContent")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let workflow = structured
+        .get("workflow")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let stage = workflow
+        .get("stage")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let candidate_feature_id = workflow
+        .get("candidate_feature_id")
+        .and_then(Value::as_str)
+        .context("no candidate feature is available to activate")?;
+    let candidate_outcome_id = workflow
+        .get("candidate_outcome_id")
+        .and_then(Value::as_str)
+        .context("no candidate outcome is available to activate")?;
+
+    let already_active = workflow
+        .get("active_feature_id")
+        .and_then(Value::as_str)
+        == Some(candidate_feature_id)
+        && workflow
+            .get("active_outcome_id")
+            .and_then(Value::as_str)
+            == Some(candidate_outcome_id);
+    if already_active {
+        return Ok(tool_success_payload_with_meta(
+            format!(
+                "Outcome '{}:{}' is already active.",
+                candidate_feature_id, candidate_outcome_id
+            ),
+            Some(json!({
+                "status": structured,
+                "activated": false,
+            })),
+            workflow_ui_meta("overview"),
+        ));
+    }
+
+    if stage == "testing"
+        && workflow
+            .get("active_feature_id")
+            .and_then(Value::as_str)
+            .is_none()
+        && workflow
+            .get("active_outcome_id")
+            .and_then(Value::as_str)
+            .is_none()
+    {
+        bail!(
+            "candidate outcome '{}:{}' is blocked on test readiness and cannot be activated yet",
+            candidate_feature_id,
+            candidate_outcome_id
+        );
+    }
+
+    let repo = discover_repo(arguments)?;
+    commands::feature::activate(&repo, candidate_feature_id)?;
+    commands::outcome::activate(&repo, candidate_feature_id, candidate_outcome_id)?;
+
+    let refreshed = tool_status(arguments)?;
+    let structured = refreshed
+        .get("structuredContent")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+
+    Ok(tool_success_payload_with_meta(
+        format!(
+            "Activated next outcome '{}:{}'.",
+            candidate_feature_id, candidate_outcome_id
+        ),
+        Some(json!({
+            "activated": true,
+            "feature_id": candidate_feature_id,
+            "outcome_id": candidate_outcome_id,
+            "status": structured,
+        })),
+        workflow_ui_meta("overview"),
+    ))
+}
+
 fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
     let repo = discover_repo(arguments)?;
     let feature_id = optional_string(arguments, "feature_id");
@@ -1434,7 +1875,7 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
     }
 
     let delegation = commands::implement::prepare_request(&repo, agent.as_deref())?;
-    Ok(tool_success_payload(
+    Ok(tool_success_payload_with_meta(
         format!(
             "Prepared delegated implementation for {}:{} in the current VS Code chat. Apply the prompt there, then call {}.",
             delegation.feature_id, delegation.outcome_id, delegation.verify_tool
@@ -1443,6 +1884,7 @@ fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
             "delegation": delegation,
             "instructions": implementation_delegation_instructions(false),
         })),
+        workflow_ui_meta("delegation"),
     ))
 }
 
@@ -1488,7 +1930,7 @@ fn tool_implement_feature(repo: &Repository, feature_id: &str, agent: Option<&st
         )
     };
 
-    Ok(tool_payload(
+    Ok(tool_payload_with_meta(
         text,
         Some(json!({
             "feature_id": feature_id,
@@ -1496,6 +1938,7 @@ fn tool_implement_feature(repo: &Repository, feature_id: &str, agent: Option<&st
             "blocked": blocked,
             "instructions": implementation_delegation_instructions(true),
         })),
+        Some(workflow_ui_meta("delegation")),
         false,
     ))
 }
@@ -1589,13 +2032,48 @@ fn build_workflow_guidance(
     features: &[FeatureSpec],
     manifest: &TestManifest,
 ) -> Result<WorkflowGuidance> {
+    let progress = workflow_progress(repo, features)?;
+
     if features.is_empty() {
         return Ok(WorkflowGuidance {
             stage: "workflow".to_string(),
             recommended_skill: "specrail-plan-features".to_string(),
             summary: "No features exist yet. Gather the first feature and break it into ordered outcomes before planning tests.".to_string(),
             blockers: vec!["The project has been initialized, but no features are registered yet.".to_string()],
+            blocker_details: vec![workflow_blocker(
+                "no_features",
+                "The project has been initialized, but no features are registered yet.",
+            )],
             next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string()],
+            actions: vec![
+                workflow_action(
+                    "create-feature",
+                    "Create feature",
+                    "specrail_feature_new",
+                    "Create the first feature slice for this project.",
+                    "workflow",
+                    "plan",
+                    json!({}),
+                    &["id", "title", "purpose"],
+                    true,
+                    true,
+                    None,
+                ),
+                workflow_action(
+                    "create-outcome",
+                    "Create outcome",
+                    "specrail_outcome_new",
+                    "Create the first ordered outcome after defining a feature.",
+                    "workflow",
+                    "plan",
+                    json!({}),
+                    &["feature_id", "outcome_id", "title", "goal", "order"],
+                    true,
+                    false,
+                    None,
+                ),
+            ],
+            progress,
             active_feature_id: state.active_feature.clone(),
             active_outcome_id: state.active_outcome.clone(),
             candidate_feature_id: None,
@@ -1617,7 +2095,27 @@ fn build_workflow_guidance(
             recommended_skill: "specrail-plan-features".to_string(),
             summary: "Features exist, but no outcomes are defined yet. Split the next feature into outcome-sized slices before planning tests.".to_string(),
             blockers: vec!["At least one feature is present, but there are no outcomes to drive the TDD loop yet.".to_string()],
+            blocker_details: vec![workflow_blocker(
+                "no_outcomes",
+                "At least one feature is present, but there are no outcomes to drive the TDD loop yet.",
+            )],
             next_tools: vec!["specrail_outcome_new".to_string()],
+            actions: vec![workflow_action(
+                "create-outcome",
+                "Create outcome",
+                "specrail_outcome_new",
+                "Split the next feature into an ordered outcome-sized slice.",
+                "workflow",
+                "plan",
+                json!({
+                    "feature_id": state.active_feature.clone(),
+                }),
+                &["feature_id", "outcome_id", "title", "goal", "order"],
+                true,
+                true,
+                None,
+            )],
+            progress,
             active_feature_id: state.active_feature.clone(),
             active_outcome_id: state.active_outcome.clone(),
             candidate_feature_id: state.active_feature.clone(),
@@ -1647,6 +2145,9 @@ fn workflow_guidance_for_snapshot(
     active: Option<&OutcomeWorkflowSnapshot>,
     candidate: Option<OutcomeWorkflowSnapshot>,
 ) -> Result<WorkflowGuidance> {
+    let features = repo.list_features()?;
+    let progress = workflow_progress(repo, &features)?;
+
     if let Some(active) = active {
         let next_tools = if active.outcome.status == OutcomeStatus::Verified {
             vec!["specrail_advance".to_string()]
@@ -1682,6 +2183,20 @@ fn workflow_guidance_for_snapshot(
             Vec::new()
         };
 
+        let blocker_details = if active.test_review.has_gaps {
+            workflow_test_review_blocker_details(active, "active")
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec![workflow_blocker(
+                "verification_failed",
+                format!(
+                    "Active outcome '{}:{}' failed verification and must be fixed before advancing.",
+                    active.feature_id, active.outcome.id
+                ),
+            )]
+        } else {
+            Vec::new()
+        };
+
         let summary = match active.outcome.status {
             OutcomeStatus::Verified => {
                 let outcomes = repo.list_outcomes(&active.feature_id)?;
@@ -1712,12 +2227,185 @@ fn workflow_guidance_for_snapshot(
             ),
         };
 
+        let actions = if active.outcome.status == OutcomeStatus::Verified {
+            vec![workflow_action(
+                "advance-outcome",
+                "Advance outcome",
+                "specrail_advance",
+                "Move to the next ordered outcome after a verified result.",
+                "activation",
+                "execute",
+                json!({}),
+                &[],
+                false,
+                true,
+                None,
+            )]
+        } else if active.outcome.status == OutcomeStatus::Failed {
+            vec![
+                workflow_action(
+                    "review-tests",
+                    "Review outcome tests",
+                    "specrail_outcome_test_review",
+                    "Inspect the active outcome's current readiness and failures.",
+                    "activation",
+                    "repair",
+                    json!({
+                        "feature_id": active.feature_id,
+                        "outcome_id": active.outcome.id,
+                    }),
+                    &["feature_id", "outcome_id"],
+                    false,
+                    false,
+                    None,
+                ),
+                workflow_action(
+                    "repair-implementation",
+                    "Prepare implementation fix",
+                    "specrail_implement",
+                    "Re-run delegated implementation for the failed active outcome.",
+                    "activation",
+                    "repair",
+                    json!({}),
+                    &[],
+                    false,
+                    true,
+                    Some("Verification failed for the active outcome.".to_string()),
+                ),
+                workflow_action(
+                    "verify-outcome",
+                    "Verify outcome",
+                    "specrail_verify",
+                    "Re-run verification after applying the fix.",
+                    "activation",
+                    "repair",
+                    json!({}),
+                    &[],
+                    false,
+                    false,
+                    Some("Run after the fix is applied.".to_string()),
+                ),
+            ]
+        } else if active.test_review.has_gaps {
+            vec![
+                workflow_action(
+                    "review-tests",
+                    "Review outcome tests",
+                    "specrail_outcome_test_review",
+                    "Inspect the active outcome's missing, planned, or undeclared tests.",
+                    "testing",
+                    "prepare_tests",
+                    json!({
+                        "feature_id": active.feature_id,
+                        "outcome_id": active.outcome.id,
+                    }),
+                    &["feature_id", "outcome_id"],
+                    false,
+                    true,
+                    None,
+                ),
+                workflow_action(
+                    "add-test",
+                    "Register test",
+                    "specrail_test_add",
+                    "Register a missing required test for this outcome.",
+                    "testing",
+                    "prepare_tests",
+                    json!({
+                        "feature_id": active.feature_id,
+                        "outcome_id": active.outcome.id,
+                    }),
+                    &["id", "feature_id", "outcome_id", "path"],
+                    true,
+                    false,
+                    None,
+                ),
+                workflow_action(
+                    "generate-tests",
+                    "Generate tests",
+                    "specrail_test_generate",
+                    "Prepare delegated test generation for the active outcome.",
+                    "testing",
+                    "prepare_tests",
+                    json!({
+                        "feature_id": active.feature_id,
+                        "outcome_id": active.outcome.id,
+                    }),
+                    &[],
+                    false,
+                    false,
+                    None,
+                ),
+                workflow_action(
+                    "set-test-status",
+                    "Mark tests written",
+                    "specrail_test_set_status",
+                    "Move tests from planned to written once the files exist.",
+                    "testing",
+                    "prepare_tests",
+                    json!({}),
+                    &["id", "status"],
+                    true,
+                    false,
+                    None,
+                ),
+            ]
+        } else {
+            vec![
+                workflow_action(
+                    "review-tests",
+                    "Review outcome tests",
+                    "specrail_outcome_test_review",
+                    "Confirm the active outcome is still test-ready before implementation.",
+                    "activation",
+                    "read",
+                    json!({
+                        "feature_id": active.feature_id,
+                        "outcome_id": active.outcome.id,
+                    }),
+                    &["feature_id", "outcome_id"],
+                    false,
+                    false,
+                    None,
+                ),
+                workflow_action(
+                    "implement-outcome",
+                    "Prepare implementation",
+                    "specrail_implement",
+                    "Prepare the delegated implementation prompt for the active outcome.",
+                    "activation",
+                    "execute",
+                    json!({}),
+                    &[],
+                    false,
+                    true,
+                    None,
+                ),
+                workflow_action(
+                    "verify-outcome",
+                    "Verify outcome",
+                    "specrail_verify",
+                    "Run the project's verification command for the active outcome.",
+                    "activation",
+                    "execute",
+                    json!({}),
+                    &[],
+                    false,
+                    false,
+                    None,
+                ),
+            ]
+        };
+
         return Ok(WorkflowGuidance {
             stage: workflow_stage(active),
             recommended_skill: workflow_skill(active).to_string(),
             summary,
             blockers,
+            blocker_details,
             next_tools,
+            actions,
+            progress,
             active_feature_id: Some(active.feature_id.clone()),
             active_outcome_id: Some(active.outcome.id.clone()),
             candidate_feature_id: Some(active.feature_id.clone()),
@@ -1731,7 +2419,37 @@ fn workflow_guidance_for_snapshot(
             recommended_skill: "specrail-plan-features".to_string(),
             summary: "All known outcomes are already verified or skipped. Add new features and outcomes to continue the TDD workflow.".to_string(),
             blockers: Vec::new(),
+            blocker_details: Vec::new(),
             next_tools: vec!["specrail_feature_new".to_string(), "specrail_outcome_new".to_string(), "specrail_status".to_string()],
+            actions: vec![
+                workflow_action(
+                    "create-feature",
+                    "Create feature",
+                    "specrail_feature_new",
+                    "Add another feature to continue the workflow.",
+                    "done",
+                    "plan",
+                    json!({}),
+                    &["id", "title", "purpose"],
+                    true,
+                    true,
+                    None,
+                ),
+                workflow_action(
+                    "refresh-status",
+                    "Refresh status",
+                    "specrail_status",
+                    "Refresh the workflow state after planning new work.",
+                    "done",
+                    "read",
+                    json!({}),
+                    &[],
+                    false,
+                    false,
+                    None,
+                ),
+            ],
+            progress,
             active_feature_id: state.active_feature.clone(),
             active_outcome_id: state.active_outcome.clone(),
             candidate_feature_id: None,
@@ -1775,12 +2493,119 @@ fn workflow_guidance_for_snapshot(
         )
     };
 
+    let blocker_details = if candidate.test_review.has_gaps {
+        workflow_test_review_blocker_details(&candidate, "candidate")
+    } else {
+        Vec::new()
+    };
+
+    let actions = if candidate.test_review.has_gaps {
+        vec![
+            workflow_action(
+                "review-candidate-tests",
+                "Review candidate tests",
+                "specrail_outcome_test_review",
+                "Inspect the next outcome's missing or planned tests before activation.",
+                "testing",
+                "prepare_tests",
+                json!({
+                    "feature_id": candidate.feature_id.clone(),
+                    "outcome_id": candidate.outcome.id.clone(),
+                }),
+                &["feature_id", "outcome_id"],
+                false,
+                true,
+                None,
+            ),
+            workflow_action(
+                "add-candidate-test",
+                "Register candidate test",
+                "specrail_test_add",
+                "Register a missing required test for the next outcome.",
+                "testing",
+                "prepare_tests",
+                json!({
+                    "feature_id": candidate.feature_id.clone(),
+                    "outcome_id": candidate.outcome.id.clone(),
+                }),
+                &["id", "feature_id", "outcome_id", "path"],
+                true,
+                false,
+                None,
+            ),
+            workflow_action(
+                "generate-candidate-tests",
+                "Generate candidate tests",
+                "specrail_test_generate",
+                "Prepare delegated test generation for the next outcome.",
+                "testing",
+                "prepare_tests",
+                json!({
+                    "feature_id": candidate.feature_id.clone(),
+                    "outcome_id": candidate.outcome.id.clone(),
+                }),
+                &[],
+                false,
+                false,
+                None,
+            ),
+        ]
+    } else {
+        vec![
+            workflow_action(
+                "activate-candidate",
+                "Activate next outcome",
+                "specrail_activate_next",
+                "Safely activate the next eligible feature/outcome pair.",
+                "activation",
+                "execute",
+                json!({}),
+                &[],
+                false,
+                true,
+                None,
+            ),
+            workflow_action(
+                "review-candidate-tests",
+                "Review candidate tests",
+                "specrail_outcome_test_review",
+                "Confirm the candidate outcome is still ready before implementation.",
+                "activation",
+                "read",
+                json!({
+                    "feature_id": candidate.feature_id.clone(),
+                    "outcome_id": candidate.outcome.id.clone(),
+                }),
+                &["feature_id", "outcome_id"],
+                false,
+                false,
+                None,
+            ),
+            workflow_action(
+                "prepare-candidate-implementation",
+                "Prepare implementation",
+                "specrail_workflow_next",
+                "Get the single best next workflow action and rationale.",
+                "activation",
+                "read",
+                json!({}),
+                &[],
+                false,
+                false,
+                None,
+            ),
+        ]
+    };
+
     Ok(WorkflowGuidance {
         stage,
         recommended_skill,
         summary,
         blockers,
+        blocker_details,
         next_tools,
+        actions,
+        progress,
         active_feature_id: state.active_feature.clone(),
         active_outcome_id: state.active_outcome.clone(),
         candidate_feature_id: Some(candidate.feature_id),
@@ -1870,6 +2695,82 @@ fn workflow_test_review_blockers(
             snapshot.feature_id,
             snapshot.outcome.id,
             review.planned_required_test_files.join(", ")
+        ));
+    }
+
+    blockers
+}
+
+fn workflow_test_review_blocker_details(
+    snapshot: &OutcomeWorkflowSnapshot,
+    label: &str,
+) -> Vec<WorkflowBlocker> {
+    let review = &snapshot.test_review;
+    let mut blockers = Vec::new();
+
+    if review.has_no_required_tests {
+        blockers.push(workflow_blocker(
+            "missing_required_tests",
+            format!(
+                "{} outcome '{}:{}' has no required test ids declared yet.",
+                label, snapshot.feature_id, snapshot.outcome.id
+            ),
+        ));
+    }
+
+    if review.has_no_required_test_files {
+        blockers.push(workflow_blocker(
+            "missing_required_test_files",
+            format!(
+                "{} outcome '{}:{}' has no required test files declared yet.",
+                label, snapshot.feature_id, snapshot.outcome.id
+            ),
+        ));
+    }
+
+    if review.has_no_related_tests {
+        blockers.push(workflow_blocker(
+            "no_related_tests",
+            format!(
+                "{} outcome '{}:{}' has no registered tests in the manifest yet.",
+                label, snapshot.feature_id, snapshot.outcome.id
+            ),
+        ));
+    }
+
+    if !review.missing_required_tests.is_empty() {
+        blockers.push(workflow_blocker(
+            "missing_required_tests",
+            format!(
+                "{} outcome '{}:{}' is missing required test ids: {}.",
+                label,
+                snapshot.feature_id,
+                snapshot.outcome.id,
+                review.missing_required_tests.join(", ")
+            ),
+        ));
+    }
+
+    if !review.missing_required_test_files.is_empty() {
+        blockers.push(workflow_blocker(
+            "missing_required_test_files",
+            format!(
+                "{} outcome '{}:{}' is missing required test files: {}.",
+                label,
+                snapshot.feature_id,
+                snapshot.outcome.id,
+                review.missing_required_test_files.join(", ")
+            ),
+        ));
+    }
+
+    if !review.planned_required_tests.is_empty() || !review.planned_required_test_files.is_empty() {
+        blockers.push(workflow_blocker(
+            "planned_tests",
+            format!(
+                "{} outcome '{}:{}' still has required tests in planned status.",
+                label, snapshot.feature_id, snapshot.outcome.id
+            ),
         ));
     }
 
@@ -1981,6 +2882,10 @@ fn tool_success_payload(text: String, structured_content: Option<Value>) -> Valu
     tool_payload(text, structured_content, false)
 }
 
+fn tool_success_payload_with_meta(text: String, structured_content: Option<Value>, meta: Value) -> Value {
+    tool_payload_with_meta(text, structured_content, Some(meta), false)
+}
+
 fn tool_error_payload(error: impl std::fmt::Display) -> Value {
     tool_payload(error.to_string(), None, true)
 }
@@ -2016,6 +2921,15 @@ fn tool_payload_with_meta(
     result
 }
 
+fn workflow_ui_meta(panel: &str) -> Value {
+    json!({
+        "ui": {
+            "resourceUri": WORKFLOW_UI_RESOURCE_URI,
+            "panel": panel,
+        }
+    })
+}
+
 #[derive(Serialize)]
 struct CliToolResult {
     command: String,
@@ -2032,6 +2946,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_status",
             "title": "Project Status",
             "description": "Direct MCP read action: get current project status, active workflow state, and recommended next action. Call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2170,6 +3085,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_outcome_test_review",
             "title": "Review Outcome Tests",
             "description": "Review one outcome's test health. Returns related manifest tests, missing required test IDs/files, planned required tests, undeclared tests, and suggested test paths to add or generate.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2184,6 +3100,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_list",
             "title": "List Tests",
             "description": "List tests from the specrail manifest. Filter by feature_id and/or outcome_id. Returns tests with their status (planned, written, passing, failing). Use to check whether tests are ready before implementation.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2197,6 +3114,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_suggest",
             "title": "Preview Test Suggestions",
             "description": "Prepare a delegated test-suggestion prompt for the current MCP client/agent. MCP returns the prompt and expected response schema but never spawns a nested agent or writes files.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2208,9 +3126,46 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_workflow_overview",
+            "title": "Workflow Overview",
+            "description": "Read-friendly compact board of features, outcomes, per-feature progress, and test readiness. Returns workflow plus outcome-level readiness summaries that hosts can render directly.",
+            "annotations": { "readonly": true },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_workflow_next",
+            "title": "Workflow Next Step",
+            "description": "Return the single best next workflow action with rationale, plus the latest status payload and typed workflow actions.",
+            "annotations": { "readonly": true },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
+                }
+            }
+        }),
+        json!({
+            "name": "specrail_resume_point",
+            "title": "Resume Point",
+            "description": "Summarize the best place to resume the current Specrail workflow, including feature/outcome ids, recommended skill, and typed next actions.",
+            "annotations": { "readonly": true },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
+                }
+            }
+        }),
+        json!({
             "name": "specrail_trace",
             "title": "Audit Ledger",
             "description": "Read the append-only specrail audit ledger showing the history of all project actions (features created, outcomes activated, tests updated, etc). Use limit to get recent events.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2527,6 +3482,7 @@ fn tool_definitions() -> Vec<Value> {
             "name": "specrail_test_generate",
             "title": "Generate Tests",
             "description": "Prepare a delegated test-generation prompt for the current MCP client/agent. MCP returns the prompt, allowed paths, and response schema; after the parent agent generates JSON test output, call specrail_test_apply_generated to persist it in-process.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2585,9 +3541,21 @@ fn tool_definitions() -> Vec<Value> {
             }
         }),
         json!({
+            "name": "specrail_activate_next",
+            "title": "Activate Next Outcome",
+            "description": "Safely activate the next eligible feature/outcome pair from workflow guidance. Refuses to activate a blocked candidate that still needs tests before activation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
+                }
+            }
+        }),
+        json!({
             "name": "specrail_implement",
             "title": "Implement",
             "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns structuredContent.delegation.prompt plus path constraints, but never spawns a nested agent. The parent agent must apply that prompt in the current conversation, then call specrail_verify. If feature_id is provided, returns one delegated task per outcome in order.",
+            "annotations": { "readonly": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2734,6 +3702,7 @@ mod tests {
 
         assert_eq!(response["result"]["protocolVersion"], DEFAULT_PROTOCOL_VERSION);
         assert_eq!(response["result"]["capabilities"]["tools"]["listChanged"], false);
+        assert_eq!(response["result"]["capabilities"]["resources"]["listChanged"], false);
         assert_eq!(response["result"]["serverInfo"]["name"], "specrail");
         assert_eq!(server.protocol_version, DEFAULT_PROTOCOL_VERSION);
     }

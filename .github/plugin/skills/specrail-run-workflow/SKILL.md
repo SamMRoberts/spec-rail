@@ -14,6 +14,7 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 ## Default sequence
 
 1. Call `specrail_status` to identify the current active feature, current active outcome, and whether work is already in progress.
+   - Prefer `workflow.actions` over reconstructing tool order from `next_tools` alone.
 2. Call `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` to gather the full set of features, outcomes, and registered tests before proposing an execution order.
 3. Determine the best feature order using explicit dependencies first.
 4. Within each feature, determine the best outcome order using `order` first and `prerequisites` second.
@@ -21,6 +22,7 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 6. If tests are missing, files do not exist, or tests are still `planned`, use `specrail_test_add`, `specrail_test_generate`, and `specrail_test_set_status`, or hand off to the `specrail-prepare-tests` skill, before continuing.
 7. Activate the first eligible feature with `specrail_feature_activate`.
 8. Activate the first eligible outcome in that feature with `specrail_outcome_activate`.
+   - If `specrail_status` already identifies a ready candidate, prefer `specrail_activate_next`.
 9. Run `specrail_implement` for the active outcome.
 10. Read `structuredContent.delegation`, apply `delegation.prompt` yourself in the current conversation, and keep edits within `allowed_paths` and `forbidden_paths`.
 11. Run `specrail_verify` for the active outcome.
@@ -50,6 +52,7 @@ If the active or planned outcomes do not yet have registered tests, existing tes
 - Do not implement future outcomes, speculative abstractions, or extra behavior that is not required by the current tests.
 - Do not bypass `specrail_advance` by directly activating the next outcome unless the user explicitly wants a manual override.
 - After each activation or advancement step, call `specrail_status` again to confirm the new state.
+- If the user asks what to do next, prefer `specrail_workflow_next`.
 - After each implementation or verification step, inspect the result before moving on.
 - If verification fails, keep the current outcome active and help the user resolve that outcome before moving on.
 - Do not skip blocked or failed outcomes without explicit user approval.

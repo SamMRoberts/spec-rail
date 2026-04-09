@@ -2,6 +2,8 @@
 
 `specrail` is a Rust CLI for an outcome-gated, test-driven workflow. It keeps project state under `.specrail/` and guides work through features, outcomes, registered tests, implementation, verification, and advancement to the next outcome.
 
+The built-in MCP server now also exposes richer workflow metadata for host UIs, including typed workflow actions, blocker details, progress counters, higher-level resume/next-step tools, and a small `@mcp-ui` workflow panel resource at `ui://specrail/workflow`.
+
 ## Overview
 
 The tool is designed to help you:
