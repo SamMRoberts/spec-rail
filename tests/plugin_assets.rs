@@ -52,7 +52,7 @@ fn workspace_mcp_config_uses_specrail_server_id() {
     assert!(mcp_config.contains("\"command\": \"${workspaceFolder}/target/debug/specrail\""));
     assert!(mcp_config.contains("\"mcp-server\""));
     assert!(mcp_config.contains("\"SPECRAIL_MCP_LOG_LEVEL\": \"verbose\""));
-    assert!(mcp_config.contains("\"SPECRAIL_MCP_DEBUG_STDERR\": \"1\""));
+    assert!(mcp_config.contains("\"SPECRAIL_MCP_DEBUG_LOG\": \"/tmp/specrail-mcp-debug.log\""));
 }
 
 #[test]

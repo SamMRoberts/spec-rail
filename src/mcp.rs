@@ -1998,8 +1998,79 @@ fn tool_test_set_status(arguments: &Map<String, Value>) -> Result<Value> {
 
 fn tool_implement(arguments: &Map<String, Value>) -> Result<Value> {
     let cwd = resolve_cwd(arguments)?;
+    let repo = Repository::discover(&cwd)?;
+    let agent_override = optional_string(arguments, "agent");
+    let feature_id = optional_string(arguments, "feature_id");
+
+    // If feature_id is provided, run implement on all outcomes in order
+    if let Some(feature_id) = feature_id {
+        let outcomes = repo.list_outcomes(&feature_id)?;
+        if outcomes.is_empty() {
+            return Ok(tool_success_payload(
+                format!("No outcomes found for feature '{feature_id}'."),
+                Some(json!({
+                    "feature_id": feature_id,
+                    "outcome_count": 0,
+                    "summary": "Feature has no outcomes to implement."
+                })),
+            ));
+        }
+
+        let mut results = Vec::new();
+        let mut success_count = 0usize;
+        let mut failure_count = 0usize;
+
+        for outcome in &outcomes {
+            // Activate outcome
+            commands::outcome::activate_outcome(&repo, &feature_id, &outcome.id)?;
+
+            // Run implement
+            let mut args = vec!["implement".to_string()];
+            if let Some(agent) = agent_override.as_deref() {
+                args.push("--agent".to_string());
+                args.push(agent.to_string());
+            }
+            let result = run_cli_tool_quiet(&cwd, args)?;
+            let success = !std_json_result_is_error(&result);
+
+            results.push(json!({
+                "outcome_id": outcome.id,
+                "outcome_title": outcome.title,
+                "order": outcome.order,
+                "success": success,
+                "message": tool_text(&result).unwrap_or_else(|| "No output".to_string())
+            }));
+
+            if success {
+                success_count += 1;
+            } else {
+                failure_count += 1;
+            }
+        }
+
+        let text = format!(
+            "Implemented {} outcome(s) in feature '{}': {} succeeded, {} failed.",
+            outcomes.len(),
+            feature_id,
+            success_count,
+            failure_count
+        );
+
+        return Ok(tool_success_payload(
+            text,
+            Some(json!({
+                "feature_id": feature_id,
+                "outcome_count": outcomes.len(),
+                "success_count": success_count,
+                "failure_count": failure_count,
+                "results": results
+            })),
+        ));
+    }
+
+    // Otherwise, run implement on the active outcome (original behavior)
     let mut args = vec!["implement".to_string()];
-    if let Some(agent) = optional_string(arguments, "agent") {
+    if let Some(agent) = agent_override {
         args.push("--agent".to_string());
         args.push(agent);
     }
@@ -2017,6 +2088,36 @@ fn tool_advance(arguments: &Map<String, Value>) -> Result<Value> {
 }
 
 fn run_cli_tool(cwd: &Path, args: Vec<String>) -> Result<Value> {
+    let executable = std::env::current_exe().context("resolving specrail executable path")?;
+    let output = Command::new(&executable)
+        .args(&args)
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .output()
+        .with_context(|| format!("running specrail {}", args.join(" ")))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let success = output.status.success();
+    let exit_code = output.status.code();
+    let command = format!("{} {}", executable.display(), args.join(" "));
+    let text = build_cli_tool_text(success, exit_code, &stdout, &stderr);
+
+    Ok(tool_payload(
+        text,
+        Some(json!(CliToolResult {
+            command,
+            cwd: cwd.display().to_string(),
+            success,
+            exit_code,
+            stdout,
+            stderr,
+        })),
+        !success,
+    ))
+}
+
+fn run_cli_tool_quiet(cwd: &Path, args: Vec<String>) -> Result<Value> {
     let executable = std::env::current_exe().context("resolving specrail executable path")?;
     let output = Command::new(&executable)
         .args(&args)
@@ -2434,6 +2535,21 @@ fn push_repeated_flag(args: &mut Vec<String>, flag: &str, values: Vec<String>) {
         args.push(flag.to_string());
         args.push(value);
     }
+}
+
+fn tool_text(result: &Value) -> Option<String> {
+    result
+        .get("content")?
+        .as_array()?
+        .iter()
+        .find(|item| item.get("type").and_then(Value::as_str) == Some("text"))?
+        .get("text")?
+        .as_str()
+        .map(String::from)
+}
+
+fn std_json_result_is_error(result: &Value) -> bool {
+    result.get("isError").and_then(Value::as_bool).unwrap_or(false)
 }
 
 fn tool_success_payload(text: String, structured_content: Option<Value>) -> Value {
@@ -3046,11 +3162,12 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_implement",
             "title": "Implement",
-            "description": "Direct MCP mutation action: run the AI implementation agent for the active outcome. Requires active feature, active outcome, at least one registered test, and no tests in 'planned' status. After implementing, run specrail_verify.",
+            "description": "Direct MCP mutation action: run the AI implementation agent. If feature_id is provided, runs implement on all outcomes in the feature in order. Otherwise requires active outcome and runs on that. After implementing, run specrail_verify.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "cwd": { "type": "string" },
+                    "feature_id": { "type": "string", "description": "Optional feature identifier. When provided, runs implement on all outcomes in this feature in order. When omitted, runs on the active outcome." },
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }

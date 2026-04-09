@@ -3247,7 +3247,7 @@
                         appendActionButton(fActions, {
                             title: "Run Implement",
                             tool: "specrail_implement",
-                            args: {},
+                            args: { feature_id: featureId },
                             kind: "default",
                             refresh: true,
                             disabled: !isActiveF || !featureHasOutcomes,
@@ -3405,11 +3405,11 @@
 
                                 if (isActiveOutcome) {
                                     if (outcome.status !== "verified" && outcome.status !== "skipped") {
-                                        appendActionButton(actions, { title: "Run Implement", tool: "specrail_implement", kind: "primary", refresh: true });
-                                        appendActionButton(actions, { title: "Run Verify", tool: "specrail_verify", kind: "success", refresh: true });
+                                        appendActionButton(actions, { title: "Run Implement", tool: "specrail_implement", args: {}, kind: "primary", refresh: true });
+                                        appendActionButton(actions, { title: "Run Verify", tool: "specrail_verify", args: {}, kind: "success", refresh: true });
                                     }
                                     if (outcome.status === "verified") {
-                                        appendActionButton(actions, { title: "Advance To Next Outcome", tool: "specrail_advance", kind: "success", refresh: true });
+                                        appendActionButton(actions, { title: "Advance To Next Outcome", tool: "specrail_advance", args: {}, kind: "success", refresh: true });
                                     }
                                 }
 
