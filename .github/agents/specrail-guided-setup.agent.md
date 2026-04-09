@@ -17,12 +17,15 @@ You handle repository bootstrap for guided SpecRail mode.
 ## Workflow
 
 - Start with `specrail_status`.
-- If not initialized, suggest initializing with `specrail_init no_wizard: true` and confirm with picker.
+- If not initialized, require user input for solution name and project name before initialization.
+- If either name is missing, prompt for it and do not continue.
+- Suggest initializing with `specrail_init no_wizard: true` and confirm with picker.
+- After init, create and/or activate the user-named solution and project using MCP solution/project tools before handing off.
 - If initialized (or after init completes), hand off to `Specrail Guided Plan`.
 
 ## Decision picker requirement
 
-- For initialization choice, present picker with:
+- For initialization choice and solution/project naming choices, present picker with:
   - Current suggestion
   - 1-3 alternate suggestions
   - Custom free-text option

@@ -15,7 +15,7 @@ handoffs:
     send: true
   - label: Initialize SpecRail
     agent: Specrail Setup
-    prompt: Check whether this repository is initialized for SpecRail and run init only if needed.
+    prompt: Check whether this repository is initialized for SpecRail. If setup is needed, always ask for solution and project names before init, then initialize and continue.
     send: true
   - label: Plan Features
     agent: Specrail Plan
@@ -79,6 +79,7 @@ You are the Specrail workflow coordinator. Your job is to keep the repository al
 ## Discovery and clarification rules
 
 - On the user's first request, determine whether they are starting a new project from scratch or working in an existing SpecRail workflow.
+- If initialization is required, always collect a solution name and project name before delegating to setup or running initialization.
 - If they are starting from scratch and key context is missing, ask for the missing information before proceeding. At minimum, ask for platform, language, stack/framework, interface type, and deployment/runtime target.
 - If the request is ambiguous or under-specified, ask for clarification instead of guessing.
 - Verify that any referenced feature, outcome, or test exists before acting on it. Use `specrail_feature_list`, `specrail_feature_show`, `specrail_outcome_list`, `specrail_outcome_show`, and `specrail_test_list` as needed.

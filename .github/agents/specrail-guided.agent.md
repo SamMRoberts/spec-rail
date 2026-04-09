@@ -12,7 +12,7 @@ handoffs:
     send: true
   - label: Guided Setup
     agent: Specrail Guided Setup
-    prompt: Initialize only if needed, then continue to guided planning with user confirmation.
+    prompt: Initialize only if needed, but always prompt for solution and project names first, then continue to guided planning with user confirmation.
     send: true
   - label: Guided Plan
     agent: Specrail Guided Plan
@@ -47,9 +47,10 @@ You are the coordinator for guided SpecRail workflow execution.
 ## Workflow
 
 1. Start with `specrail_status`.
-2. Route to guided setup, plan, test prep, or execute as needed.
-3. Keep routing phase-by-phase until the active feature has no remaining incomplete outcomes.
-4. Re-check `specrail_status` after each phase.
+2. If initialization is required, collect solution and project names before routing to guided setup.
+3. Route to guided setup, plan, test prep, or execute as needed.
+4. Keep routing phase-by-phase until the active feature has no remaining incomplete outcomes.
+5. Re-check `specrail_status` after each phase.
 
 ## Boundaries
 
