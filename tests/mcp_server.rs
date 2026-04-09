@@ -116,12 +116,8 @@ fn mcp_server_lists_tools_and_initializes_project() {
     let initialize = client.initialize();
     assert_eq!(initialize["result"]["serverInfo"]["name"], "specrail");
     assert!(initialize["result"]["capabilities"]["tools"].is_object());
-    assert!(initialize["result"]["capabilities"]["resources"].is_object());
-    assert_eq!(
-        initialize["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]
-            ["mimeTypes"][0],
-        "text/html;profile=mcp-app"
-    );
+    assert!(initialize["result"]["capabilities"]["resources"].is_null());
+    assert!(initialize["result"]["capabilities"]["extensions"].is_null());
 
     let tools = client.request("tools/list", json!({}));
     let tool_names: Vec<_> = tools["result"]["tools"]
@@ -148,122 +144,7 @@ fn mcp_server_lists_tools_and_initializes_project() {
         .iter()
         .find(|tool| tool["name"] == "specrail_feature_navigate")
         .unwrap();
-    assert_eq!(
-        feature_navigate["_meta"]["ui"]["resourceUri"],
-        "ui://specrail/feature-navigate"
-    );
-
-    let resources = client.request("resources/list", json!({}));
-    let feature_picker = resources["result"]["resources"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|resource| resource["uri"] == "ui://specrail/feature-navigate")
-        .unwrap();
-    assert_eq!(feature_picker["mimeType"], "text/html;profile=mcp-app");
-
-    let feature_picker_html = client.request(
-        "resources/read",
-        json!({
-            "uri": "ui://specrail/feature-navigate"
-        }),
-    );
-    assert_eq!(
-        feature_picker_html["result"]["contents"][0]["mimeType"],
-        "text/html;profile=mcp-app"
-    );
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("specrail_feature_navigate"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("specrail_outcome_unverify"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("specrail_implement"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("specrail_verify"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("testReviewTool"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("hasTestGaps"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("hero-panel"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Workspace overview"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Solution / Project / Component overview"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Related tests"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Preview AI Suggestions"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Implementation prompt ready"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Copy Prompt"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Start Editor Chat"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("command:"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("workbench.action.chat.open"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Implementation prompt copied to clipboard."));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("btn-status-progress"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("In progress"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("data-tool-action"));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("document.addEventListener(\"click\""));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Pointer down on "));
-    assert!(feature_picker_html["result"]["contents"][0]["text"]
-        .as_str()
-        .unwrap()
-        .contains("Dispatching tool action:"));
+    assert!(feature_navigate["_meta"].is_null());
 
     let status_before = client.request(
         "tools/call",
@@ -508,10 +389,7 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         feature_picker["result"]["structuredContent"]["mode"],
         "feature_selection"
     );
-    assert_eq!(
-        feature_picker["result"]["_meta"]["ui"]["resourceUri"],
-        "ui://specrail/feature-navigate"
-    );
+    assert!(feature_picker["result"]["_meta"].is_null());
     let features = feature_picker["result"]["structuredContent"]["features"]
         .as_array()
         .unwrap();
@@ -580,10 +458,7 @@ fn mcp_server_can_navigate_features_and_outcomes_for_selection() {
         outcome_picker["result"]["structuredContent"]["mode"],
         "outcome_selection"
     );
-    assert_eq!(
-        outcome_picker["result"]["_meta"]["ui"]["resourceUri"],
-        "ui://specrail/feature-navigate"
-    );
+    assert!(outcome_picker["result"]["_meta"].is_null());
     assert_eq!(
         outcome_picker["result"]["structuredContent"]["selectedFeature"]["id"],
         "auth"

@@ -98,9 +98,8 @@ These commands pass in the current repository state and are the baseline validat
 ## MCP server and Copilot plugin
 
 - `specrail mcp-server` starts a stdio JSON-RPC MCP server (`src/mcp.rs`).
-- The server advertises the `io.modelcontextprotocol/ui` extension and exposes an interactive feature-navigate UI resource at `ui://specrail/feature-navigate`.
 - `specrail_status` returns `structuredContent.workflow` with the recommended skill, blockers, next tools, and candidate feature/outcome for the TDD loop.
-- `specrail_feature_navigate` returns feature cards with progress bars, outcome counts, and test counts in `structuredContent`. When called with a `feature_id`, it returns outcome cards with per-outcome test counts (`testCount`, `passingTestCount`, `plannedTestCount`).
+- `specrail_feature_navigate` returns structured feature summaries, outcome counts, and test counts in `structuredContent`. When called with a `feature_id`, it returns outcomes with per-outcome test counts (`testCount`, `passingTestCount`, `plannedTestCount`).
 - All tools now include a `title` field (e.g. `"title": "Feature & Outcome Navigator"`) for display in MCP-capable hosts.
 - The workspace custom agent lives under `.github/agents/specrail.agent.md` and serves as the repo-aware VS Code entrypoint for SpecRail guidance.
 - The installable Copilot CLI plugin lives under `.github/plugin/`; `.github/plugin/.mcp.json` launches `specrail mcp-server` as the `specrail` MCP server, and `.github/plugin/skills/` contains workflow skills (`specrail-tdd`, `specrail-setup`, `specrail-plan-features`, `specrail-prepare-tests`, `specrail-run-workflow`, `specrail-resume`).

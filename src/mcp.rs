@@ -18,10 +18,6 @@ use crate::core::{
 use crate::commands;
 
 const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
-const UI_EXTENSION_NAME: &str = "io.modelcontextprotocol/ui";
-const UI_RESOURCE_MIME_TYPE: &str = "text/html;profile=mcp-app";
-const FEATURE_NAVIGATE_APP_URI: &str = "ui://specrail/feature-navigate";
-const FEATURE_NAVIGATE_APP_HTML: &str = include_str!("mcp_feature_navigate_app.html");
 const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     DEFAULT_PROTOCOL_VERSION,
     "2025-06-18",
@@ -83,14 +79,6 @@ fn server_capabilities() -> Value {
     json!({
         "tools": {
             "listChanged": false
-        },
-        "resources": {
-            "listChanged": false
-        },
-        "extensions": {
-            UI_EXTENSION_NAME: {
-                "mimeTypes": [UI_RESOURCE_MIME_TYPE]
-            }
         }
     })
 }
@@ -292,13 +280,6 @@ impl McpServer {
             }
             "ping" => id.map(|id| jsonrpc_result(id, json!({}))),
             "tools/list" => id.map(|id| jsonrpc_result(id, json!({ "tools": tool_definitions() }))),
-            "resources/list" => {
-                id.map(|id| jsonrpc_result(id, json!({ "resources": resource_definitions() })))
-            }
-            "resources/read" => id.map(|id| match read_resource(message.get("params")) {
-                Ok(result) => jsonrpc_result(id, result),
-                Err(error) => jsonrpc_error(id, -32002, error.to_string()),
-            }),
             "tools/call" => {
                 let params = message.get("params").cloned().unwrap_or_else(|| json!({}));
                 let result = handle_tool_call(&params).unwrap_or_else(|error| tool_error_payload(error));
@@ -1356,12 +1337,12 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
         let active_outcome_str = active_outcome_id.as_deref().unwrap_or("none");
         let outcome_text = format!(
             "Feature '{}' ({feature_id}) — {} outcome(s), {verified_count} verified. Active outcome: {active_outcome_str}. \
-             Use the embedded navigator UI to manage outcomes and run the TDD workflow.",
+             Use the structured outcome data to manage outcomes and run the TDD workflow.",
             feature.title,
             outcome_summaries.len(),
         );
 
-        return Ok(feature_navigate_payload(outcome_text, Some(Value::Object(payload))));
+        return Ok(tool_success_payload(outcome_text, Some(Value::Object(payload))));
     }
 
     let mut payload = Map::new();
@@ -1382,13 +1363,13 @@ fn tool_feature_navigate(arguments: &Map<String, Value>) -> Result<Value> {
 
     let feature_text = format!(
         "{} feature(s) in scope. Active feature: {}. Active outcome: {}. \
-         Use the embedded navigator UI to select a feature and manage its outcomes.",
+         Use the structured feature data to select a feature and manage its outcomes.",
         scoped_feature_summaries.len(),
         active_feature_id.as_deref().unwrap_or("none"),
         active_outcome_id.as_deref().unwrap_or("none"),
     );
 
-    Ok(feature_navigate_payload(feature_text, Some(Value::Object(payload))))
+    Ok(tool_success_payload(feature_text, Some(Value::Object(payload))))
 }
 
 fn outcome_available_actions(
@@ -1425,41 +1406,6 @@ fn outcome_available_actions(
     }
 
     actions
-}
-
-fn resource_definitions() -> Vec<Value> {
-    vec![json!({
-        "uri": FEATURE_NAVIGATE_APP_URI,
-        "name": "specrail_feature_navigate",
-        "title": "Specrail Feature Picker",
-        "description": "Interactive feature and outcome picker for the specrail workflow.",
-        "mimeType": UI_RESOURCE_MIME_TYPE
-    })]
-}
-
-fn read_resource(params: Option<&Value>) -> Result<Value> {
-    let uri = params
-        .and_then(|value| value.get("uri"))
-        .and_then(Value::as_str)
-        .context("missing resource uri")?;
-
-    match uri {
-        FEATURE_NAVIGATE_APP_URI => Ok(json!({
-            "contents": [
-                {
-                    "uri": FEATURE_NAVIGATE_APP_URI,
-                    "mimeType": UI_RESOURCE_MIME_TYPE,
-                    "text": FEATURE_NAVIGATE_APP_HTML,
-                    "_meta": {
-                        "ui": {
-                            "prefersBorder": true
-                        }
-                    }
-                }
-            ]
-        })),
-        other => bail!("resource not found: {other}"),
-    }
 }
 
 fn tool_feature_show(arguments: &Map<String, Value>) -> Result<Value> {
@@ -2622,20 +2568,6 @@ fn tool_success_payload(text: String, structured_content: Option<Value>) -> Valu
     tool_payload(text, structured_content, false)
 }
 
-fn feature_navigate_payload(text: String, structured_content: Option<Value>) -> Value {
-    tool_payload_with_meta(
-        text,
-        structured_content,
-        Some(json!({
-            "ui": {
-                "resourceUri": FEATURE_NAVIGATE_APP_URI,
-                "visibility": ["model", "app"]
-            }
-        })),
-        false,
-    )
-}
-
 fn tool_error_payload(error: impl std::fmt::Display) -> Value {
     tool_payload(error.to_string(), None, true)
 }
@@ -2697,13 +2629,7 @@ fn tool_definitions() -> Vec<Value> {
         json!({
             "name": "specrail_feature_navigate",
             "title": "Workflow Navigator",
-            "description": "Direct MCP read action with UI: interactive solution/project/component/feature/outcome browser. Without feature_id returns feature cards annotated with hierarchy path. With feature_id returns selected outcomes with test counts and status.",
-            "_meta": {
-                "ui": {
-                    "resourceUri": FEATURE_NAVIGATE_APP_URI,
-                    "visibility": ["model", "app"]
-                }
-            },
+            "description": "Direct MCP read action: inspect solution/project/component/feature/outcome workflow data. Without feature_id returns feature summaries annotated with hierarchy path. With feature_id returns selected outcomes with test counts and status.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
