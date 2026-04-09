@@ -244,47 +244,12 @@ pub(crate) fn ensure_required_test_reference(
     feature_id: &str,
     outcome_id: &str,
     test_id: &str,
-    path: &str,
+    _path: &str,
 ) -> Result<RequiredTestReferenceUpdate> {
-    let mut outcome = repo.load_outcome(feature_id, outcome_id)?;
-    let mut added_test_id = false;
-    let mut added_test_file = false;
-
-    if !outcome.required_tests.iter().any(|existing| existing == test_id) {
-        outcome.required_tests.push(test_id.to_string());
-        added_test_id = true;
-    }
-
-    if !outcome
-        .required_test_files
-        .iter()
-        .any(|existing| existing == path)
-    {
-        outcome.required_test_files.push(path.to_string());
-        added_test_file = true;
-    }
-
-    if added_test_id || added_test_file {
-        repo.save_outcome(&outcome)?;
-
-        let mut changes = Vec::new();
-        if added_test_id {
-            changes.push(format!("required test '{}' added", test_id));
-        }
-        if added_test_file {
-            changes.push(format!("required test file '{}' added", path));
-        }
-
-        let event = LedgerEvent::new(LedgerEventType::OutcomeEdited)
-            .with_feature(feature_id)
-            .with_outcome(outcome_id)
-            .with_message(changes.join("; "));
-        Ledger::append(repo, &event)?;
-    }
-
+    let added_test_id = ensure_required_test(repo, feature_id, outcome_id, test_id)?;
     Ok(RequiredTestReferenceUpdate {
         added_test_id,
-        added_test_file,
+        added_test_file: false,
     })
 }
 

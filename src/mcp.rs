@@ -396,8 +396,6 @@ struct WorkflowGuidance {
 struct OutcomeWorkflowSnapshot {
     feature_id: String,
     outcome: OutcomeSpec,
-    test_count: usize,
-    planned_test_ids: Vec<String>,
     test_review: OutcomeTestReview,
 }
 
@@ -2486,23 +2484,11 @@ fn workflow_snapshot(
     outcome_id: &str,
 ) -> Result<OutcomeWorkflowSnapshot> {
     let outcome = repo.load_outcome(feature_id, outcome_id)?;
-    let tests: Vec<_> = manifest
-        .tests
-        .iter()
-        .filter(|test| test.feature_id == feature_id && test.outcome_id == outcome_id)
-        .collect();
-    let planned_test_ids = tests
-        .iter()
-        .filter(|test| test.status == TestStatus::Planned)
-        .map(|test| test.id.clone())
-        .collect();
     let test_review = build_outcome_test_review(&outcome, manifest);
 
     Ok(OutcomeWorkflowSnapshot {
         feature_id: feature_id.to_string(),
         outcome,
-        test_count: tests.len(),
-        planned_test_ids,
         test_review,
     })
 }

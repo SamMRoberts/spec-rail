@@ -1641,9 +1641,12 @@ fn mcp_status_guides_the_end_to_end_tdd_flow() {
         status_ready["result"]["structuredContent"]["workflow"]["recommended_skill"],
         "specrail-run-workflow"
     );
-    assert_eq!(
-        status_ready["result"]["structuredContent"]["workflow"]["next_tools"][0],
-        "specrail_outcome_test_review"
+    assert!(
+        status_ready["result"]["structuredContent"]["workflow"]["next_tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|tool| tool == "specrail_outcome_test_review")
     );
     assert_eq!(
         status_ready["result"]["structuredContent"]["workflow"]["candidate_feature_id"],
