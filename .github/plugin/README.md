@@ -2,7 +2,7 @@
 
 This plugin exposes the specrail MCP server and a set of workflow skills for driving a specrail project end to end.
 
-In VS Code, the repo also ships a workspace custom agent at `.github/agents/specrail.agent.md`. Use that agent when you want repository-aware guidance that starts from the current SpecRail state and then leans on the MCP tools and the stage skills below. Use this plugin package when you want the installable Copilot CLI skill set.
+In VS Code, the repo also ships a workspace automatic coordinator at `.github/agents/specrail-automatic.agent.md`. Use that agent when you want repository-aware guidance that starts from the current SpecRail state, routes through the subordinate workspace phase agents, and keeps the workflow moving from live MCP status. Use this plugin package when you want the installable Copilot CLI skill set.
 
 ## What It Covers
 

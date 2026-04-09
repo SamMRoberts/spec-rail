@@ -88,12 +88,12 @@ fn plugin_tdd_skill_exists() {
 #[test]
 fn workspace_specrail_agent_exists_and_references_workflow_guidance() {
     let agent_path = format!(
-        "{}/.github/agents/specrail.agent.md",
+        "{}/.github/agents/specrail-automatic.agent.md",
         env!("CARGO_MANIFEST_DIR")
     );
     let agent = fs::read_to_string(agent_path).unwrap();
 
-    assert!(agent.contains("name: Specrail"));
+    assert!(agent.contains("name: Specrail Automatic"));
     assert!(agent.contains("description:"));
     assert!(agent.contains("specrail_status"));
     assert!(agent.contains("workflow.recommended_skill"));
@@ -104,4 +104,6 @@ fn workspace_specrail_agent_exists_and_references_workflow_guidance() {
     assert!(agent.contains("ask for clarification instead of guessing"));
     assert!(agent.contains("ask the user whether they want to create it or correct the reference"));
     assert!(agent.contains("warn the user and ask whether they want to continue as-is or refine it"));
+    assert!(agent.contains("Own the routing loop yourself"));
+    assert!(agent.contains("Use stage handoffs as UX shortcuts only"));
 }
