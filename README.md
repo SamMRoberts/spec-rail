@@ -52,7 +52,7 @@ cargo test
 
 This repository now includes workspace custom agents under `.github/agents/` for the main SpecRail phases.
 
-Use the `Specrail` agent as the coordinator when you want end-to-end help. It checks the current workflow state, chooses the correct phase, and can delegate to the more focused phase agents as subagents.
+Use the `Specrail Automatic` agent as the coordinator when you want end-to-end help. It checks the current workflow state, chooses the correct phase, and keeps routing through the phase agents until work is blocked, complete, or waiting on real user input.
 
 Available phase agents:
 
@@ -64,7 +64,7 @@ Available phase agents:
 
 Typical chat flow in VS Code:
 
-1. Select `Specrail` in the Chat agent picker.
+1. Select `Specrail Automatic` in the Chat agent picker.
 2. Ask to continue from the current state, or ask for a specific phase such as planning or test preparation.
 3. Review the result from each phase before using the next handoff.
 
@@ -347,7 +347,7 @@ Inside `your-ai-wrapper`, read:
 
 ### GitHub Copilot CLI plugin and MCP server
 
-This repository now ships a first-party Copilot CLI plugin under `.github/plugin/`, a repo-scoped VS Code custom agent under `.github/agents/specrail.agent.md`, and a built-in MCP server entrypoint at `specrail mcp-server`.
+This repository now ships a first-party Copilot CLI plugin under `.github/plugin/`, a repo-scoped VS Code automatic workflow agent under `.github/agents/specrail-automatic.agent.md`, and a built-in MCP server entrypoint at `specrail mcp-server`.
 
 Prerequisites:
 

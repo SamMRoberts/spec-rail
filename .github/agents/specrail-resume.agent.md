@@ -2,21 +2,14 @@
 name: Specrail Resume
 description: "Use when the repository already has SpecRail state and you want to continue the active slice without a full workflow rediscovery pass."
 tools: [agent, read, search, specrail-mcp/*]
-agents: ["Specrail Plan", "Specrail Test Prep", "Specrail Execute"]
+agents: ["Specrail Automatic"]
 user-invocable: false
+disable-model-invocation: false
 argument-hint: "Continue the active SpecRail slice and route straight to the right phase."
 handoffs:
-  - label: Refine Current Scope
-    agent: Specrail Plan
-    prompt: Resume by clarifying or creating the current feature and outcome slice.
-    send: true
-  - label: Prepare Tests For Current Outcome
-    agent: Specrail Test Prep
-    prompt: Resume by preparing the required tests for the active outcome.
-    send: true
-  - label: Execute Current Outcome
-    agent: Specrail Execute
-    prompt: Resume by implementing, verifying, and advancing the current active outcome.
+  - label: Return To Automatic Workflow
+    agent: Specrail Automatic
+    prompt: Resume analysis is complete. Re-check `specrail_status` and continue the automatic SpecRail workflow from the current live state.
     send: true
 ---
 
@@ -32,16 +25,13 @@ You determine the correct resume point for an existing SpecRail workflow before 
 - Do not retell the workflow from the beginning when the active slice is already clear.
 - If there is no active outcome, identify the next incomplete outcome using ordering and current status.
 - Determine the next phase based on blockers: planning when scope is incomplete, test prep when tests are missing or still `planned`, execution when tests are ready.
-- Once the resume point is determined, **immediately hand off to the appropriate phase agent** without asking for confirmation:
-  - Scope incomplete → use the `Refine Current Scope` handoff
-  - Tests missing or `planned` → use the `Prepare Tests For Current Outcome` handoff
-  - Tests ready → use the `Execute Current Outcome` handoff
+- Once the resume point is determined, **immediately use the `Return To Automatic Workflow` handoff** without asking for confirmation so the coordinator can own the next routing decision.
 
 ## Boundaries
 
 - Do not mutate workflow state in this agent.
-- Only delegate to `Specrail Plan`, `Specrail Test Prep`, or `Specrail Execute`.
-- Do not list "Natural next steps" or stop with recommendations. Always execute an immediate handoff based on the determined resume point.
+- Only return control to `Specrail Automatic`.
+- Do not list "Natural next steps" or stop with recommendations. Always execute an immediate `Return To Automatic Workflow` handoff once the resume point is clear.
 - Do not broaden a regular resume into a full repository audit when the active slice is already known.
 
 ## Question fallback requirement
