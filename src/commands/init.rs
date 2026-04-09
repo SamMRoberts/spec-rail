@@ -43,7 +43,7 @@ pub fn run(repo: &Repository, no_wizard: bool) -> Result<InitOutcome> {
     let config_path = repo.project_config_path();
     if write_if_missing(
         &config_path,
-        &serde_yaml::to_string(&ProjectConfig::default())?,
+        &serde_yaml::to_string(&ProjectConfig::for_workspace(&repo.root))?,
     )? {
         println!("  created  .specrail/project.yaml");
     }

@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use serde_yaml::Value;
 use std::fs;
 use tempfile::TempDir;
 
@@ -56,6 +57,44 @@ fn init_creates_valid_project_yaml() {
     assert!(content.contains("version:"), "version field missing");
     assert!(content.contains("test_command:"), "test_command field missing");
     assert!(content.contains("default_agent:"), "default_agent field missing");
+}
+
+#[test]
+fn init_uses_rust_test_command_when_cargo_toml_exists() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("Cargo.toml"), "[package]\nname='demo'\nversion='0.1.0'\n").unwrap();
+
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
+
+    let content = fs::read_to_string(dir.path().join(".specrail/project.yaml")).unwrap();
+    let yaml: Value = serde_yaml::from_str(&content).unwrap();
+    assert_eq!(yaml["test_command"].as_str(), Some("cargo test"));
+}
+
+#[test]
+fn init_uses_dotnet_test_command_when_csproj_exists() {
+    let dir = TempDir::new().unwrap();
+    fs::create_dir_all(dir.path().join("src/App")).unwrap();
+    fs::create_dir_all(dir.path().join("tests/App.Tests")).unwrap();
+    fs::write(
+        dir.path().join("src/App/App.csproj"),
+        "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("tests/App.Tests/App.Tests.csproj"),
+        "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>",
+    )
+    .unwrap();
+
+    specrail(&dir).args(["init", "--no-wizard"]).assert().success();
+
+    let content = fs::read_to_string(dir.path().join(".specrail/project.yaml")).unwrap();
+    let yaml: Value = serde_yaml::from_str(&content).unwrap();
+    assert_eq!(
+        yaml["test_command"].as_str(),
+        Some("dotnet test --project tests/App.Tests/App.Tests.csproj")
+    );
 }
 
 #[test]
