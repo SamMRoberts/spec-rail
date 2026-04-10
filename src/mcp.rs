@@ -23,7 +23,9 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[
     "2025-03-26",
     "2024-11-05",
 ];
+const UI_EXTENSION_IDENTIFIER: &str = "io.modelcontextprotocol/ui";
 const WORKFLOW_UI_RESOURCE_URI: &str = "ui://specrail/workflow";
+const WORKFLOW_UI_MIME_TYPE: &str = "text/html;profile=mcp-app";
 
 #[derive(Debug, Clone, Serialize)]
 struct ImplementationBlockedOutcome {
@@ -83,6 +85,11 @@ fn server_capabilities() -> Value {
         "resources": {
             "subscribe": false,
             "listChanged": false
+        },
+        "extensions": {
+            (UI_EXTENSION_IDENTIFIER): {
+                "mimeTypes": [WORKFLOW_UI_MIME_TYPE]
+            }
         }
     })
 }
@@ -92,8 +99,9 @@ fn resource_definitions() -> Vec<Value> {
         "uri": WORKFLOW_UI_RESOURCE_URI,
         "name": "Specrail Workflow UI",
         "title": "Specrail Workflow UI",
-        "mimeType": "text/html",
-        "description": "Small @mcp-ui workflow/status panel for Specrail status, overview, review, and delegation results."
+        "mimeType": WORKFLOW_UI_MIME_TYPE,
+        "description": "Interactive MCP app for Specrail workflow status, overview, review, delegation, and control actions.",
+        "_meta": workflow_ui_resource_meta(),
     })]
 }
 
@@ -101,8 +109,9 @@ fn handle_resource_read(uri: &str) -> Result<Value> {
     let contents = match uri {
         WORKFLOW_UI_RESOURCE_URI => vec![json!({
             "uri": WORKFLOW_UI_RESOURCE_URI,
-            "mimeType": "text/html",
+            "mimeType": WORKFLOW_UI_MIME_TYPE,
             "text": include_str!("mcp_workflow_app.html"),
+            "_meta": workflow_ui_resource_meta(),
         })],
         _ => bail!("unknown resource '{uri}'"),
     };
@@ -2930,6 +2939,30 @@ fn workflow_ui_meta(panel: &str) -> Value {
     })
 }
 
+fn workflow_ui_resource_meta() -> Value {
+    json!({
+        "ui": {
+            "prefersBorder": true,
+        }
+    })
+}
+
+fn workflow_ui_tool_definition(mut tool: Value) -> Value {
+    if let Some(map) = tool.as_object_mut() {
+        map.insert(
+            "_meta".to_string(),
+            json!({
+                "ui": {
+                    "resourceUri": WORKFLOW_UI_RESOURCE_URI,
+                    "visibility": ["model", "app"],
+                }
+            }),
+        );
+    }
+
+    tool
+}
+
 #[derive(Serialize)]
 struct CliToolResult {
     command: String,
@@ -2942,7 +2975,7 @@ struct CliToolResult {
 
 fn tool_definitions() -> Vec<Value> {
     vec![
-        json!({
+        workflow_ui_tool_definition(json!({
             "name": "specrail_status",
             "title": "Project Status",
             "description": "Direct MCP read action: get current project status, active workflow state, and recommended next action. Call this first to understand where you are in the TDD workflow. Returns structuredContent.workflow with recommended_skill, blockers, next_tools, and candidate feature/outcome.",
@@ -2953,7 +2986,7 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
                 }
             }
-        }),
+        })),
         json!({
             "name": "specrail_solution_list",
             "title": "List Solutions",
@@ -3081,7 +3114,7 @@ fn tool_definitions() -> Vec<Value> {
                 "required": ["feature_id", "outcome_id"]
             }
         }),
-        json!({
+        workflow_ui_tool_definition(json!({
             "name": "specrail_outcome_test_review",
             "title": "Review Outcome Tests",
             "description": "Review one outcome's test health. Returns related manifest tests, missing required test IDs/files, planned required tests, undeclared tests, and suggested test paths to add or generate.",
@@ -3095,7 +3128,7 @@ fn tool_definitions() -> Vec<Value> {
                 },
                 "required": ["feature_id", "outcome_id"]
             }
-        }),
+        })),
         json!({
             "name": "specrail_test_list",
             "title": "List Tests",
@@ -3110,7 +3143,7 @@ fn tool_definitions() -> Vec<Value> {
                 }
             }
         }),
-        json!({
+        workflow_ui_tool_definition(json!({
             "name": "specrail_test_suggest",
             "title": "Preview Test Suggestions",
             "description": "Prepare a delegated test-suggestion prompt for the current MCP client/agent. MCP returns the prompt and expected response schema but never spawns a nested agent or writes files.",
@@ -3124,8 +3157,8 @@ fn tool_definitions() -> Vec<Value> {
                     "agent": { "type": "string", "description": "Optional agent override for previewing suggestions." }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_workflow_overview",
             "title": "Workflow Overview",
             "description": "Read-friendly compact board of features, outcomes, per-feature progress, and test readiness. Returns workflow plus outcome-level readiness summaries that hosts can render directly.",
@@ -3136,8 +3169,8 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_workflow_next",
             "title": "Workflow Next Step",
             "description": "Return the single best next workflow action with rationale, plus the latest status payload and typed workflow actions.",
@@ -3148,8 +3181,8 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_resume_point",
             "title": "Resume Point",
             "description": "Summarize the best place to resume the current Specrail workflow, including feature/outcome ids, recommended skill, and typed next actions.",
@@ -3160,7 +3193,7 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
                 }
             }
-        }),
+        })),
         json!({
             "name": "specrail_trace",
             "title": "Audit Ledger",
@@ -3478,7 +3511,7 @@ fn tool_definitions() -> Vec<Value> {
                 "required": ["id", "feature_id", "outcome_id", "path"]
             }
         }),
-        json!({
+        workflow_ui_tool_definition(json!({
             "name": "specrail_test_generate",
             "title": "Generate Tests",
             "description": "Prepare a delegated test-generation prompt for the current MCP client/agent. MCP returns the prompt, allowed paths, and response schema; after the parent agent generates JSON test output, call specrail_test_apply_generated to persist it in-process.",
@@ -3492,7 +3525,7 @@ fn tool_definitions() -> Vec<Value> {
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }
-        }),
+        })),
         json!({
             "name": "specrail_test_apply_generated",
             "title": "Apply Generated Tests",
@@ -3540,7 +3573,7 @@ fn tool_definitions() -> Vec<Value> {
                 "required": ["id", "status"]
             }
         }),
-        json!({
+        workflow_ui_tool_definition(json!({
             "name": "specrail_activate_next",
             "title": "Activate Next Outcome",
             "description": "Safely activate the next eligible feature/outcome pair from workflow guidance. Refuses to activate a blocked candidate that still needs tests before activation.",
@@ -3550,8 +3583,8 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string", "description": "Workspace or project root path. Defaults to the server's working directory." }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_implement",
             "title": "Implement",
             "description": "Prepare a delegated implementation prompt for the current MCP client/agent. MCP returns structuredContent.delegation.prompt plus path constraints, but never spawns a nested agent. The parent agent must apply that prompt in the current conversation, then call specrail_verify. If feature_id is provided, returns one delegated task per outcome in order.",
@@ -3564,8 +3597,8 @@ fn tool_definitions() -> Vec<Value> {
                     "agent": { "type": "string", "description": "Override the configured agent (e.g. 'generic-shell', 'copilot', 'codex')." }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_verify",
             "title": "Verify",
             "description": "Direct MCP mutation action: run the project's test command (from project.yaml) to verify the active outcome. Marks the outcome verified on success or failed on failure. After verified, call specrail_advance.",
@@ -3575,8 +3608,8 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string" }
                 }
             }
-        }),
-        json!({
+        })),
+        workflow_ui_tool_definition(json!({
             "name": "specrail_advance",
             "title": "Advance",
             "description": "Direct MCP mutation action: advance from a verified outcome to the next one in sequence (order + 1). If no next outcome exists, marks the feature complete. Requires the current active outcome to be verified.",
@@ -3586,7 +3619,7 @@ fn tool_definitions() -> Vec<Value> {
                     "cwd": { "type": "string" }
                 }
             }
-        }),
+        })),
     ]
 }
 
