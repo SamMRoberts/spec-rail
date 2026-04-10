@@ -3,93 +3,1116 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Specrail Workflow UI</title>
+  <title>Specrail Workflow Control Center</title>
   <style>
     :root {
       color-scheme: light dark;
       font-family: Inter, system-ui, sans-serif;
+      --bg: light-dark(#f6f8fb, #0f1117);
+      --panel: light-dark(#ffffff, #171b24);
+      --panel-muted: light-dark(#f1f4f8, #11151d);
+      --border: light-dark(rgba(31, 41, 55, 0.12), rgba(255, 255, 255, 0.12));
+      --text: light-dark(#101828, #f8fafc);
+      --muted: light-dark(#475467, #98a2b3);
+      --accent: light-dark(#2563eb, #60a5fa);
+      --success: light-dark(#067647, #34d399);
+      --warn: light-dark(#b54708, #fbbf24);
+      --danger: light-dark(#b42318, #f87171);
+      --shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
     }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
       padding: 16px;
-      background: canvas;
-      color: canvasText;
+      background: var(--bg);
+      color: var(--text);
     }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel-muted);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: 120ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    button.primary {
+      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+      border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+    }
+
+    button.success {
+      background: color-mix(in srgb, var(--success) 12%, var(--panel));
+      border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+    }
+
+    button.warn {
+      background: color-mix(in srgb, var(--warn) 12%, var(--panel));
+      border-color: color-mix(in srgb, var(--warn) 32%, var(--border));
+    }
+
+    button.danger {
+      background: color-mix(in srgb, var(--danger) 12%, var(--panel));
+      border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+    }
+
     .app {
-      border: 1px solid color-mix(in srgb, canvasText 16%, transparent);
-      border-radius: 12px;
+      display: grid;
+      gap: 16px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .panel, .hero {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .toolbar, .button-row, .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      background: var(--panel-muted);
+      border: 1px solid var(--border);
+    }
+
+    .chip.accent { color: var(--accent); }
+    .chip.success { color: var(--success); }
+    .chip.warn { color: var(--warn); }
+    .chip.danger { color: var(--danger); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      background: var(--panel-muted);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .panel {
       padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-head h2, .panel-head h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-item, .outcome-card, .log-entry, .detail-card {
+      border: 1px solid var(--border);
+      background: var(--panel-muted);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .action-item.recommended,
+    .outcome-card.candidate,
+    .detail-card.recommended {
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    .action-title, .outcome-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .feature-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: var(--panel-muted);
       display: grid;
       gap: 12px;
     }
-    .muted { opacity: 0.72; }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip {
-      border-radius: 999px;
-      padding: 4px 10px;
-      background: color-mix(in srgb, canvasText 10%, transparent);
-      font-size: 12px;
+
+    .outcome-list {
+      display: grid;
+      gap: 10px;
     }
+
+    .outcome-card.active {
+      border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+    }
+
+    .pill.pending { color: var(--warn); }
+    .pill.verified, .pill.ready { color: var(--success); }
+    .pill.failed, .pill.blocked { color: var(--danger); }
+    .pill.active, .pill.candidate { color: var(--accent); }
+
+    .key-values {
+      display: grid;
+      gap: 6px;
+    }
+
+    .key-values div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.95rem;
+    }
+
+    ul.compact {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+    }
+
     pre {
       margin: 0;
       padding: 12px;
-      border-radius: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1020;
+      color: #edf2f7;
+      white-space: pre-wrap;
       overflow: auto;
-      background: color-mix(in srgb, canvasText 8%, transparent);
       font-size: 12px;
+      max-height: 320px;
+    }
+
+    .log-list {
+      display: grid;
+      gap: 8px;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .log-entry small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .log-entry.error { border-color: color-mix(in srgb, var(--danger) 32%, var(--border)); }
+    .log-entry.success { border-color: color-mix(in srgb, var(--success) 28%, var(--border)); }
+    .log-entry.action { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
+    .log-entry.warn { border-color: color-mix(in srgb, var(--warn) 32%, var(--border)); }
+
+    @media (max-width: 720px) {
+      body { padding: 10px; }
+      .hero, .panel { padding: 14px; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div>
-      <strong>Hi from Specrail @mcp-ui</strong>
-      <div class="muted">This panel can render `specrail_status`, `specrail_workflow_overview`, test review, and delegation payloads.</div>
+  <div class="app" id="app">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>Specrail Workflow Control Center</h1>
+          <div class="muted" id="heroSummary">Connects to the MCP host, hydrates workflow status and overview, and exposes guided controls for the active or next outcome.</div>
+        </div>
+        <div class="toolbar" id="toolbar">
+          <button class="primary" id="refreshButton" type="button">Refresh</button>
+          <button id="nextButton" type="button">Next step</button>
+          <button id="resumeButton" type="button">Resume</button>
+          <button id="fullscreenButton" type="button">Fullscreen</button>
+        </div>
+      </div>
+      <div class="chip-row" id="heroChips"></div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Workflow status</h2>
+            <div class="muted">Stage, blockers, active focus, and readiness.</div>
+          </div>
+          <div class="chip-row" id="statusMeta"></div>
+        </div>
+        <div class="key-values" id="statusDetails"></div>
+        <div id="blockersPanel"></div>
+        <div id="reviewPanel"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Workflow controls</h2>
+            <div class="muted">Recommended controls come from workflow.actions. Outcome cards add direct activation and review shortcuts.</div>
+          </div>
+          <div class="chip-row" id="hostMeta"></div>
+        </div>
+        <div class="button-row" id="quickActions"></div>
+        <div class="action-list" id="workflowActions"></div>
+      </section>
     </div>
-    <div class="chips" id="summary"></div>
-    <pre id="payload">Call specrail_status or specrail_workflow_overview to populate this panel.</pre>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Workflow overview</h2>
+          <div class="muted">Feature and outcome board with readiness, verification progress, and context actions.</div>
+        </div>
+        <div class="chip-row" id="overviewMeta"></div>
+      </div>
+      <div class="feature-list" id="overviewBoard"></div>
+    </section>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Delegation</h2>
+            <div class="muted">Implementation and test generation prompts stay visible here after the control action returns.</div>
+          </div>
+          <div class="button-row" id="delegationButtons"></div>
+        </div>
+        <div id="delegationPanel"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Activity</h2>
+            <div class="muted">Recent app activity and MCP bridge feedback.</div>
+          </div>
+        </div>
+        <div class="log-list" id="activityLog"></div>
+      </section>
+    </div>
   </div>
+
   <script>
-    const payloadEl = document.getElementById('payload');
-    const summaryEl = document.getElementById('summary');
+    const elements = {
+      heroSummary: document.getElementById('heroSummary'),
+      heroChips: document.getElementById('heroChips'),
+      stats: document.getElementById('stats'),
+      statusMeta: document.getElementById('statusMeta'),
+      statusDetails: document.getElementById('statusDetails'),
+      blockersPanel: document.getElementById('blockersPanel'),
+      reviewPanel: document.getElementById('reviewPanel'),
+      hostMeta: document.getElementById('hostMeta'),
+      quickActions: document.getElementById('quickActions'),
+      workflowActions: document.getElementById('workflowActions'),
+      overviewMeta: document.getElementById('overviewMeta'),
+      overviewBoard: document.getElementById('overviewBoard'),
+      delegationPanel: document.getElementById('delegationPanel'),
+      delegationButtons: document.getElementById('delegationButtons'),
+      activityLog: document.getElementById('activityLog'),
+      refreshButton: document.getElementById('refreshButton'),
+      nextButton: document.getElementById('nextButton'),
+      resumeButton: document.getElementById('resumeButton'),
+      fullscreenButton: document.getElementById('fullscreenButton'),
+    };
 
-    function addChip(text) {
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.textContent = text;
-      summaryEl.appendChild(chip);
+    const state = {
+      hostReady: false,
+      hostCapabilities: null,
+      hostContext: null,
+      loading: false,
+      status: null,
+      overview: null,
+      review: null,
+      delegation: null,
+      resume: null,
+      logs: [],
+    };
+
+    let nextRequestId = 1;
+    const pendingRequests = new Map();
+    const REFRESH_SAFE_TOOLS = new Set([
+      'specrail_status',
+      'specrail_workflow_overview',
+      'specrail_workflow_next',
+      'specrail_resume_point',
+      'specrail_outcome_test_review',
+      'specrail_test_suggest',
+      'specrail_test_generate',
+      'specrail_implement',
+    ]);
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
     }
 
-    function render(raw) {
-      const payload = raw?.structuredContent ?? raw ?? {};
-      summaryEl.innerHTML = '';
+    function appendLog(message, level = 'info') {
+      state.logs.unshift({
+        level,
+        message,
+        time: new Date().toLocaleTimeString(),
+      });
+      state.logs = state.logs.slice(0, 40);
+      renderActivity();
+    }
 
-      const workflow = payload.workflow || payload.status?.workflow;
-      if (workflow) {
-        addChip(`stage: ${workflow.stage ?? 'unknown'}`);
-        addChip(`skill: ${workflow.recommended_skill ?? 'n/a'}`);
-        const progress = workflow.progress || {};
-        if (typeof progress.outcome_verified === 'number' && typeof progress.outcome_total === 'number') {
-          addChip(`outcomes: ${progress.outcome_verified}/${progress.outcome_total}`);
+    function createChip(text, tone) {
+      return `<span class="chip ${tone || ''}">${escapeHtml(text)}</span>`;
+    }
+
+    function createPill(text, tone) {
+      return `<span class="pill ${tone || ''}">${escapeHtml(text)}</span>`;
+    }
+
+    function normalizeToolPayload(raw) {
+      if (!raw) {
+        return null;
+      }
+
+      if (raw.structuredContent || raw.content || typeof raw.isError === 'boolean') {
+        return raw;
+      }
+
+      if (raw.result && (raw.result.structuredContent || raw.result.content || typeof raw.result.isError === 'boolean')) {
+        return raw.result;
+      }
+
+      if (raw.workflow || raw.status || raw.review || raw.delegation || raw.resume || raw.features || raw.initialized !== undefined) {
+        return { structuredContent: raw };
+      }
+
+      return null;
+    }
+
+    function applyHostContext(hostContext) {
+      state.hostContext = { ...(state.hostContext || {}), ...(hostContext || {}) };
+      const vars = state.hostContext?.styles?.variables || {};
+      Object.entries(vars).forEach(([key, value]) => {
+        if (value) {
+          document.documentElement.style.setProperty(key, value);
         }
-      }
-
-      if (payload.review) {
-        addChip(payload.review.has_gaps ? 'tests blocked' : 'tests ready');
-      }
-
-      if (payload.delegation) {
-        addChip(`delegation: ${payload.delegation.scope_label || payload.delegation.outcome_id || 'ready'}`);
-      }
-
-      payloadEl.textContent = JSON.stringify(payload, null, 2);
+      });
     }
 
-    window.addEventListener('message', (event) => render(event.data));
+    function postMessageToHost(message) {
+      if (!window.parent || window.parent === window) {
+        throw new Error('No MCP host bridge is available.');
+      }
+      window.parent.postMessage(message, '*');
+    }
+
+    function sendRequest(method, params) {
+      return new Promise((resolve, reject) => {
+        const id = nextRequestId++;
+        pendingRequests.set(id, { resolve, reject });
+        try {
+          postMessageToHost({ jsonrpc: '2.0', id, method, params });
+        } catch (error) {
+          pendingRequests.delete(id);
+          reject(error);
+        }
+      });
+    }
+
+    function sendNotification(method, params) {
+      postMessageToHost({ jsonrpc: '2.0', method, params });
+    }
+
+    async function initializeHostBridge() {
+      try {
+        const response = await sendRequest('ui/initialize', {
+          protocolVersion: '2026-01-26',
+          capabilities: {},
+          appCapabilities: {
+            availableDisplayModes: ['inline', 'fullscreen'],
+          },
+          clientInfo: {
+            name: 'specrail-workflow-app',
+            version: '1.0.0',
+          },
+        });
+
+        state.hostReady = true;
+        state.hostCapabilities = response?.hostCapabilities || null;
+        applyHostContext(response?.hostContext || null);
+        sendNotification('ui/notifications/initialized', {});
+        appendLog(`Connected to ${(response?.hostInfo?.name || 'MCP host')} bridge.`, 'success');
+        render();
+
+        if (!state.status && !state.overview) {
+          refreshDashboard();
+        }
+      } catch (error) {
+        appendLog(`Bridge initialization failed: ${error.message || error}`, 'warn');
+        render();
+      }
+    }
+
+    async function callTool(name, args = {}, options = {}) {
+      appendLog(`Calling ${name}`, 'action');
+      const result = await sendRequest('tools/call', { name, arguments: args });
+      const text = (result?.content || [])
+        .map((entry) => entry?.text)
+        .filter(Boolean)
+        .join('\n');
+      if (text) {
+        appendLog(text, result?.isError ? 'error' : 'success');
+      }
+      if (result?.isError) {
+        applyToolEnvelope(result);
+        throw new Error(text || `${name} failed.`);
+      }
+      applyToolEnvelope(result);
+      if (options.refresh !== false && !REFRESH_SAFE_TOOLS.has(name)) {
+        await refreshDashboard();
+      }
+      return result;
+    }
+
+    async function refreshDashboard() {
+      if (!state.hostReady) {
+        return;
+      }
+      state.loading = true;
+      render();
+      try {
+        const [status, overview] = await Promise.all([
+          sendRequest('tools/call', { name: 'specrail_status', arguments: {} }),
+          sendRequest('tools/call', { name: 'specrail_workflow_overview', arguments: {} }),
+        ]);
+        applyToolEnvelope(status);
+        applyToolEnvelope(overview);
+        appendLog('Workflow status and overview refreshed.', 'success');
+      } catch (error) {
+        appendLog(`Refresh failed: ${error.message || error}`, 'error');
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    function applyToolEnvelope(result) {
+      const payload = result?.structuredContent || {};
+
+      if (payload.workflow && (payload.state || payload.manifest || payload.initialized !== undefined)) {
+        state.status = payload;
+      }
+      if (payload.status?.workflow) {
+        state.status = payload.status;
+      }
+      if (Array.isArray(payload.features)) {
+        state.overview = payload;
+      }
+      if (payload.review) {
+        state.review = payload.review;
+      }
+      if (payload.delegation) {
+        state.delegation = payload.delegation;
+      }
+      if (payload.generation) {
+        state.delegation = payload.generation;
+      }
+      if (payload.resume) {
+        state.resume = payload.resume;
+      }
+      if (!state.review && state.status?.workflow?.active_feature_id && state.overview?.features) {
+        state.review = findOutcomeReview(state.status.workflow.active_feature_id, state.status.workflow.active_outcome_id);
+      }
+      render();
+    }
+
+    function findOutcomeReview(featureId, outcomeId) {
+      const featureRow = (state.overview?.features || []).find((row) => row?.feature?.id === featureId);
+      const outcomeRow = featureRow?.outcomes?.find((row) => row?.outcome?.id === outcomeId);
+      return outcomeRow?.test_review || null;
+    }
+
+    function missingRequiredArguments(action) {
+      const args = action?.arguments || {};
+      return (action?.required_arguments || []).filter((key) => {
+        const value = args[key];
+        return value === undefined || value === null || value === '';
+      });
+    }
+
+    async function runWorkflowAction(action) {
+      const missing = missingRequiredArguments(action);
+      if (missing.length) {
+        appendLog(`${action.label} needs: ${missing.join(', ')}`, 'warn');
+        return;
+      }
+      if (action.requires_confirmation && !window.confirm(`Run ${action.label}?`)) {
+        return;
+      }
+      try {
+        await callTool(action.tool, action.arguments || {});
+      } catch (error) {
+        appendLog(error.message || String(error), 'error');
+      }
+    }
+
+    async function activateOutcome(featureId, outcomeId) {
+      try {
+        await callTool('specrail_outcome_activate', { feature_id: featureId, outcome_id: outcomeId }, { refresh: false });
+        await refreshDashboard();
+      } catch (error) {
+        appendLog(error.message || String(error), 'error');
+      }
+    }
+
+    async function reviewOutcome(featureId, outcomeId) {
+      try {
+        await callTool('specrail_outcome_test_review', { feature_id: featureId, outcome_id: outcomeId }, { refresh: false });
+      } catch (error) {
+        appendLog(error.message || String(error), 'error');
+      }
+    }
+
+    async function maybeOpenFullscreen() {
+      if (!state.hostReady) {
+        appendLog('Fullscreen is only available through the MCP host bridge.', 'warn');
+        return;
+      }
+      try {
+        const result = await sendRequest('ui/request-display-mode', { mode: 'fullscreen' });
+        appendLog(`Display mode: ${result?.mode || 'inline'}`, 'info');
+      } catch (error) {
+        appendLog(`Fullscreen request failed: ${error.message || error}`, 'warn');
+      }
+    }
+
+    async function copyDelegationPrompt() {
+      const prompt = state.delegation?.prompt;
+      if (!prompt) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(prompt);
+        appendLog('Delegation prompt copied to clipboard.', 'success');
+      } catch (error) {
+        appendLog(`Clipboard copy failed: ${error.message || error}`, 'warn');
+      }
+    }
+
+    async function sendDelegationPromptToChat() {
+      const prompt = state.delegation?.prompt;
+      if (!prompt) {
+        return;
+      }
+      try {
+        await sendRequest('ui/message', {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: prompt,
+          },
+        });
+        appendLog('Delegation prompt sent to the chat host.', 'success');
+      } catch (error) {
+        appendLog(`Chat handoff failed: ${error.message || error}`, 'warn');
+      }
+    }
+
+    function render() {
+      renderHero();
+      renderStatus();
+      renderControls();
+      renderOverview();
+      renderDelegation();
+      renderActivity();
+      reportSize();
+    }
+
+    function renderHero() {
+      const status = state.status;
+      const workflow = status?.workflow || state.overview?.workflow || {};
+      const testCounts = status?.testCounts || {};
+
+      elements.heroSummary.textContent = workflow.summary
+        || (state.loading ? 'Refreshing workflow status…' : 'Awaiting workflow payload. Use Refresh when connected to an MCP host.');
+
+      elements.heroChips.innerHTML = [
+        createChip(`bridge ${state.hostReady ? 'ready' : 'standalone'}`, state.hostReady ? 'success' : 'warn'),
+        workflow.stage ? createChip(`stage ${workflow.stage}`, workflow.stage === 'done' ? 'success' : 'accent') : '',
+        workflow.recommended_skill ? createChip(`skill ${workflow.recommended_skill}`, 'accent') : '',
+        status?.root ? createChip(status.root, '') : '',
+        state.loading ? createChip('refreshing', 'warn') : '',
+      ].filter(Boolean).join('');
+
+      const stats = [
+        { label: 'Features', value: workflow.progress?.feature_completed != null ? `${workflow.progress.feature_completed}/${workflow.progress.feature_total}` : '—', hint: 'verified or complete' },
+        { label: 'Outcomes', value: workflow.progress?.outcome_verified != null ? `${workflow.progress.outcome_verified}/${workflow.progress.outcome_total}` : '—', hint: 'verified outcomes' },
+        { label: 'Passing tests', value: testCounts.passing ?? '—', hint: 'manifest status' },
+        { label: 'Written tests', value: testCounts.written ?? '—', hint: 'ready for verify' },
+        { label: 'Planned tests', value: testCounts.planned ?? '—', hint: 'still blocked' },
+      ];
+      elements.stats.innerHTML = stats.map((item) => `
+        <div class="stat">
+          <div class="muted">${escapeHtml(item.label)}</div>
+          <div class="stat-value">${escapeHtml(item.value)}</div>
+          <div class="muted">${escapeHtml(item.hint)}</div>
+        </div>
+      `).join('');
+
+      elements.refreshButton.disabled = !state.hostReady || state.loading;
+      elements.nextButton.disabled = !state.hostReady;
+      elements.resumeButton.disabled = !state.hostReady;
+      elements.fullscreenButton.disabled = !state.hostReady;
+    }
+
+    function renderStatus() {
+      const status = state.status;
+      const workflow = status?.workflow || state.overview?.workflow || {};
+      const blockers = workflow.blocker_details || [];
+      const review = state.review;
+
+      elements.statusMeta.innerHTML = [
+        workflow.stage ? createChip(workflow.stage, 'accent') : '',
+        workflow.active_feature_id ? createChip(`active feature ${workflow.active_feature_id}`, 'success') : '',
+        workflow.active_outcome_id ? createChip(`active outcome ${workflow.active_outcome_id}`, 'success') : '',
+        workflow.candidate_feature_id && !workflow.active_feature_id ? createChip(`candidate ${workflow.candidate_feature_id}:${workflow.candidate_outcome_id || '?'}`, 'accent') : '',
+      ].filter(Boolean).join('');
+
+      elements.statusDetails.innerHTML = [
+        ['Recommended skill', workflow.recommended_skill || '—'],
+        ['Active solution', status?.state?.active_solution || '—'],
+        ['Active project', status?.state?.active_project || '—'],
+        ['Active component', status?.state?.active_component || '—'],
+        ['Active feature', status?.state?.active_feature || workflow.active_feature_id || '—'],
+        ['Active outcome', status?.state?.active_outcome || workflow.active_outcome_id || '—'],
+      ].map(([label, value]) => `<div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join('');
+
+      elements.blockersPanel.innerHTML = blockers.length ? `
+        <div class="detail-card ${blockers.length ? 'recommended' : ''}">
+          <div class="panel-head"><h3>Blockers</h3><span class="pill blocked">${blockers.length}</span></div>
+          <ul class="compact">${blockers.map((item) => `<li><strong>${escapeHtml(item.kind)}</strong> — ${escapeHtml(item.message)}</li>`).join('')}</ul>
+        </div>
+      ` : '<div class="detail-card"><div class="panel-head"><h3>Blockers</h3><span class="pill ready">clear</span></div><div class="muted">No blockers are currently reported.</div></div>';
+
+      if (!review) {
+        elements.reviewPanel.innerHTML = '<div class="detail-card"><div class="panel-head"><h3>Outcome test review</h3></div><div class="muted">Run “Review tests” from the controls or an outcome card to inspect one outcome in detail.</div></div>';
+        return;
+      }
+
+      elements.reviewPanel.innerHTML = `
+        <div class="detail-card">
+          <div class="panel-head">
+            <h3>Outcome test review</h3>
+            <div class="chip-row">
+              ${createChip(`${review.feature_id}:${review.outcome_id}`, 'accent')}
+              ${createChip(review.has_gaps ? 'gaps present' : 'ready', review.has_gaps ? 'danger' : 'success')}
+            </div>
+          </div>
+          <div class="key-values">
+            <div><strong>Required tests</strong><span>${escapeHtml(review.required_test_count)}</span></div>
+            <div><strong>Related tests</strong><span>${escapeHtml(review.related_test_count)}</span></div>
+            <div><strong>Required files</strong><span>${escapeHtml(review.required_test_file_count)}</span></div>
+          </div>
+          <ul class="compact">
+            ${review.missing_required_tests?.length ? `<li>Missing tests: ${escapeHtml(review.missing_required_tests.join(', '))}</li>` : ''}
+            ${review.planned_required_tests?.length ? `<li>Planned tests: ${escapeHtml(review.planned_required_tests.join(', '))}</li>` : ''}
+            ${review.missing_required_test_files?.length ? `<li>Missing files: ${escapeHtml(review.missing_required_test_files.join(', '))}</li>` : ''}
+            ${review.undeclared_tests?.length ? `<li>Undeclared related tests: ${escapeHtml(review.undeclared_tests.map((test) => test.id).join(', '))}</li>` : ''}
+            ${!review.missing_required_tests?.length && !review.planned_required_tests?.length && !review.missing_required_test_files?.length && !review.undeclared_tests?.length ? '<li>No test review gaps detected.</li>' : ''}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderControls() {
+      const workflow = state.status?.workflow || state.overview?.workflow || {};
+      const actions = workflow.actions || [];
+      const quickButtons = [];
+
+      quickButtons.push({ label: 'Refresh status', tone: 'primary', onClick: refreshDashboard, disabled: !state.hostReady || state.loading });
+      quickButtons.push({ label: 'Next step', tone: '', onClick: () => callTool('specrail_workflow_next', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+      quickButtons.push({ label: 'Resume point', tone: '', onClick: () => callTool('specrail_resume_point', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+
+      if (workflow.candidate_feature_id && workflow.candidate_outcome_id && workflow.active_outcome_id !== workflow.candidate_outcome_id) {
+        quickButtons.push({ label: 'Activate next outcome', tone: 'success', onClick: () => callTool('specrail_activate_next').catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+      }
+      if (workflow.active_feature_id && workflow.active_outcome_id) {
+        quickButtons.push({ label: 'Review active tests', tone: '', onClick: () => reviewOutcome(workflow.active_feature_id, workflow.active_outcome_id), disabled: !state.hostReady });
+        quickButtons.push({ label: 'Prepare implementation', tone: 'primary', onClick: () => callTool('specrail_implement', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+        quickButtons.push({ label: 'Verify active outcome', tone: 'success', onClick: () => callTool('specrail_verify').catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+        quickButtons.push({ label: 'Advance workflow', tone: 'warn', onClick: () => callTool('specrail_advance').catch((error) => appendLog(error.message || String(error), 'error')), disabled: !state.hostReady });
+      }
+
+      elements.hostMeta.innerHTML = [
+        createChip(state.hostReady ? 'tool bridge enabled' : 'read-only payload mode', state.hostReady ? 'success' : 'warn'),
+        state.hostContext?.displayMode ? createChip(`display ${state.hostContext.displayMode}`, 'accent') : '',
+      ].filter(Boolean).join('');
+
+      elements.quickActions.innerHTML = '';
+      quickButtons.forEach((button) => {
+        const element = document.createElement('button');
+        element.type = 'button';
+        element.className = button.tone || '';
+        element.textContent = button.label;
+        element.disabled = button.disabled;
+        element.addEventListener('click', button.onClick);
+        elements.quickActions.appendChild(element);
+      });
+
+      if (!actions.length) {
+        elements.workflowActions.innerHTML = '<div class="action-item"><div class="muted">No workflow actions are available yet. Refresh or initialize a project.</div></div>';
+        return;
+      }
+
+      elements.workflowActions.innerHTML = actions.map((action) => {
+        const missing = missingRequiredArguments(action);
+        const disabled = !state.hostReady || !!action.blocked_reason || missing.length > 0;
+        return `
+          <div class="action-item ${action.recommended ? 'recommended' : ''}">
+            <div class="action-title">
+              <div>
+                <strong>${escapeHtml(action.label)}</strong>
+                <div class="muted">${escapeHtml(action.purpose || '')}</div>
+              </div>
+              <div class="chip-row">
+                ${action.recommended ? createChip('recommended', 'accent') : ''}
+                ${createChip(action.tool, '')}
+                ${createChip(action.group || 'workflow', '')}
+              </div>
+            </div>
+            <div class="muted">${escapeHtml(action.stage || 'workflow')}</div>
+            ${action.blocked_reason ? `<div class="muted">Blocked: ${escapeHtml(action.blocked_reason)}</div>` : ''}
+            ${missing.length ? `<div class="muted">Needs arguments: ${escapeHtml(missing.join(', '))}</div>` : ''}
+            <div class="button-row">
+              <button type="button" class="${action.recommended ? 'primary' : ''}" data-action-id="${escapeHtml(action.id)}" ${disabled ? 'disabled' : ''}>${escapeHtml(action.label)}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      actions.forEach((action) => {
+        const button = elements.workflowActions.querySelector(`[data-action-id="${CSS.escape(action.id)}"]`);
+        if (button && !button.disabled) {
+          button.addEventListener('click', () => runWorkflowAction(action));
+        }
+      });
+    }
+
+    function renderOverview() {
+      const overview = state.overview;
+      const workflow = overview?.workflow || state.status?.workflow || {};
+      elements.overviewMeta.innerHTML = [
+        workflow.candidate_feature_id ? createChip(`candidate ${workflow.candidate_feature_id}:${workflow.candidate_outcome_id || '?'}`, 'accent') : '',
+        workflow.active_feature_id ? createChip(`active ${workflow.active_feature_id}:${workflow.active_outcome_id || '?'}`, 'success') : '',
+      ].filter(Boolean).join('');
+
+      if (!overview?.features?.length) {
+        elements.overviewBoard.innerHTML = '<div class="feature-card"><div class="muted">No workflow overview is available yet. Initialize a project or add features and outcomes.</div></div>';
+        return;
+      }
+
+      elements.overviewBoard.innerHTML = overview.features.map((featureRow) => {
+        const feature = featureRow.feature || {};
+        const outcomes = featureRow.outcomes || [];
+        return `
+          <div class="feature-card">
+            <div class="panel-head">
+              <div>
+                <h3>${escapeHtml(feature.title || feature.id || 'Feature')}</h3>
+                <div class="muted">${escapeHtml(feature.id || '')}</div>
+              </div>
+              <div class="chip-row">
+                ${featureRow.active ? createChip('active feature', 'success') : ''}
+                ${featureRow.candidate ? createChip('candidate feature', 'accent') : ''}
+                ${createChip(`${featureRow.progress?.outcome_verified || 0}/${featureRow.progress?.outcome_total || 0} verified`, '')}
+              </div>
+            </div>
+            <div class="muted">${escapeHtml(feature.purpose || 'No feature purpose recorded.')}</div>
+            <div class="outcome-list">
+              ${outcomes.map((outcomeRow) => renderOutcomeCard(feature, outcomeRow)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      elements.overviewBoard.querySelectorAll('[data-outcome-action]').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+          const action = event.currentTarget.dataset.outcomeAction;
+          const featureId = event.currentTarget.dataset.featureId;
+          const outcomeId = event.currentTarget.dataset.outcomeId;
+          if (action === 'activate') {
+            await activateOutcome(featureId, outcomeId);
+          } else if (action === 'review') {
+            await reviewOutcome(featureId, outcomeId);
+          } else if (action === 'implement') {
+            await callTool('specrail_implement', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error'));
+          } else if (action === 'verify') {
+            await callTool('specrail_verify').catch((error) => appendLog(error.message || String(error), 'error'));
+          } else if (action === 'advance') {
+            await callTool('specrail_advance').catch((error) => appendLog(error.message || String(error), 'error'));
+          } else if (action === 'generate') {
+            await callTool('specrail_test_generate', { feature_id: featureId, outcome_id: outcomeId }, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error'));
+          }
+        });
+      });
+    }
+
+    function renderOutcomeCard(feature, outcomeRow) {
+      const outcome = outcomeRow.outcome || {};
+      const review = outcomeRow.test_review || {};
+      const ready = outcomeRow.ready_for_implementation;
+      const statePills = [
+        createPill(outcome.status || 'pending', outcome.status || 'pending'),
+        outcomeRow.active ? createPill('active', 'active') : '',
+        outcomeRow.candidate ? createPill('candidate', 'candidate') : '',
+        ready ? createPill('ready', 'ready') : '',
+        review.has_gaps ? createPill('blocked', 'blocked') : '',
+      ].filter(Boolean).join('');
+
+      const buttons = [];
+      if (outcome.status !== 'verified' && !outcomeRow.active) {
+        buttons.push(`<button type="button" data-outcome-action="activate" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" ${state.hostReady ? '' : 'disabled'}>Activate</button>`);
+      }
+      buttons.push(`<button type="button" data-outcome-action="review" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" ${state.hostReady ? '' : 'disabled'}>Review tests</button>`);
+      if (review.has_gaps) {
+        buttons.push(`<button type="button" data-outcome-action="generate" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" class="warn" ${state.hostReady ? '' : 'disabled'}>Generate tests</button>`);
+      }
+      if (outcomeRow.active && !review.has_gaps && outcome.status !== 'verified') {
+        buttons.push(`<button type="button" data-outcome-action="implement" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" class="primary" ${state.hostReady ? '' : 'disabled'}>Implement</button>`);
+        buttons.push(`<button type="button" data-outcome-action="verify" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" class="success" ${state.hostReady ? '' : 'disabled'}>Verify</button>`);
+      }
+      if (outcomeRow.active && outcome.status === 'verified') {
+        buttons.push(`<button type="button" data-outcome-action="advance" data-feature-id="${escapeHtml(feature.id)}" data-outcome-id="${escapeHtml(outcome.id)}" class="warn" ${state.hostReady ? '' : 'disabled'}>Advance</button>`);
+      }
+
+      return `
+        <div class="outcome-card ${outcomeRow.active ? 'active' : ''} ${outcomeRow.candidate ? 'candidate' : ''}">
+          <div class="outcome-title">
+            <div>
+              <strong>${escapeHtml(outcome.title || outcome.id || 'Outcome')}</strong>
+              <div class="muted">${escapeHtml(feature.id)}:${escapeHtml(outcome.id)} • order ${escapeHtml(outcome.order ?? '—')}</div>
+            </div>
+            <div class="chip-row">${statePills}</div>
+          </div>
+          <div class="muted">${escapeHtml(outcome.goal || 'No outcome goal recorded.')}</div>
+          <div class="key-values">
+            <div><strong>Next tool</strong><span>${escapeHtml(outcomeRow.next_action_tool || '—')}</span></div>
+            <div><strong>Required tests</strong><span>${escapeHtml(outcomeRow.progress?.required_test_count ?? 0)}</span></div>
+            <div><strong>Related tests</strong><span>${escapeHtml(outcomeRow.progress?.related_test_count ?? 0)}</span></div>
+          </div>
+          <div class="button-row">${buttons.join('')}</div>
+        </div>
+      `;
+    }
+
+    function renderDelegation() {
+      if (!state.delegation) {
+        elements.delegationButtons.innerHTML = '';
+        elements.delegationPanel.innerHTML = '<div class="detail-card"><div class="muted">Implementation and test generation results will appear here when a delegation tool is called.</div></div>';
+        return;
+      }
+
+      const prompt = state.delegation.prompt || state.delegation.instructions?.join('\n') || JSON.stringify(state.delegation, null, 2);
+      const scope = state.delegation.scope_label || `${state.delegation.feature_id || ''}:${state.delegation.outcome_id || ''}`.replace(/^:|:$/g, '');
+      elements.delegationButtons.innerHTML = `
+        <button type="button" id="copyDelegationButton">Copy prompt</button>
+        <button type="button" id="sendDelegationButton">Send to chat</button>
+      `;
+      elements.delegationPanel.innerHTML = `
+        <div class="detail-card">
+          <div class="panel-head">
+            <h3>${escapeHtml(scope || 'Delegated workflow task')}</h3>
+            <div class="chip-row">
+              ${state.delegation.verify_tool ? createChip(`then ${state.delegation.verify_tool}`, 'accent') : ''}
+              ${state.delegation.agent ? createChip(`agent ${state.delegation.agent}`, '') : ''}
+            </div>
+          </div>
+          ${state.delegation.allowed_paths?.length ? `<div class="muted">Allowed paths: ${escapeHtml(state.delegation.allowed_paths.join(', '))}</div>` : ''}
+          ${state.delegation.forbidden_paths?.length ? `<div class="muted">Forbidden paths: ${escapeHtml(state.delegation.forbidden_paths.join(', '))}</div>` : ''}
+          <pre>${escapeHtml(prompt)}</pre>
+        </div>
+      `;
+      document.getElementById('copyDelegationButton')?.addEventListener('click', copyDelegationPrompt);
+      document.getElementById('sendDelegationButton')?.addEventListener('click', sendDelegationPromptToChat);
+    }
+
+    function renderActivity() {
+      if (!state.logs.length) {
+        elements.activityLog.innerHTML = '<div class="log-entry"><div class="muted">No app activity yet.</div></div>';
+        return;
+      }
+      elements.activityLog.innerHTML = state.logs.map((entry) => `
+        <div class="log-entry ${escapeHtml(entry.level)}">
+          <small>${escapeHtml(entry.time)}</small>
+          <div>${escapeHtml(entry.message)}</div>
+        </div>
+      `).join('');
+    }
+
+    function reportSize() {
+      const rect = document.body.getBoundingClientRect();
+      if (!state.hostReady || !Number.isFinite(rect.height)) {
+        return;
+      }
+      try {
+        sendNotification('ui/notifications/size-changed', {
+          width: Math.ceil(rect.width),
+          height: Math.min(Math.max(Math.ceil(rect.height), 360), 1400),
+        });
+      } catch (_error) {
+        // Ignore size reporting failures when the host bridge is unavailable.
+      }
+    }
+
+    function handleRpcMessage(message) {
+      if (message.id && pendingRequests.has(message.id)) {
+        const pending = pendingRequests.get(message.id);
+        pendingRequests.delete(message.id);
+        if (Object.prototype.hasOwnProperty.call(message, 'result')) {
+          pending.resolve(message.result);
+        } else {
+          pending.reject(new Error(message.error?.message || 'Request failed.'));
+        }
+        return;
+      }
+
+      if (message.method === 'ui/notifications/host-context-changed') {
+        applyHostContext(message.params || null);
+        appendLog('Host context updated.', 'info');
+        render();
+        return;
+      }
+
+      const payload = normalizeToolPayload(message?.params?.result || message?.params?.payload || message?.params);
+      if (payload) {
+        applyToolEnvelope(payload);
+      }
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) {
+        return;
+      }
+
+      if (data.jsonrpc === '2.0') {
+        handleRpcMessage(data);
+        return;
+      }
+
+      const payload = normalizeToolPayload(data);
+      if (payload) {
+        applyToolEnvelope(payload);
+      }
+    });
+
+    const resizeObserver = new ResizeObserver(reportSize);
+    resizeObserver.observe(document.body);
+
+    elements.refreshButton.addEventListener('click', refreshDashboard);
+    elements.nextButton.addEventListener('click', () => callTool('specrail_workflow_next', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error')));
+    elements.resumeButton.addEventListener('click', () => callTool('specrail_resume_point', {}, { refresh: false }).catch((error) => appendLog(error.message || String(error), 'error')));
+    elements.fullscreenButton.addEventListener('click', maybeOpenFullscreen);
 
     if (window.__MCP_UI_PAYLOAD__) {
-      render(window.__MCP_UI_PAYLOAD__);
+      const payload = normalizeToolPayload(window.__MCP_UI_PAYLOAD__);
+      if (payload) {
+        applyToolEnvelope(payload);
+      }
     }
+
+    render();
+    initializeHostBridge();
   </script>
 </body>
 </html>

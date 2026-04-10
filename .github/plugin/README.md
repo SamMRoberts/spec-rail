@@ -45,7 +45,7 @@ Newer MCP hosts can also use:
 - `specrail_resume_point` for explicit resume guidance
 - `specrail_activate_next` to safely activate the next eligible outcome
 
-The MCP server also exposes a small `@mcp-ui` resource at `ui://specrail/workflow` so hosts can render status, review, overview, and delegation payloads visually instead of relying on text alone.
+The MCP server also exposes an MCP app at `ui://specrail/workflow` so hosts can render workflow status, review details, overview boards, delegation payloads, and guided workflow controls instead of relying on text alone.
 
 ## MCP Logging Configuration
 

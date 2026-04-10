@@ -117,8 +117,18 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert_eq!(initialize["result"]["serverInfo"]["name"], "specrail");
     assert!(initialize["result"]["capabilities"]["tools"].is_object());
     assert!(initialize["result"]["capabilities"]["resources"].is_object());
+    assert_eq!(
+        initialize["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"][0],
+        "text/html;profile=mcp-app"
+    );
 
     let tools = client.request("tools/list", json!({}));
+    let status_tool = tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "specrail_status")
+        .unwrap();
     let tool_names: Vec<_> = tools["result"]["tools"]
         .as_array()
         .unwrap()
@@ -140,20 +150,32 @@ fn mcp_server_lists_tools_and_initializes_project() {
     assert!(tool_names.contains(&"specrail_workflow_next"));
     assert!(tool_names.contains(&"specrail_resume_point"));
     assert!(tool_names.contains(&"specrail_activate_next"));
+    assert_eq!(
+        status_tool["_meta"]["ui"]["resourceUri"],
+        "ui://specrail/workflow"
+    );
 
     let resources = client.request("resources/list", json!({}));
     assert_eq!(resources["result"]["resources"][0]["uri"], "ui://specrail/workflow");
+    assert_eq!(
+        resources["result"]["resources"][0]["mimeType"],
+        "text/html;profile=mcp-app"
+    );
     let resource = client.request(
         "resources/read",
         json!({
             "uri": "ui://specrail/workflow"
         }),
     );
+    assert_eq!(
+        resource["result"]["contents"][0]["mimeType"],
+        "text/html;profile=mcp-app"
+    );
     assert!(
         resource["result"]["contents"][0]["text"]
             .as_str()
             .unwrap_or("")
-            .contains("Hi from Specrail @mcp-ui")
+            .contains("Specrail Workflow Control Center")
     );
 
     let status_before = client.request(
