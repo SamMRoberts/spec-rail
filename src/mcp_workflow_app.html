@@ -410,6 +410,7 @@
       hostReady: false,
       hostCapabilities: null,
       hostContext: null,
+      hostOrigin: null,
       loading: false,
       status: null,
       overview: null,
@@ -421,6 +422,9 @@
 
     let nextRequestId = 1;
     const pendingRequests = new Map();
+    const MAX_LOG_ENTRIES = 40;
+    const MIN_APP_HEIGHT = 360;
+    const MAX_APP_HEIGHT = 1400;
     const REFRESH_SAFE_TOOLS = new Set([
       'specrail_status',
       'specrail_workflow_overview',
@@ -447,7 +451,7 @@
         message,
         time: new Date().toLocaleTimeString(),
       });
-      state.logs = state.logs.slice(0, 40);
+      state.logs = state.logs.slice(0, MAX_LOG_ENTRIES);
       renderActivity();
     }
 
@@ -491,9 +495,37 @@
 
     function postMessageToHost(message) {
       if (!window.parent || window.parent === window) {
-        throw new Error('No MCP host bridge is available.');
+        throw new Error('No MCP host bridge is available. This app must run inside an MCP host and cannot be used as a standalone browser page.');
       }
-      window.parent.postMessage(message, '*');
+      window.parent.postMessage(message, preferredTargetOrigin());
+    }
+
+    function preferredTargetOrigin() {
+      if (state.hostOrigin && state.hostOrigin !== 'null') {
+        return state.hostOrigin;
+      }
+
+      try {
+        if (document.referrer) {
+          return new URL(document.referrer).origin;
+        }
+      } catch (_error) {
+        // Fall back to the widest possible target when the referrer cannot be parsed.
+      }
+
+      return '*';
+    }
+
+    function isTrustedMessage(event) {
+      if (event.source !== window.parent) {
+        return false;
+      }
+
+      if (!state.hostOrigin || state.hostOrigin === 'null') {
+        return true;
+      }
+
+      return event.origin === state.hostOrigin;
     }
 
     function sendRequest(method, params) {
@@ -1047,7 +1079,7 @@
       try {
         sendNotification('ui/notifications/size-changed', {
           width: Math.ceil(rect.width),
-          height: Math.min(Math.max(Math.ceil(rect.height), 360), 1400),
+          height: Math.min(Math.max(Math.ceil(rect.height), MIN_APP_HEIGHT), MAX_APP_HEIGHT),
         });
       } catch (_error) {
         // Ignore size reporting failures when the host bridge is unavailable.
@@ -1080,6 +1112,14 @@
     }
 
     window.addEventListener('message', (event) => {
+      if (!isTrustedMessage(event)) {
+        return;
+      }
+
+      if (!state.hostOrigin && event.origin && event.origin !== 'null') {
+        state.hostOrigin = event.origin;
+      }
+
       const data = event.data;
       if (!data) {
         return;
