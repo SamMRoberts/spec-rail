@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -22,7 +23,9 @@
       --radius: 16px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -31,7 +34,9 @@
       color: var(--text);
     }
 
-    button, input, textarea {
+    button,
+    input,
+    textarea {
       font: inherit;
     }
 
@@ -82,7 +87,8 @@
       margin: 0 auto;
     }
 
-    .panel, .hero {
+    .panel,
+    .hero {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -112,7 +118,9 @@
       color: var(--muted);
     }
 
-    .toolbar, .button-row, .chip-row {
+    .toolbar,
+    .button-row,
+    .chip-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -129,10 +137,21 @@
       border: 1px solid var(--border);
     }
 
-    .chip.accent { color: var(--accent); }
-    .chip.success { color: var(--success); }
-    .chip.warn { color: var(--warn); }
-    .chip.danger { color: var(--danger); }
+    .chip.accent {
+      color: var(--accent);
+    }
+
+    .chip.success {
+      color: var(--success);
+    }
+
+    .chip.warn {
+      color: var(--warn);
+    }
+
+    .chip.danger {
+      color: var(--danger);
+    }
 
     .stats {
       display: grid;
@@ -174,7 +193,8 @@
       flex-wrap: wrap;
     }
 
-    .panel-head h2, .panel-head h3 {
+    .panel-head h2,
+    .panel-head h3 {
       margin: 0;
       font-size: 1rem;
     }
@@ -184,7 +204,10 @@
       gap: 10px;
     }
 
-    .action-item, .outcome-card, .log-entry, .detail-card {
+    .action-item,
+    .outcome-card,
+    .log-entry,
+    .detail-card {
       border: 1px solid var(--border);
       background: var(--panel-muted);
       border-radius: 12px;
@@ -198,7 +221,8 @@
       box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
     }
 
-    .action-title, .outcome-title {
+    .action-title,
+    .outcome-title {
       display: flex;
       justify-content: space-between;
       gap: 12px;
@@ -240,10 +264,24 @@
       background: color-mix(in srgb, var(--panel) 70%, transparent);
     }
 
-    .pill.pending { color: var(--warn); }
-    .pill.verified, .pill.ready { color: var(--success); }
-    .pill.failed, .pill.blocked { color: var(--danger); }
-    .pill.active, .pill.candidate { color: var(--accent); }
+    .pill.pending {
+      color: var(--warn);
+    }
+
+    .pill.verified,
+    .pill.ready {
+      color: var(--success);
+    }
+
+    .pill.failed,
+    .pill.blocked {
+      color: var(--danger);
+    }
+
+    .pill.active,
+    .pill.candidate {
+      color: var(--accent);
+    }
 
     .key-values {
       display: grid;
@@ -291,24 +329,43 @@
       margin-bottom: 4px;
     }
 
-    .log-entry.error { border-color: color-mix(in srgb, var(--danger) 32%, var(--border)); }
-    .log-entry.success { border-color: color-mix(in srgb, var(--success) 28%, var(--border)); }
-    .log-entry.action { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
-    .log-entry.warn { border-color: color-mix(in srgb, var(--warn) 32%, var(--border)); }
+    .log-entry.error {
+      border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+    }
+
+    .log-entry.success {
+      border-color: color-mix(in srgb, var(--success) 28%, var(--border));
+    }
+
+    .log-entry.action {
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+    }
+
+    .log-entry.warn {
+      border-color: color-mix(in srgb, var(--warn) 32%, var(--border));
+    }
 
     @media (max-width: 720px) {
-      body { padding: 10px; }
-      .hero, .panel { padding: 14px; }
+      body {
+        padding: 10px;
+      }
+
+      .hero,
+      .panel {
+        padding: 14px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="app" id="app">
     <section class="hero">
       <div class="hero-top">
         <div>
           <h1>Specrail Workflow Control Center</h1>
-          <div class="muted" id="heroSummary">Connects to the MCP host, hydrates workflow status and overview, and exposes guided controls for the active or next outcome.</div>
+          <div class="muted" id="heroSummary">Connects to the MCP host, hydrates workflow status and overview, and
+            exposes guided controls for the active or next outcome.</div>
         </div>
         <div class="toolbar" id="toolbar">
           <button class="primary" id="refreshButton" type="button">Refresh</button>
@@ -339,7 +396,8 @@
         <div class="panel-head">
           <div>
             <h2>Workflow controls</h2>
-            <div class="muted">Recommended controls come from workflow.actions. Outcome cards add direct activation and review shortcuts.</div>
+            <div class="muted">Recommended controls come from workflow.actions. Outcome cards add direct activation and
+              review shortcuts.</div>
           </div>
           <div class="chip-row" id="hostMeta"></div>
         </div>
@@ -364,7 +422,8 @@
         <div class="panel-head">
           <div>
             <h2>Delegation</h2>
-            <div class="muted">Implementation and test generation prompts stay visible here after the control action returns.</div>
+            <div class="muted">Implementation and test generation prompts stay visible here after the control action
+              returns.</div>
           </div>
           <div class="button-row" id="delegationButtons"></div>
         </div>
@@ -709,7 +768,7 @@
     }
 
     async function copyDelegationPrompt() {
-      const prompt = state.delegation?.prompt;
+      const prompt = delegationPromptText();
       if (!prompt) {
         return;
       }
@@ -721,18 +780,26 @@
       }
     }
 
+    function delegationPromptText() {
+      return state.delegation?.prompt
+        || state.delegation?.instructions?.join('\n')
+        || '';
+    }
+
     async function sendDelegationPromptToChat() {
-      const prompt = state.delegation?.prompt;
+      const prompt = delegationPromptText();
       if (!prompt) {
         return;
       }
       try {
         await sendRequest('ui/message', {
           role: 'user',
-          content: {
-            type: 'text',
-            text: prompt,
-          },
+          content: [
+            {
+              type: 'text',
+              text: prompt,
+            },
+          ],
         });
         appendLog('Delegation prompt sent to the chat host.', 'success');
       } catch (error) {
@@ -1034,7 +1101,7 @@
         return;
       }
 
-      const prompt = state.delegation.prompt || state.delegation.instructions?.join('\n') || JSON.stringify(state.delegation, null, 2);
+      const prompt = delegationPromptText() || JSON.stringify(state.delegation, null, 2);
       const scope = state.delegation.scope_label || `${state.delegation.feature_id || ''}:${state.delegation.outcome_id || ''}`.replace(/^:|:$/g, '');
       elements.delegationButtons.innerHTML = `
         <button type="button" id="copyDelegationButton">Copy prompt</button>
@@ -1155,4 +1222,5 @@
     initializeHostBridge();
   </script>
 </body>
+
 </html>
