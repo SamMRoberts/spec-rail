@@ -27,6 +27,24 @@ const UI_EXTENSION_IDENTIFIER: &str = "io.modelcontextprotocol/ui";
 const WORKFLOW_UI_RESOURCE_URI: &str = "ui://specrail/workflow";
 const WORKFLOW_UI_MIME_TYPE: &str = "text/html;profile=mcp-app";
 
+fn mcp_ui_enabled() -> bool {
+    !env_flag_true("SPECRAIL_MCP_DISABLE_UI")
+}
+
+fn env_flag_true(name: &str) -> bool {
+    match std::env::var(name) {
+        Ok(value) => {
+            let normalized = value.trim().to_ascii_lowercase();
+            if normalized.is_empty() {
+                return true;
+            }
+
+            !matches!(normalized.as_str(), "0" | "false" | "off" | "no")
+        }
+        Err(_) => false,
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct ImplementationBlockedOutcome {
     feature_id: String,
@@ -78,23 +96,32 @@ fn negotiate_protocol_version(requested: Option<&str>) -> &'static str {
 }
 
 fn server_capabilities() -> Value {
-    json!({
+    let mut capabilities = json!({
         "tools": {
             "listChanged": false
         },
         "resources": {
             "subscribe": false,
             "listChanged": false
-        },
-        "extensions": {
+        }
+    });
+
+    if mcp_ui_enabled() {
+        capabilities["extensions"] = json!({
             (UI_EXTENSION_IDENTIFIER): {
                 "mimeTypes": [WORKFLOW_UI_MIME_TYPE]
             }
-        }
-    })
+        });
+    }
+
+    capabilities
 }
 
 fn resource_definitions() -> Vec<Value> {
+    if !mcp_ui_enabled() {
+        return Vec::new();
+    }
+
     vec![json!({
         "uri": WORKFLOW_UI_RESOURCE_URI,
         "name": "Specrail Workflow UI",
@@ -106,6 +133,10 @@ fn resource_definitions() -> Vec<Value> {
 }
 
 fn handle_resource_read(uri: &str) -> Result<Value> {
+    if !mcp_ui_enabled() {
+        bail!("workflow UI resource is disabled");
+    }
+
     let contents = match uri {
         WORKFLOW_UI_RESOURCE_URI => vec![json!({
             "uri": WORKFLOW_UI_RESOURCE_URI,
@@ -2924,13 +2955,19 @@ fn tool_payload_with_meta(
     }
 
     if let Some(meta) = meta {
-        result["_meta"] = meta;
+        if !meta.is_null() {
+            result["_meta"] = meta;
+        }
     }
 
     result
 }
 
 fn workflow_ui_meta(panel: &str) -> Value {
+    if !mcp_ui_enabled() {
+        return Value::Null;
+    }
+
     json!({
         "ui": {
             "resourceUri": WORKFLOW_UI_RESOURCE_URI,
@@ -2948,6 +2985,10 @@ fn workflow_ui_resource_meta() -> Value {
 }
 
 fn workflow_ui_tool_definition(mut tool: Value) -> Value {
+    if !mcp_ui_enabled() {
+        return tool;
+    }
+
     if let Some(map) = tool.as_object_mut() {
         map.insert(
             "_meta".to_string(),

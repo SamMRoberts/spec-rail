@@ -4,6 +4,14 @@
 
 The built-in MCP server now also exposes richer workflow metadata for host UIs, including typed workflow actions, blocker details, progress counters, higher-level resume/next-step tools, and a small `@mcp-ui` workflow panel resource at `ui://specrail/workflow`.
 
+If you want to disable MCP app rendering/advertising for the workflow panel, set `SPECRAIL_MCP_DISABLE_UI` before starting the server. When enabled, the server omits UI extension metadata, does not list the workflow UI resource, and does not attach UI resource hints in tool metadata.
+
+Example:
+
+```bash
+SPECRAIL_MCP_DISABLE_UI=1 specrail mcp-server
+```
+
 ## Overview
 
 The tool is designed to help you:
